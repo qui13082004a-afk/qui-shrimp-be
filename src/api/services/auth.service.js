@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { authRepository } = require("../repositories");
-const { validateRegister } = require("../validates/auth.validate");
+const { validateRegister } = require("../../validates/auth.validate");
 const sendEmail = require("../../helpers/sendEmail");
 
 const generateOTP = () => {

@@ -1,14 +1,21 @@
 const express = require("express");
 const { connectDB, sequelize } = require("./config/database");
 const apiRoutes = require("./api/routes");
-
+const cors = require("cors");
 require("dotenv").config();
 require("./api/models");
 
 const app = express();
 
 app.use(express.json());
-
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://qui-shrimp-fe.vercel.app"
+  ],
+  credentials: true
+}));
 app.use("/api", apiRoutes);
 const startServer = async () => {
   await connectDB();
@@ -19,5 +26,4 @@ const startServer = async () => {
     console.log(`Server chạy tại port ${process.env.PORT}`);
   });
 };
-
 startServer();

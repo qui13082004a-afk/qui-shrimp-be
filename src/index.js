@@ -26,5 +26,4 @@ const startServer = async () => {
     console.log(`Server chạy tại port ${process.env.PORT}`);
   });
 };
-
 startServer();

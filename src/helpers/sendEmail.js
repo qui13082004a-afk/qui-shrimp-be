@@ -1,31 +1,21 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async (to, subject, text) => {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    requireTLS: true,
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  await transporter.verify();
-
-  await transporter.sendMail({
-    from: `"ĐẤT TÔM" <${process.env.EMAIL_USER}>`,
+  const { data, error } = await resend.emails.send({
+    from: "ĐẤT TÔM <onboarding@resend.dev>",
     to,
     subject,
     text,
   });
+
+  if (error) {
+    console.error(error);
+    throw new Error("Không gửi được email");
+  }
+
+  console.log("Email sent:", data);
 };
 
 module.exports = sendEmail;

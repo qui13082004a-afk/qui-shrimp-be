@@ -8,17 +8,18 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+const safeSendEmail = async (to, subject, text) => {
+  try {
+    await sendEmail(to, subject, text);
+  } catch (error) {
+    console.log("SEND EMAIL ERROR:", error.message);
+  }
+};
+
 const register = async (data) => {
   validateRegister(data);
 
-  const {
-    ho_ten,
-    so_dien_thoai,
-    dia_chi,
-    email,
-    mat_khau,
-    tinh_thanh,
-  } = data;
+  const { ho_ten, so_dien_thoai, dia_chi, email, mat_khau, tinh_thanh } = data;
 
   const existedUser = await authRepository.findByEmailOrPhone(
     email,
@@ -47,7 +48,7 @@ const register = async (data) => {
     otp_expires: otpExpires,
   });
 
-  await sendEmail(
+  await safeSendEmail(
     email,
     "Mã xác thực tài khoản",
     `Mã OTP của bạn là: ${otp}. Mã có hiệu lực trong 5 phút.`
@@ -153,7 +154,7 @@ const resendOtp = async (email) => {
 
   await user.save();
 
-  await sendEmail(
+  await safeSendEmail(
     email,
     "Mã OTP mới",
     `Mã OTP mới của bạn là: ${otp}. Mã có hiệu lực trong 5 phút.`
@@ -187,7 +188,7 @@ const forgotPassword = async (email) => {
 
   await user.save();
 
-  await sendEmail(
+  await safeSendEmail(
     email,
     "Mã đặt lại mật khẩu",
     `Mã OTP đặt lại mật khẩu của bạn là: ${otp}. Mã có hiệu lực trong 5 phút.`

@@ -7,7 +7,7 @@ const create = async (data) => {
 const findAllActive = async () => {
   return await SanPham.findAll({
     where: {
-      trang_thai: "hoat_dong",
+      trang_thai: "dang_ban",
     },
     include: [
       {
@@ -60,7 +60,7 @@ const remove = async (id) => {
   }
 
   await sanPham.update({
-    trang_thai: "an",
+    trang_thai: "ngung_ban",
   });
 
   return true;

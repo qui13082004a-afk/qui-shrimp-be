@@ -5,12 +5,15 @@ const createProduct = async (data) => {
     id_danh_muc,
     ten_san_pham,
     gia,
-    so_luong_ton,
+    ton_kho,
     ton_kho_toi_thieu,
     hinh_anh,
     mo_ta,
     cong_dung,
     huong_dan_su_dung,
+    don_vi_tinh,
+    han_su_dung,
+    xuat_xu,
   } = data;
 
   if (!id_danh_muc) {
@@ -21,12 +24,12 @@ const createProduct = async (data) => {
     throw new Error("Tên sản phẩm không được để trống");
   }
 
-  if (!gia || gia <= 0) {
+  if (!gia || Number(gia) <= 0) {
     throw new Error("Giá bán phải lớn hơn 0");
   }
 
-  if (so_luong_ton === undefined || so_luong_ton < 0) {
-    throw new Error("Số lượng tồn không hợp lệ");
+  if (ton_kho === undefined || Number(ton_kho) < 0) {
+    throw new Error("Tồn kho không hợp lệ");
   }
 
   const danhMuc = await categoryRepository.findById(id_danh_muc);
@@ -39,13 +42,16 @@ const createProduct = async (data) => {
     id_danh_muc,
     ten_san_pham,
     gia,
-    so_luong_ton,
+    ton_kho,
     ton_kho_toi_thieu: ton_kho_toi_thieu || 0,
     hinh_anh,
     mo_ta,
     cong_dung,
     huong_dan_su_dung,
-    trang_thai: "hoat_dong",
+    don_vi_tinh,
+    han_su_dung,
+    xuat_xu,
+    trang_thai: "dang_ban",
   });
 
   return product;

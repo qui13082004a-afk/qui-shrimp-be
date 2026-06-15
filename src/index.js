@@ -20,7 +20,7 @@ app.use("/api", apiRoutes);
 const startServer = async () => {
   await connectDB();
 
-  await sequelize.sync();
+  await sequelize.sync({ force: true });
 
   app.listen(process.env.PORT, () => {
     console.log(`Server chạy tại port ${process.env.PORT}`);

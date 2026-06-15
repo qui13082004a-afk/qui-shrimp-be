@@ -17,6 +17,23 @@ const createCategory = async (req, res) => {
   }
 };
 
+const getActiveCategories = async (req, res) => {
+  try {
+    const categories = await categoryService.getActiveCategories();
+
+    res.status(200).json({
+      success: true,
+      message: "Lấy danh mục hoạt động thành công",
+      data: categories,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 const getAllCategories = async (req, res) => {
   try {
     const categories = await categoryService.getAllCategories();
@@ -92,6 +109,7 @@ const deleteCategory = async (req, res) => {
 
 module.exports = {
   createCategory,
+  getActiveCategories,
   getAllCategories,
   getCategoryById,
   updateCategory,

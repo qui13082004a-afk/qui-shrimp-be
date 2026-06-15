@@ -4,6 +4,16 @@ const create = async (data) => {
   return await DanhMuc.create(data);
 };
 
+// Khách hàng
+const findAllActive = async () => {
+  return await DanhMuc.findAll({
+    where: {
+      trang_thai: "hoat_dong",
+    },
+  });
+};
+
+// Admin
 const findAll = async () => {
   return await DanhMuc.findAll();
 };
@@ -38,6 +48,7 @@ const remove = async (id) => {
 
 module.exports = {
   create,
+  findAllActive,
   findAll,
   findById,
   update,

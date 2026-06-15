@@ -39,9 +39,10 @@ const SanPham = sequelize.define("SanPham", {
     type: DataTypes.INTEGER,
     defaultValue: 0,
   },
-  hinh_anh: {
-    type: DataTypes.STRING(255),
-  },
+hinh_anh: {
+  type: DataTypes.TEXT,
+  allowNull: true,
+},
   han_su_dung: {
     type: DataTypes.DATEONLY,
   },

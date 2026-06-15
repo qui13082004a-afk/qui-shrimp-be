@@ -21,13 +21,12 @@ const register = async (data) => {
 
   const { ho_ten, so_dien_thoai, dia_chi, email, mat_khau, tinh_thanh } = data;
 
-  const existedUser = await authRepository.findByEmailOrPhone(
-    email,
-    so_dien_thoai
+  const existedUser = await authRepository.findByEmail(
+    email
   );
 
   if (existedUser) {
-    throw new Error("Email hoặc số điện thoại đã tồn tại");
+    throw new Error("Email đã tồn tại");
   }
 
   const hashedPassword = await bcrypt.hash(mat_khau, 10);

@@ -8,7 +8,6 @@ const ChiTietDonHang = require("./ChiTietDonHang");
 const ThanhToan = require("./ThanhToan");
 const GiaoHang = require("./GiaoHang");
 const HopDong = require("./HopDong");
-const DinhMuc = require("./DinhMuc");
 const HoSoKhachHang = require("./HoSoKhachHang");
 const BaiViet = require("./BaiViet");
 const BinhLuan = require("./BinhLuan");
@@ -22,15 +21,8 @@ NguoiDung.hasMany(HoSoKhachHang, {
 HoSoKhachHang.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
-// 1-n DinhMuc - HoSoKhachHang
-DinhMuc.hasMany(HoSoKhachHang, {
-  foreignKey: "id_dinh_muc",
-});
-HoSoKhachHang.belongsTo(DinhMuc, {
-  foreignKey: "id_dinh_muc",
-});
-// 1-1 HoSoKhachHang - AoNuoi
-AoNuoi.hasOne(HoSoKhachHang, {
+// 1-n AoNuoi - HoSoKhachHang
+AoNuoi.hasMany(HoSoKhachHang, {
   foreignKey: "id_ao",
 });
 
@@ -43,6 +35,14 @@ AoNuoi.hasMany(VuNuoi, {
 });
 VuNuoi.belongsTo(AoNuoi, {
   foreignKey: "id_ao",
+});
+// 1-1 VuNuoi - HoSoKhachHang
+VuNuoi.hasOne(HoSoKhachHang, {
+  foreignKey: "id_vu_nuoi",
+});
+
+HoSoKhachHang.belongsTo(VuNuoi, {
+  foreignKey: "id_vu_nuoi",
 });
 // 1-n NguoiDung - DonHang
 NguoiDung.hasMany(DonHang, {
@@ -79,7 +79,7 @@ SanPham.hasMany(ChiTietDonHang, {
 ChiTietDonHang.belongsTo(SanPham, {
   foreignKey: "id_san_pham",
 });
-// 1-n DonHang - ThanhToan
+//DonHang 1 ----- 0..n ThanhToan
 DonHang.hasMany(ThanhToan, {
   foreignKey: "id_don_hang",
 });
@@ -144,25 +144,14 @@ HoSoKhachHang.hasMany(GiaHanThanhToan, {
 GiaHanThanhToan.belongsTo(HoSoKhachHang, {
   foreignKey: "id_ho_so",
 });
-// 1-n NguoiDung(KhachHang) - GiaHanThanhToan
-NguoiDung.hasMany(GiaHanThanhToan, {
-  foreignKey: "id_nguoi_gui",
-  as: "gia_han_da_gui",
+// 1-n HoSoKhachHang - GiaHanThanhToan
+HoSoKhachHang.hasMany(GiaHanThanhToan, {
+  foreignKey: "id_ho_so",
 });
 
-GiaHanThanhToan.belongsTo(NguoiDung, {
-  foreignKey: "id_nguoi_gui",
-  as: "nguoi_gui",
-});
-// 1-n NguoiDung(Admin) - GiaHanThanhToan
-NguoiDung.hasMany(GiaHanThanhToan, {
-  foreignKey: "id_nguoi_duyet",
-  as: "gia_han_da_duyet",
-});
-GiaHanThanhToan.belongsTo(NguoiDung, {
-  foreignKey: "id_nguoi_duyet",
-  as: "nguoi_duyet",
-});
+GiaHanThanhToan.belongsTo(HoSoKhachHang, {
+  foreignKey: "id_ho_so",
+}); 
 module.exports = {
   NguoiDung,
   DanhMuc,
@@ -174,7 +163,6 @@ module.exports = {
   ThanhToan,
   GiaoHang,
   HopDong,
-  DinhMuc,
   HoSoKhachHang,
   BaiViet,
   BinhLuan,

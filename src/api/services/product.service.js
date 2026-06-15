@@ -4,7 +4,7 @@ const createProduct = async (data) => {
   const {
     id_danh_muc,
     ten_san_pham,
-    gia_ban,
+    gia,
     so_luong_ton,
     ton_kho_toi_thieu,
     hinh_anh,
@@ -21,7 +21,7 @@ const createProduct = async (data) => {
     throw new Error("Tên sản phẩm không được để trống");
   }
 
-  if (!gia_ban || gia_ban <= 0) {
+  if (!gia || gia <= 0) {
     throw new Error("Giá bán phải lớn hơn 0");
   }
 
@@ -38,7 +38,7 @@ const createProduct = async (data) => {
   const product = await productRepository.create({
     id_danh_muc,
     ten_san_pham,
-    gia_ban,
+    gia,
     so_luong_ton,
     ton_kho_toi_thieu: ton_kho_toi_thieu || 0,
     hinh_anh,

@@ -2,11 +2,12 @@ const { productService } = require("../services");
 const cloudinary = require("../../config/cloudinary");
 const createProduct = async (req, res) => {
   let uploadedPublicIds = [];
+
   try {
     const imageUrls = req.files ? req.files.map((file) => file.path) : [];
 
     uploadedPublicIds = req.files
-      ? req.files.map((file) => file.filename)
+      ? req.files.map((file) => file.filename || file.public_id)
       : [];
 
     const data = {
@@ -22,6 +23,7 @@ const createProduct = async (req, res) => {
       data: product,
     });
   } catch (error) {
+ 
     if (uploadedPublicIds.length > 0) {
       await Promise.all(
         uploadedPublicIds.map((publicId) =>

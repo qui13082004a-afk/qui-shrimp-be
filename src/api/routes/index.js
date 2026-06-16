@@ -6,12 +6,14 @@ const uploadRoute = require("./upload.route");
 const categoryRoute = require("./category.route");
 const productRoute = require("./product.route");
 const pondRoute = require("./pond.route");
-const cropSeasonRoute =require ("./cropSeason.route")
+const cropSeasonRoute =require ("./cropSeason.route");
+const customerProfileRoute = require("./customerProfile.route");
 router.use("/auth", authRoute);
 router.use("/upload", uploadRoute);
 router.use("/categories", categoryRoute);
 router.use("/products", productRoute);
 router.use("/ponds", pondRoute);
 router.use("/crop-seasons", cropSeasonRoute);
+router.use("/customer-profiles", customerProfileRoute);
 
 module.exports = router;

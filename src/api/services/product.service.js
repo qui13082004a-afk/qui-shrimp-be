@@ -56,60 +56,25 @@ const createProduct = async (data) => {
 
   return product;
 };
+
 const getActiveProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
 
-  const keyword = query.keyword || "";
-  const id_danh_muc = query.id_danh_muc || null;
+  // Lọc sạch các chuỗi rỗng gửi từ URL của Front-end
+  const keyword = query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
+  
+  // Chuyển sang undefined nếu rỗng để Sequelize tự động bỏ qua
+  const id_danh_muc = query.id_danh_muc && query.id_danh_muc !== "" ? Number(query.id_danh_muc) : undefined;
 
-  const minPrice = query.minPrice
-    ? Number(query.minPrice)
-    : null;
+  // Ép kiểu số an toàn cho khoảng giá để tránh lỗi Mismatch Data Type
+  const minPrice = query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
+  const maxPrice = query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
 
-  const maxPrice = query.maxPrice
-    ? Number(query.maxPrice)
-    : null;
+  // Đảm bảo sortBy luôn có dữ liệu hợp lệ trước khi gửi xuống Repository
+  const sortBy = query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
 
-  const sortBy = query.sortBy || "newest";
-
-  const result = await productRepository.findAllActive({
-    page,
-    limit,
-    keyword,
-    id_danh_muc,
-    minPrice,
-    maxPrice,
-    sortBy,
-  });
-
-  return {
-    products: result.rows,
-    pagination: {
-      page,
-      limit,
-      totalItems: result.count,
-      totalPages: Math.ceil(result.count / limit),
-    },
-  };
-};
-const getAllProducts = async (query = {}) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 9;
-
-  const keyword = query.keyword || "";
-  const id_danh_muc = query.id_danh_muc || null;
-
-  const minPrice = query.minPrice
-    ? Number(query.minPrice)
-    : null;
-
-  const maxPrice = query.maxPrice
-    ? Number(query.maxPrice)
-    : null;
-
-  const sortBy = query.sortBy || "newest";
-
+  // SỬA TẠI ĐÂY: Đổi từ findAllActive sang findAll để sửa lỗi "is not a function"
   const result = await productRepository.findAll({
     page,
     limit,
@@ -131,6 +96,43 @@ const getAllProducts = async (query = {}) => {
   };
 };
 
+const getAllProducts = async (query = {}) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 9;
+
+  // Lọc sạch các chuỗi rỗng gửi từ URL của Front-end
+  const keyword = query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
+  
+  // Chuyển sang undefined nếu rỗng để Sequelize tự động bỏ qua
+  const id_danh_muc = query.id_danh_muc && query.id_danh_muc !== "" ? Number(query.id_danh_muc) : undefined;
+
+  // Ép kiểu số an toàn cho khoảng giá để tránh lỗi Mismatch Data Type
+  const minPrice = query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
+  const maxPrice = query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
+
+  // Đảm bảo sortBy luôn có dữ liệu hợp lệ trước khi gửi xuống Repository
+  const sortBy = query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
+
+  const result = await productRepository.findAll({
+    page,
+    limit,
+    keyword,
+    id_danh_muc,
+    minPrice,
+    maxPrice,
+    sortBy,
+  });
+
+  return {
+    products: result.rows,
+    pagination: {
+      page,
+      limit,
+      totalItems: result.count,
+      totalPages: Math.ceil(result.count / limit),
+    },
+  };
+};
 
 const getProductById = async (id) => {
   const product = await productRepository.findById(id);

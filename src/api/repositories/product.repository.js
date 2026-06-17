@@ -1,6 +1,7 @@
 const { Op } = require("sequelize");
 const { SanPham, DanhMuc } = require("../models");
 
+// 1. Hàm lấy danh sách sản phẩm đang bán (Dành cho khách hàng / Store)
 const findAllActive = async ({
   page = 1,
   limit = 9,
@@ -87,6 +88,7 @@ const findAllActive = async ({
   });
 };
 
+// 2. Hàm lấy TẤT CẢ sản phẩm (Kể cả hàng đã ẩn - Dành cho Admin)
 const findAll = async ({
   page = 1,
   limit = 9,
@@ -169,4 +171,43 @@ const findAll = async ({
     offset,
     order,
   });
+};
+
+// 3. Hàm tìm sản phẩm theo ID (Xem chi tiết) - BỔ SUNG
+const findById = async (id) => {
+  return await SanPham.findByPk(id, {
+    include: [{ model: DanhMuc }],
+  });
+};
+
+// 4. Hàm tạo mới sản phẩm - BỔ SUNG
+const create = async (data) => {
+  return await SanPham.create(data);
+};
+
+// 5. Hàm cập nhật thông tin sản phẩm - BỔ SUNG
+const update = async (id, data) => {
+  const product = await SanPham.findByPk(id);
+  if (!product) return null;
+  
+  return await product.update(data);
+};
+
+// 6. Hàm xóa sản phẩm (hoặc chuyển trạng thái thành ngung_ban) - BỔ SUNG
+const remove = async (id) => {
+  const product = await SanPham.findByPk(id);
+  if (!product) return null;
+
+  // Nếu dự án của bạn muốn XÓA HẲN khỏi DB, hãy dùng: return await product.destroy();
+  // Còn code dưới đây tuân theo logic Soft Delete (Ẩn đi) bằng cách đổi trạng thái:
+  return await product.update({ trang_thai: "ngung_ban" });
+};
+
+module.exports = {
+  findAllActive,
+  findAll,
+  findById,
+  create,
+  update,
+  remove,
 };

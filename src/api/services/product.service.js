@@ -56,14 +56,54 @@ const createProduct = async (data) => {
 
   return product;
 };
+const getActiveProducts = async (query) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 9;
+  const keyword = query.keyword || "";
+  const id_danh_muc = query.id_danh_muc || null;
 
-const getActiveProducts = async () => {
-  return await productRepository.findAllActive();
+  const result = await productRepository.findAllActive({
+    page,
+    limit,
+    keyword,
+    id_danh_muc,
+  });
+
+  return {
+    products: result.rows,
+    pagination: {
+      page,
+      limit,
+      totalItems: result.count,
+      totalPages: Math.ceil(result.count / limit),
+    },
+  };
 };
 
-const getAllProducts = async () => {
-  return await productRepository.findAll();
+const getAllProducts = async (query) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 9;
+  const keyword = query.keyword || "";
+  const id_danh_muc = query.id_danh_muc || null;
+
+  const result = await productRepository.findAll({
+    page,
+    limit,
+    keyword,
+    id_danh_muc,
+  });
+
+  return {
+    products: result.rows,
+    pagination: {
+      page,
+      limit,
+      totalItems: result.count,
+      totalPages: Math.ceil(result.count / limit),
+    },
+  };
 };
+
 
 const getProductById = async (id) => {
   const product = await productRepository.findById(id);

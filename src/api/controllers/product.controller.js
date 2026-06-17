@@ -40,15 +40,16 @@ const createProduct = async (req, res) => {
 };
 const getActiveProducts = async (req, res) => {
   try {
-    const products = await productService.getActiveProducts();
+    const result = await productService.getActiveProducts(req.query || {});
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Lấy danh sách sản phẩm thành công",
-      data: products,
+      data: result.products,
+      pagination: result.pagination,
     });
   } catch (error) {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: error.message,
     });
@@ -57,21 +58,21 @@ const getActiveProducts = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
-    const products = await productService.getAllProducts();
+    const result = await productService.getAllProducts(req.query || {});
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Lấy tất cả sản phẩm thành công",
-      data: products,
+      data: result.products,
+      pagination: result.pagination,
     });
   } catch (error) {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: error.message,
     });
   }
 };
-
 const getProductById = async (req, res) => {
   try {
     const { id } = req.params;

@@ -7,6 +7,7 @@ const cropSeasonController= require("./cropSeason.controller");
 const customerProfileController = require("./customerProfile.controller");
 const orderController = require("./order.controller");
 const paymentController = require("./payment.controller");
+const deliveryController = require("./delivery.controller");
 module.exports = {
   authController,
   uploadController,
@@ -16,5 +17,6 @@ module.exports = {
   cropSeasonController,
   customerProfileController,
   orderController,
-  paymentController
+  paymentController,
+  deliveryController
 };

@@ -6,6 +6,7 @@ const cropSeasonRepository = require("./cropSeason.repository");
 const customerProfileRepository = require("./customerProfile.repository");
 const orderRepository = require("./order.repository");
 const paymentRepository = require("./payment.repository");
+const deliveryRepository = require("./delivery.repository");
 module.exports = {
   authRepository,
   categoryRepository,
@@ -14,6 +15,7 @@ module.exports = {
   cropSeasonRepository,
   customerProfileRepository,
   orderRepository,
-  paymentRepository
+  paymentRepository,
+  deliveryRepository
 };
   

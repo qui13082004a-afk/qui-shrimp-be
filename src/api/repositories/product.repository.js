@@ -3,31 +3,57 @@ const { SanPham, DanhMuc } = require("../models");
 const create = async (data) => {
   return await SanPham.create(data);
 };
+const findAllActive = async ({ page = 1, limit = 9, keyword = "", id_danh_muc }) => {
+  const offset = (page - 1) * limit;
 
-const findAllActive = async () => {
-  return await SanPham.findAll({
-    where: {
-      trang_thai: "dang_ban",
-    },
-    include: [
-      {
-        model: DanhMuc,
-        attributes: ["id_danh_muc", "ten_danh_muc"],
-      },
-    ],
+  const where = {
+    trang_thai: "dang_ban",
+  };
+
+  if (id_danh_muc) {
+    where.id_danh_muc = id_danh_muc;
+  }
+
+  if (keyword) {
+    where.ten_san_pham = {
+      [require("sequelize").Op.like]: `%${keyword}%`,
+    };
+  }
+
+  return await SanPham.findAndCountAll({
+    where,
+    include: [{ model: DanhMuc }],
+    limit,
+    offset,
+    order: [["id_san_pham", "DESC"]],
   });
 };
 
-const findAll = async () => {
-  return await SanPham.findAll({
-    include: [
-      {
-        model: DanhMuc,
-        attributes: ["id_danh_muc", "ten_danh_muc"],
-      },
-    ],
+
+const findAll = async ({ page = 1, limit = 9, keyword = "", id_danh_muc }) => {
+  const offset = (page - 1) * limit;
+
+  const where = {};
+
+  if (id_danh_muc) {
+    where.id_danh_muc = id_danh_muc;
+  }
+
+  if (keyword) {
+    where.ten_san_pham = {
+      [require("sequelize").Op.like]: `%${keyword}%`,
+    };
+  }
+
+  return await SanPham.findAndCountAll({
+    where,
+    include: [{ model: DanhMuc }],
+    limit,
+    offset,
+    order: [["id_san_pham", "DESC"]],
   });
 };
+
 
 const findById = async (id) => {
   return await SanPham.findByPk(id, {

@@ -55,8 +55,7 @@ const createProduct = async (data) => {
   });
 
   return product;
-};
-const getActiveProducts = async (query) => {
+};const getActiveProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
   const keyword = query.keyword || "";
@@ -80,7 +79,7 @@ const getActiveProducts = async (query) => {
   };
 };
 
-const getAllProducts = async (query) => {
+const getAllProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
   const keyword = query.keyword || "";

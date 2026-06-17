@@ -1,9 +1,15 @@
+const { Op } = require("sequelize");
 const { SanPham, DanhMuc } = require("../models");
 
-const create = async (data) => {
-  return await SanPham.create(data);
-};
-const findAllActive = async ({ page = 1, limit = 9, keyword = "", id_danh_muc }) => {
+const findAllActive = async ({
+  page = 1,
+  limit = 9,
+  keyword = "",
+  id_danh_muc,
+  minPrice,
+  maxPrice,
+  sortBy = "newest",
+}) => {
   const offset = (page - 1) * limit;
 
   const where = {
@@ -15,9 +21,61 @@ const findAllActive = async ({ page = 1, limit = 9, keyword = "", id_danh_muc })
   }
 
   if (keyword) {
-    where.ten_san_pham = {
-      [require("sequelize").Op.like]: `%${keyword}%`,
-    };
+    where[Op.or] = [
+      {
+        ten_san_pham: {
+          [Op.like]: `%${keyword}%`,
+        },
+      },
+      {
+        cong_dung: {
+          [Op.like]: `%${keyword}%`,
+        },
+      },
+    ];
+  }
+
+  if (minPrice || maxPrice) {
+    where.gia = {};
+
+    if (minPrice) {
+      where.gia[Op.gte] = minPrice;
+    }
+
+    if (maxPrice) {
+      where.gia[Op.lte] = maxPrice;
+    }
+  }
+
+  let order = [["id_san_pham", "DESC"]];
+
+  switch (sortBy) {
+    case "priceAsc":
+      order = [["gia", "ASC"]];
+      break;
+
+    case "priceDesc":
+      order = [["gia", "DESC"]];
+      break;
+
+    case "nameAsc":
+      order = [["ten_san_pham", "ASC"]];
+      break;
+
+    case "nameDesc":
+      order = [["ten_san_pham", "DESC"]];
+      break;
+
+    case "stockDesc":
+      order = [["ton_kho", "DESC"]];
+      break;
+
+    case "oldest":
+      order = [["id_san_pham", "ASC"]];
+      break;
+
+    default:
+      order = [["id_san_pham", "DESC"]];
   }
 
   return await SanPham.findAndCountAll({
@@ -25,12 +83,19 @@ const findAllActive = async ({ page = 1, limit = 9, keyword = "", id_danh_muc })
     include: [{ model: DanhMuc }],
     limit,
     offset,
-    order: [["id_san_pham", "DESC"]],
+    order,
   });
 };
 
-
-const findAll = async ({ page = 1, limit = 9, keyword = "", id_danh_muc }) => {
+const findAll = async ({
+  page = 1,
+  limit = 9,
+  keyword = "",
+  id_danh_muc,
+  minPrice,
+  maxPrice,
+  sortBy = "newest",
+}) => {
   const offset = (page - 1) * limit;
 
   const where = {};
@@ -40,9 +105,61 @@ const findAll = async ({ page = 1, limit = 9, keyword = "", id_danh_muc }) => {
   }
 
   if (keyword) {
-    where.ten_san_pham = {
-      [require("sequelize").Op.like]: `%${keyword}%`,
-    };
+    where[Op.or] = [
+      {
+        ten_san_pham: {
+          [Op.like]: `%${keyword}%`,
+        },
+      },
+      {
+        cong_dung: {
+          [Op.like]: `%${keyword}%`,
+        },
+      },
+    ];
+  }
+
+  if (minPrice || maxPrice) {
+    where.gia = {};
+
+    if (minPrice) {
+      where.gia[Op.gte] = minPrice;
+    }
+
+    if (maxPrice) {
+      where.gia[Op.lte] = maxPrice;
+    }
+  }
+
+  let order = [["id_san_pham", "DESC"]];
+
+  switch (sortBy) {
+    case "priceAsc":
+      order = [["gia", "ASC"]];
+      break;
+
+    case "priceDesc":
+      order = [["gia", "DESC"]];
+      break;
+
+    case "nameAsc":
+      order = [["ten_san_pham", "ASC"]];
+      break;
+
+    case "nameDesc":
+      order = [["ten_san_pham", "DESC"]];
+      break;
+
+    case "stockDesc":
+      order = [["ton_kho", "DESC"]];
+      break;
+
+    case "oldest":
+      order = [["id_san_pham", "ASC"]];
+      break;
+
+    default:
+      order = [["id_san_pham", "DESC"]];
   }
 
   return await SanPham.findAndCountAll({
@@ -50,53 +167,6 @@ const findAll = async ({ page = 1, limit = 9, keyword = "", id_danh_muc }) => {
     include: [{ model: DanhMuc }],
     limit,
     offset,
-    order: [["id_san_pham", "DESC"]],
+    order,
   });
-};
-
-
-const findById = async (id) => {
-  return await SanPham.findByPk(id, {
-    include: [
-      {
-        model: DanhMuc,
-        attributes: ["id_danh_muc", "ten_danh_muc"],
-      },
-    ],
-  });
-};
-
-const update = async (id, data) => {
-  const sanPham = await SanPham.findByPk(id);
-
-  if (!sanPham) {
-    return null;
-  }
-
-  await sanPham.update(data);
-
-  return sanPham;
-};
-
-const remove = async (id) => {
-  const sanPham = await SanPham.findByPk(id);
-
-  if (!sanPham) {
-    return null;
-  }
-
-  await sanPham.update({
-    trang_thai: "ngung_ban",
-  });
-
-  return true;
-};
-
-module.exports = {
-  create,
-  findAllActive,
-  findAll,
-  findById,
-  update,
-  remove,
 };

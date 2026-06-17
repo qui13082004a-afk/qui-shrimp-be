@@ -55,17 +55,32 @@ const createProduct = async (data) => {
   });
 
   return product;
-};const getActiveProducts = async (query = {}) => {
+};
+const getActiveProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
+
   const keyword = query.keyword || "";
   const id_danh_muc = query.id_danh_muc || null;
+
+  const minPrice = query.minPrice
+    ? Number(query.minPrice)
+    : null;
+
+  const maxPrice = query.maxPrice
+    ? Number(query.maxPrice)
+    : null;
+
+  const sortBy = query.sortBy || "newest";
 
   const result = await productRepository.findAllActive({
     page,
     limit,
     keyword,
     id_danh_muc,
+    minPrice,
+    maxPrice,
+    sortBy,
   });
 
   return {
@@ -78,18 +93,31 @@ const createProduct = async (data) => {
     },
   };
 };
-
 const getAllProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
+
   const keyword = query.keyword || "";
   const id_danh_muc = query.id_danh_muc || null;
+
+  const minPrice = query.minPrice
+    ? Number(query.minPrice)
+    : null;
+
+  const maxPrice = query.maxPrice
+    ? Number(query.maxPrice)
+    : null;
+
+  const sortBy = query.sortBy || "newest";
 
   const result = await productRepository.findAll({
     page,
     limit,
     keyword,
     id_danh_muc,
+    minPrice,
+    maxPrice,
+    sortBy,
   });
 
   return {

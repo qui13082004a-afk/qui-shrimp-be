@@ -6,7 +6,6 @@ const createCategory = async (data) => {
   if (!ten_danh_muc) {
     throw new Error("Tên danh mục không được để trống");
   }
-
   const category = await categoryRepository.create({
     ten_danh_muc,
     mo_ta,

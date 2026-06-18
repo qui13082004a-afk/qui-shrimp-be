@@ -10,7 +10,9 @@ const findByEmailOrPhone = async (email, so_dien_thoai) => {
     },
   });
 };
-
+const findByPk = async (id, options = {}) => {
+  return await NguoiDung.findByPk(id, options);
+};
 const createUser = async (data) => {
   return await NguoiDung.create(data);
 };
@@ -23,4 +25,5 @@ module.exports = {
   findByEmailOrPhone,
   createUser,
   findByEmail,
+  findByPk
 };

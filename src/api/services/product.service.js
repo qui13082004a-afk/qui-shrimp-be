@@ -60,22 +60,12 @@ const createProduct = async (data) => {
 const getActiveProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
-
-  // Lọc sạch các chuỗi rỗng gửi từ URL của Front-end
   const keyword = query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
-  
-  // Chuyển sang undefined nếu rỗng để Sequelize tự động bỏ qua
   const id_danh_muc = query.id_danh_muc && query.id_danh_muc !== "" ? Number(query.id_danh_muc) : undefined;
-
-  // Ép kiểu số an toàn cho khoảng giá để tránh lỗi Mismatch Data Type
   const minPrice = query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
   const maxPrice = query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
-
-  // Đảm bảo sortBy luôn có dữ liệu hợp lệ trước khi gửi xuống Repository
   const sortBy = query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
-
-  // SỬA TẠI ĐÂY: Đổi từ findAllActive sang findAll để sửa lỗi "is not a function"
-  const result = await productRepository.findAll({
+  const result = await productRepository.findAllActive({
     page,
     limit,
     keyword,

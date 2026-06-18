@@ -236,6 +236,61 @@ const resetPassword = async (email, otp_code, mat_khau_moi) => {
   return true;
 };
 
+/**
+ * CẬP NHẬT THÔNG TIN CÁ NHÂN (Dành cho ProfilePage)
+ */
+const updateProfile = async (userId, updateData) => {
+  const user = await authRepository.findById(userId);
+
+  if (!user) {
+    throw new Error("Không tìm thấy thông tin tài khoản");
+  }
+
+  // Danh sách các trường được phép cập nhật thủ công
+  const allowedFields = ["ho_ten", "so_dien_thoai", "dia_chi", "tinh_thanh", "anh_dai_dien"];
+  
+  allowedFields.forEach((field) => {
+    if (updateData[field] !== undefined) {
+      user[field] = updateData[field];
+    }
+  });
+
+  await user.save();
+  user.mat_khau = undefined;
+  user.otp_code = undefined;
+  user.otp_expires = undefined;
+
+  return user;
+};
+
+/**
+ * ĐỔI MẬT KHẨU AN TOÀN (Kiểm tra mật khẩu cũ)
+ */
+const changePassword = async (userId, mat_khau_cu, mat_khau_moi) => {
+  const user = await authRepository.findById(userId);
+
+  if (!user) {
+    throw new Error("Không tìm thấy tài khoản");
+  }
+
+  if (!mat_khau_moi || mat_khau_moi.length < 6) {
+    throw new Error("Mật khẩu mới phải từ 6 ký tự trở lên");
+  }
+
+  // Đối chiếu mật khẩu hiện tại
+  const isMatch = await bcrypt.compare(mat_khau_cu, user.mat_khau);
+  if (!isMatch) {
+    throw new Error("Mật khẩu hiện tại không chính xác");
+  }
+
+  // Thực hiện mã hóa mật khẩu mới
+  const hashedPassword = await bcrypt.hash(mat_khau_moi, 10);
+  user.mat_khau = hashedPassword;
+  await user.save();
+
+  return true;
+};
+
 module.exports = {
   register,
   verifyEmail,
@@ -243,4 +298,6 @@ module.exports = {
   resendOtp,
   forgotPassword,
   resetPassword,
+  updateProfile,
+  changePassword,
 };

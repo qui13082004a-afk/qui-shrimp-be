@@ -1,5 +1,6 @@
 const { authService } = require("../services");
 
+
 const register = async (req, res) => {
   try {
     await authService.register(req.body);
@@ -109,14 +110,11 @@ const resetPassword = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    // Ẩn mật khẩu trước khi trả về thông tin tài khoản hiện tại
-    if (req.user) {
-      req.user.mat_khau = undefined;
-    }
+    const data = await layThongTinTaiKhoan(req.user.id_nguoi_dung);
     return res.status(200).json({
       success: true,
       message: "Lấy thông tin tài khoản thành công",
-      data: req.user,
+      data,
     });
   } catch (error) {
     return res.status(500).json({

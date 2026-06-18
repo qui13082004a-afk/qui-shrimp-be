@@ -276,21 +276,33 @@ const changePassword = async (userId, mat_khau_cu, mat_khau_moi) => {
   if (!mat_khau_moi || mat_khau_moi.length < 6) {
     throw new Error("Mật khẩu mới phải từ 6 ký tự trở lên");
   }
-
-  // Đối chiếu mật khẩu hiện tại
   const isMatch = await bcrypt.compare(mat_khau_cu, user.mat_khau);
   if (!isMatch) {
     throw new Error("Mật khẩu hiện tại không chính xác");
   }
-
-  // Thực hiện mã hóa mật khẩu mới
   const hashedPassword = await bcrypt.hash(mat_khau_moi, 10);
   user.mat_khau = hashedPassword;
   await user.save();
 
   return true;
 };
+const layThongTinTaiKhoan = async (idNguoiDung) => {
+  const nguoiDung = await NguoiDung.findByPk(idNguoiDung, {
+    attributes: {
+      exclude: ["mat_khau", "otp_code", "otp_expires"],
+    },
+    // Nếu có model liên kết, ví dụ đơn hàng, giỏ hàng... thì include thêm ở đây:
+    // include: [
+    //   { model: DonHang, as: "don_hang", attributes: ["id_don_hang", "trang_thai", "tong_tien"] },
+    // ],
+  });
 
+  if (!nguoiDung) {
+    throw new Error("Không tìm thấy người dùng");
+  }
+
+  return nguoiDung;
+};
 module.exports = {
   register,
   verifyEmail,
@@ -300,4 +312,5 @@ module.exports = {
   resetPassword,
   updateProfile,
   changePassword,
+  layThongTinTaiKhoan
 };

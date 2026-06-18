@@ -110,7 +110,7 @@ const resetPassword = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    const data = await layThongTinTaiKhoan(req.user.id_nguoi_dung);
+    const data = await authService.layThongTinTaiKhoan(req.user.id_nguoi_dung);
     return res.status(200).json({
       success: true,
       message: "Lấy thông tin tài khoản thành công",

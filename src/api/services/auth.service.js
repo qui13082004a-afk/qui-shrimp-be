@@ -287,7 +287,7 @@ const changePassword = async (userId, mat_khau_cu, mat_khau_moi) => {
   return true;
 };
 const layThongTinTaiKhoan = async (idNguoiDung) => {
-  const nguoiDung = await NguoiDung.findByPk(idNguoiDung, {
+  const nguoiDung = await authRepository.findByPk(idNguoiDung, {
     attributes: {
       exclude: ["mat_khau", "otp_code", "otp_expires"],
     },

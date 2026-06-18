@@ -70,6 +70,7 @@ const resendOtp = async (req, res) => {
     });
   }
 };
+
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -105,21 +106,74 @@ const resetPassword = async (req, res) => {
     });
   }
 };
+
 const getMe = async (req, res) => {
   try {
-    // req.user đã được authMiddleware lấy sẵn từ database sau khi check token hợp lệ
+    // Ẩn mật khẩu trước khi trả về thông tin tài khoản hiện tại
+    if (req.user) {
+      req.user.mat_khau = undefined;
+    }
     return res.status(200).json({
       success: true,
       message: "Lấy thông tin tài khoản thành công",
-      data: req.user
+      data: req.user,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
+
+/**
+ * CẬP NHẬT HỒ SƠ CÁ NHÂN
+ */
+const updateProfile = async (req, res) => {
+  try {
+    const updatedUser = await authService.updateProfile(
+      req.user.id_nguoi_dung,
+      req.body
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật hồ sơ thành công",
+      data: updatedUser,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * ĐỔI MẬT KHẨU
+ */
+const changePassword = async (req, res) => {
+  try {
+    const { mat_khau_cu, mat_khau_moi } = req.body;
+
+    await authService.changePassword(
+      req.user.id_nguoi_dung,
+      mat_khau_cu,
+      mat_khau_moi
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Thay đổi mật khẩu thành công",
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   register,
   verifyEmail,
@@ -127,5 +181,7 @@ module.exports = {
   resendOtp,
   forgotPassword,
   resetPassword,
-  getMe, 
+  getMe,
+  updateProfile,
+  changePassword,
 };

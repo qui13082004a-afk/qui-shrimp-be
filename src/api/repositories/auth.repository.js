@@ -21,9 +21,13 @@ const findByEmail = async (email) => {
   return await NguoiDung.findOne({ where: { email } });
 };
 
+const findById = async (id) => {
+  return await NguoiDung.findByPk(id);
+};
 module.exports = {
   findByEmailOrPhone,
   createUser,
   findByEmail,
-  findByPk
+  findByPk,
+  findById
 };

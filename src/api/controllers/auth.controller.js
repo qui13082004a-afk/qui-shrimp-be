@@ -105,6 +105,21 @@ const resetPassword = async (req, res) => {
     });
   }
 };
+const getMe = async (req, res) => {
+  try {
+    // req.user đã được authMiddleware lấy sẵn từ database sau khi check token hợp lệ
+    return res.status(200).json({
+      success: true,
+      message: "Lấy thông tin tài khoản thành công",
+      data: req.user
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 module.exports = {
   register,
   verifyEmail,
@@ -112,4 +127,5 @@ module.exports = {
   resendOtp,
   forgotPassword,
   resetPassword,
+  getMe, 
 };

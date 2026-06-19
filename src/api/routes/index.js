@@ -8,7 +8,7 @@ const productRoute = require("./product.route");
 const pondRoute = require("./pond.route");
 const cropSeasonRoute =require ("./cropSeason.route");
 const customerProfileRoute = require("./customerProfile.route");
-const orderRoute = require("./order.route");
+const orderRoute = require("./order.route");    
 const paymentRoute = require("./payment.route");
 const deliveryRoute = require("./delivery.route");
 router.use("/auth", authRoute);

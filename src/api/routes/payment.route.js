@@ -3,40 +3,51 @@ const router = express.Router();
 
 const { paymentController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
+const { authorizeAdmin, authorizeAdminOrDeliveryStaff } = authMiddleware;
 const { validateConfirmPayment, validateFailPayment } = require("../middlewares/validate");
 
+// API nhận Webhook báo có tiền từ ngân hàng (PayOS, VietQR) để tự động khớp và duyệt đơn hàng
+// router.post(
+//   "/webhook", 
+//   paymentController.processWebhook
+// );
+
 // Khách hàng xem lịch sử thanh toán của chính mình
-// Dùng để theo dõi số tiền, phương thức thanh toán, trạng thái thanh toán
-router.get("/my", authMiddleware, paymentController.getMyPayments);
+router.get(
+  "/my", 
+  authMiddleware, 
+  paymentController.getMyPayments
+);
 
-// Admin xem toàn bộ thanh toán trong hệ thống
-// Dùng để đối soát doanh thu, kiểm tra thanh toán COD, chuyển khoản, trả sau
-router.get("/admin", authMiddleware, paymentController.getAllPayments);
-
-// Khách hàng hoặc admin xem thanh toán của một đơn hàng cụ thể
-// Khách chỉ xem được đơn của mình, admin xem được tất cả
+// Khách hàng hoặc admin xem chi tiết thanh toán của một đơn hàng cụ thể
 router.get(
   "/order/:orderId",
   authMiddleware,
   paymentController.getPaymentsByOrder
 );
 
-// Admin hoặc nhân viên giao hàng xác nhận thanh toán thành công
-// COD: nhân viên giao hàng/admin xác nhận sau khi thu tiền
-// Trả sau: admin xác nhận sau khi khách trả công nợ
-// Chuyển khoản thủ công: admin xác nhận nếu chưa tích hợp MoMo/VNPay
+// Admin xem toàn bộ danh sách giao dịch thanh toán trong hệ thống
+router.get(
+  "/admin",
+  authMiddleware,
+  authorizeAdmin,
+  paymentController.getAllPayments
+);
+
+// Admin hoặc nhân viên giao hàng xác nhận giao dịch thành công (COD hoặc Trả sau)
 router.put(
   "/:id/confirm",
   authMiddleware,
+  authorizeAdminOrDeliveryStaff,
   validateConfirmPayment,
   paymentController.confirmPayment
 );
 
-// Admin đánh dấu thanh toán thất bại
-// Dùng khi chuyển khoản lỗi, khách không thanh toán, hoặc COD giao thất bại
+// Admin đánh dấu giao dịch thanh toán bị thất bại (Chuyển khoản lỗi, COD hoàn trả)
 router.put(
   "/:id/fail",
   authMiddleware,
+  authorizeAdmin,
   validateFailPayment,
   paymentController.failPayment
 );

@@ -1,6 +1,12 @@
 const { Op } = require("sequelize");
 const { SanPham, DanhMuc } = require("../models");
-
+const countByCategoryId = async (id_danh_muc) => {
+  return await SanPham.count({
+    where: {
+      id_danh_muc: id_danh_muc,
+    },
+  });
+};
 // 1. Hàm lấy danh sách sản phẩm đang bán (Dành cho khách hàng / Store)
 const findAllActive = async ({
   page = 1,
@@ -210,4 +216,5 @@ module.exports = {
   create,
   update,
   remove,
+  countByCategoryId,
 };

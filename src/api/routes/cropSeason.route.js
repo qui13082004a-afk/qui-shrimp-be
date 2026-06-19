@@ -2,24 +2,56 @@ const express = require("express");
 const router = express.Router();
 
 const { cropSeasonController } = require("../controllers");
+
 const authMiddleware = require("../middlewares/auth.middleware");
+
+const { authorizeCustomer, authorizeAdminOrCustomer } = require("../middlewares/auth.middleware");
+
 const {
   validateCreateCropSeason,
   validateUpdateCropSeason,
 } = require("../middlewares/validate");
 
-router.post("/", authMiddleware, validateCreateCropSeason, cropSeasonController.createCropSeason);
+// API tạo vụ nuôi mới
+router.post(
+  "/", 
+  authMiddleware, 
+  authorizeCustomer, 
+  validateCreateCropSeason, 
+  cropSeasonController.createCropSeason
+);
 
+// API lấy danh sách các vụ nuôi theo ao nuôi
 router.get(
   "/pond/:id_ao",
   authMiddleware,
+  authorizeAdminOrCustomer, 
   cropSeasonController.getCropSeasonsByPond
 );
 
-router.get("/:id", authMiddleware, cropSeasonController.getCropSeasonById);
+// API lấy chi tiết một vụ nuôi qua ID
+router.get(
+  "/:id", 
+  authMiddleware, 
+  authorizeAdminOrCustomer, 
+  cropSeasonController.getCropSeasonById
+);
 
-router.put("/:id", authMiddleware, validateUpdateCropSeason, cropSeasonController.updateCropSeason);
+// API cập nhật thông tin vụ nuôi
+router.put(
+  "/:id", 
+  authMiddleware, 
+  authorizeCustomer, 
+  validateUpdateCropSeason, 
+  cropSeasonController.updateCropSeason
+);
 
-router.delete("/:id", authMiddleware, cropSeasonController.deleteCropSeason);
+// API xóa vụ nuôi
+router.delete(
+  "/:id", 
+  authMiddleware, 
+  authorizeCustomer, 
+  cropSeasonController.deleteCropSeason
+);
 
 module.exports = router;

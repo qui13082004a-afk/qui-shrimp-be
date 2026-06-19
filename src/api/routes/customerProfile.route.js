@@ -3,11 +3,17 @@ const router = express.Router();
 
 const { customerProfileController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
+const {
+  validateCreateCustomerProfile,
+  validateUpdateCustomerProfile,
+  validateApprovePostpaid,
+} = require("../middlewares/validate");
 
 // Khách hàng tạo hồ sơ xét duyệt trả sau cho ao/vụ nuôi
 router.post(
   "/",
   authMiddleware,
+  validateCreateCustomerProfile,
   customerProfileController.createCustomerProfile
 );
 
@@ -37,6 +43,7 @@ router.get(
 router.put(
   "/:id/approve-postpaid",
   authMiddleware,
+  validateApprovePostpaid,
   customerProfileController.approvePostpaid
 );
 
@@ -45,6 +52,7 @@ router.put(
 router.put(
   "/:id",
   authMiddleware,
+  validateUpdateCustomerProfile,
   customerProfileController.updateCustomerProfile
 );
 

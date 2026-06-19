@@ -3,6 +3,7 @@ const router = express.Router();
 
 const { paymentController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
+const { validateConfirmPayment, validateFailPayment } = require("../middlewares/validate");
 
 // Khách hàng xem lịch sử thanh toán của chính mình
 // Dùng để theo dõi số tiền, phương thức thanh toán, trạng thái thanh toán
@@ -27,11 +28,17 @@ router.get(
 router.put(
   "/:id/confirm",
   authMiddleware,
+  validateConfirmPayment,
   paymentController.confirmPayment
 );
 
 // Admin đánh dấu thanh toán thất bại
 // Dùng khi chuyển khoản lỗi, khách không thanh toán, hoặc COD giao thất bại
-router.put("/:id/fail", authMiddleware, paymentController.failPayment);
+router.put(
+  "/:id/fail",
+  authMiddleware,
+  validateFailPayment,
+  paymentController.failPayment
+);
 
 module.exports = router;

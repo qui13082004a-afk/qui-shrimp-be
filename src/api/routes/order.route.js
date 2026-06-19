@@ -3,10 +3,11 @@ const router = express.Router();
 
 const { orderController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
+const { validateCreateOrder, validateUpdateOrderStatus } = require("../middlewares/validate");
 
 // Khách hàng tạo đơn hàng mới
 // Hệ thống kiểm tra tồn kho, tính tổng tiền, tạo đơn hàng, tạo chi tiết đơn hàng và tạo thanh toán
-router.post("/", authMiddleware, orderController.createOrder);
+router.post("/", authMiddleware, validateCreateOrder, orderController.createOrder);
 
 // Khách hàng xem danh sách đơn hàng của chính mình
 // Dùng để theo dõi trạng thái đơn hàng, tổng tiền, hình thức thanh toán

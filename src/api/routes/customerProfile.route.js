@@ -3,6 +3,7 @@ const router = express.Router();
 
 const { customerProfileController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
+const { authorizeAdmin } = authMiddleware;
 const {
   validateCreateCustomerProfile,
   validateUpdateCustomerProfile,
@@ -28,11 +29,11 @@ router.get(
 router.get(
   "/admin",
   authMiddleware,
+  authorizeAdmin,
   customerProfileController.getAllCustomerProfiles
 );
 
 // Khách hàng hoặc admin xem chi tiết một hồ sơ
-// Khách chỉ xem hồ sơ của mình, admin xem được tất cả
 router.get(
   "/:id",
   authMiddleware,
@@ -43,12 +44,12 @@ router.get(
 router.put(
   "/:id/approve-postpaid",
   authMiddleware,
+  authorizeAdmin,
   validateApprovePostpaid,
   customerProfileController.approvePostpaid
 );
 
 // Cập nhật hồ sơ khách hàng
-// Khách chỉ cập nhật ghi chú, admin có thể cập nhật hạn mức/trạng thái trả sau
 router.put(
   "/:id",
   authMiddleware,

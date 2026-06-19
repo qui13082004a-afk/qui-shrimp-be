@@ -1,10 +1,15 @@
 const { DanhMuc } = require("../models");
 
+/**
+ * Tạo mới danh mục vật tư
+ */
 const create = async (data) => {
   return await DanhMuc.create(data);
 };
 
-// Khách hàng
+/**
+ * Khách hàng: Lấy danh sách danh mục đang hoạt động
+ */
 const findAllActive = async () => {
   return await DanhMuc.findAll({
     where: {
@@ -13,15 +18,31 @@ const findAllActive = async () => {
   });
 };
 
-// Admin
+/**
+ * Admin: Lấy toàn bộ danh mục hệ thống
+ */
 const findAll = async () => {
   return await DanhMuc.findAll();
 };
 
+/**
+ * Tìm kiếm danh mục theo ID khóa chính
+ */
 const findById = async (id) => {
   return await DanhMuc.findByPk(id);
 };
 
+const findByName = async (ten_danh_muc) => {
+  return await DanhMuc.findOne({
+    where: {
+      ten_danh_muc: ten_danh_muc,
+    },
+  });
+};
+
+/**
+ * Cập nhật thông tin danh mục vật tư
+ */
 const update = async (id, data) => {
   const danhMuc = await DanhMuc.findByPk(id);
 
@@ -34,6 +55,9 @@ const update = async (id, data) => {
   return danhMuc;
 };
 
+/**
+ * Xóa danh mục ra khỏi hệ thống
+ */
 const remove = async (id) => {
   const danhMuc = await DanhMuc.findByPk(id);
 
@@ -47,10 +71,12 @@ const remove = async (id) => {
 };
 
 module.exports = {
+  
   create,
   findAllActive,
   findAll,
   findById,
+  findByName, 
   update,
   remove,
 };

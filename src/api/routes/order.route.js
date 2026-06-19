@@ -7,7 +7,7 @@ const { authorizeAdmin, authorizeAdminOrDeliveryStaff } = authMiddleware;
 const { validateCreateOrder, validateUpdateOrderStatus } = require("../middlewares/validate");
 
 // Khách hàng tạo đơn hàng mới
-router.post("/", validateCreateOrder, orderController.createOrder);
+router.post("/", authMiddleware, validateCreateOrder, orderController.createOrder);
 
 // Khách hàng xem danh sách đơn hàng của chính mình
 router.get("/my", authMiddleware, orderController.getMyOrders);

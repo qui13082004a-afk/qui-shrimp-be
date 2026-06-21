@@ -6,27 +6,40 @@ const authMiddleware = require("../middlewares/auth.middleware");
 const { authorizeAdmin, authorizeAdminOrDeliveryStaff } = authMiddleware;
 const { validateConfirmPayment, validateFailPayment } = require("../middlewares/validate");
 
-// API nhận Webhook báo có tiền từ ngân hàng (PayOS, VietQR) để tự động khớp và duyệt đơn hàng
-// router.post(
-//   "/webhook", 
-//   paymentController.processWebhook
-// );
+// API nhận Webhook báo biến động số dư tự động từ VietQR / PayOS
+router.post(
+  "/webhook", 
+  paymentController.processWebhook
+);
 
-// Khách hàng xem lịch sử thanh toán của chính mình
+// API nhận Webhook IPN thông báo trạng thái giao dịch tự động từ ví MoMo
+router.post(
+  "/momo-callback",
+  paymentController.handleMomoCallback
+);
+
+// Khách hàng tự tra cứu danh sách lịch sử thanh toán của cá nhân
 router.get(
   "/my", 
   authMiddleware, 
   paymentController.getMyPayments
 );
 
-// Khách hàng hoặc admin xem chi tiết thanh toán của một đơn hàng cụ thể
+// Khách hàng hoặc Admin xem chi tiết lịch sử thanh toán của một đơn hàng cụ thể
 router.get(
   "/order/:orderId",
   authMiddleware,
   paymentController.getPaymentsByOrder
 );
 
-// Admin xem toàn bộ danh sách giao dịch thanh toán trong hệ thống
+// Khách hàng gửi yêu cầu tạo link thanh toán ví MoMo dựa trên mã hóa đơn (ID thanh toán)
+router.post(
+  "/:id/momo",
+  authMiddleware,
+  paymentController.createMomoPayment
+);
+
+// Admin xem danh sách biến động số dư toàn bộ hệ thống
 router.get(
   "/admin",
   authMiddleware,
@@ -34,7 +47,7 @@ router.get(
   paymentController.getAllPayments
 );
 
-// Admin hoặc nhân viên giao hàng xác nhận giao dịch thành công (COD hoặc Trả sau)
+// Admin hoặc nhân viên giao hàng xác nhận thu tiền thành công thủ công (COD hoặc ký nợ trả sau)
 router.put(
   "/:id/confirm",
   authMiddleware,
@@ -43,7 +56,7 @@ router.put(
   paymentController.confirmPayment
 );
 
-// Admin đánh dấu giao dịch thanh toán bị thất bại (Chuyển khoản lỗi, COD hoàn trả)
+// Admin chủ động đánh dấu giao dịch thanh toán bị thất bại
 router.put(
   "/:id/fail",
   authMiddleware,

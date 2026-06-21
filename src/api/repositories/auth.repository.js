@@ -1,9 +1,10 @@
 const { NguoiDung } = require("../models");
+const { Op } = require("sequelize");
 
 const findByEmailOrPhone = async (email, so_dien_thoai) => {
   return await NguoiDung.findOne({
     where: {
-      [require("sequelize").Op.or]: [
+      [Op.or]: [
         { email },
         { so_dien_thoai },
       ],
@@ -24,10 +25,23 @@ const findByEmail = async (email) => {
 const findById = async (id) => {
   return await NguoiDung.findByPk(id);
 };
+
+const findByPhoneExceptUser = async (so_dien_thoai, userId) => {
+  return await NguoiDung.findOne({
+    where: {
+      so_dien_thoai,
+      id_nguoi_dung: {
+        [Op.ne]: userId,
+      },
+    },
+  });
+};
+
 module.exports = {
   findByEmailOrPhone,
   createUser,
   findByEmail,
   findByPk,
-  findById
+  findById,
+  findByPhoneExceptUser
 };

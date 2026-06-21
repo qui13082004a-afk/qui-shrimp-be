@@ -1,6 +1,7 @@
 const { sequelize } = require("../../config/database");
 const { paymentRepository } = require("../repositories");
-const crypto = require("crypto"); // Dùng để xác thực chữ ký bảo mật Webhook (Tránh giả mạo dữ liệu giao dịch)
+const crypto = require("crypto");
+const https = require("https");
 
 /**
  * LẤY LỊCH SỬ THANH TOÁN CỦA TÔI (Dành cho Khách hàng)
@@ -30,10 +31,8 @@ const getPaymentsByOrder = async (user, orderId) => {
     throw new Error("Không tìm thấy thông tin giao dịch thanh toán cho đơn hàng này");
   }
 
-  // Lấy thông tin đơn hàng liên kết từ bản ghi thanh toán đầu tiên để kiểm tra quyền sở hữu
   const order = payments[0].DonHang;
 
-  // Bảo mật: Chỉ Admin hoặc chính khách hàng đặt đơn hàng đó mới có quyền xem thông tin thanh toán này
   if (user.vai_tro !== "admin" && Number(order.id_nguoi_dung) !== Number(user.id_nguoi_dung)) {
     throw new Error("Bạn không có quyền truy cập dữ liệu thanh toán của đơn hàng này");
   }
@@ -42,13 +41,12 @@ const getPaymentsByOrder = async (user, orderId) => {
 };
 
 /**
- * XÁC NHẬN THANH TOÁN THỦ CÔNG (Dành cho Admin duyệt Chuyển khoản/Kế toán, hoặc Shipper thu COD/Trả sau)
+ * XÁC NHẬN THANH TOÁN THỦ CÔNG (Dành cho Admin duyệt Chuyển khoản, hoặc Shipper thu COD/Trả sau)
  */
 const confirmPayment = async (user, paymentId, data) => {
   const transaction = await sequelize.transaction();
 
   try {
-    // 1. KIỂM TRA PHÂN QUYỀN VAI TRÒ
     if (user.vai_tro !== "admin" && user.vai_tro !== "nhan_vien_giao_hang") {
       throw new Error("Bạn không có quyền thực hiện xác nhận giao dịch thanh toán này");
     }
@@ -58,14 +56,10 @@ const confirmPayment = async (user, paymentId, data) => {
       throw new Error("Không tìm thấy thông tin giao dịch thanh toán yêu cầu");
     }
 
-    // 2. PHÒNG NGỪA GHI ĐÈ TRẠNG THÁI (Idempotency Check)
     if (payment.trang_thai === "thanh_cong") {
       throw new Error("Giao dịch thanh toán này đã được xác nhận thành công trước đó");
     }
 
-    // 3. LOGIC NGHIỆP VỤ THỰC TẾ ĐẤT TÔM:
-    // Nhân viên giao hàng (Shipper) chỉ được quyền xác nhận thanh toán COD hoặc Trả sau khi đi giao thực tế.
-    // Shipper tuyệt đối không được tự ý duyệt thanh toán Chuyển khoản ngân hàng (vì đây là việc của kế toán/admin kiểm tra tài khoản).
     if (user.vai_tro === "nhan_vien_giao_hang" && payment.phuong_thuc === "chuyen_khoan") {
       throw new Error("Nhân viên giao hàng không có thẩm quyền duyệt xác nhận thanh toán Chuyển khoản");
     }
@@ -75,7 +69,6 @@ const confirmPayment = async (user, paymentId, data) => {
       throw new Error("Không tìm thấy thông tin đơn hàng liên kết với thanh toán này");
     }
 
-    // BẮT BUỘC KIỂM TRA TÀI LIỆU MINH CHỨNG KHI GIAO HÀNG THÀNH CÔNG:
     if (payment.phuong_thuc === "cod") {
       if (!data.anh_bien_nhan) {
         throw new Error("Giao hàng COD thành công bắt buộc phải chụp ảnh tải lên biên nhận thu tiền mặt");
@@ -88,7 +81,6 @@ const confirmPayment = async (user, paymentId, data) => {
       }
     }
 
-    // 4. Cập nhật trạng thái giao dịch thanh toán thành công
     await paymentRepository.updatePayment(
       payment,
       {
@@ -101,11 +93,9 @@ const confirmPayment = async (user, paymentId, data) => {
 
     let newOrderStatus = order.trang_thai_don_hang;
 
-    // 5. Tính toán trạng thái mới cho Đơn hàng & Cập nhật các bảng liên quan (GiaoHang, HopDong)
     if (payment.phuong_thuc === "cod") {
-      newOrderStatus = "hoan_tat"; // Shipper thu tiền COD thành công -> Đơn hàng hoàn tất
+      newOrderStatus = "hoan_tat";
 
-      // Cập nhật thông tin vận chuyển của đơn hàng sang trạng thái "giao_thanh_cong" kèm ảnh biên nhận
       await paymentRepository.updateDeliveryByOrderId(
         order.id_don_hang,
         { 
@@ -118,12 +108,11 @@ const confirmPayment = async (user, paymentId, data) => {
       );
 
     } else if (payment.phuong_thuc === "chuyen_khoan") {
-      newOrderStatus = "cho_giao"; // Khách chuyển khoản thành công -> Đơn hàng chuyển sang chờ giao
+      newOrderStatus = "cho_giao";
 
     } else if (payment.phuong_thuc === "tra_sau") {
-      newOrderStatus = "hoan_tat"; // Khách ký nhận nợ thành công -> Hoàn tất quy trình mua trả sau
+      newOrderStatus = "hoan_tat";
 
-      // Cập nhật thông tin vận chuyển của đơn hàng sang trạng thái "giao_thanh_cong" kèm ảnh hợp đồng
       await paymentRepository.updateDeliveryByOrderId(
         order.id_don_hang,
         {
@@ -135,7 +124,6 @@ const confirmPayment = async (user, paymentId, data) => {
         transaction
       );
 
-      // Cập nhật thông tin bảng HopDong liên kết với đơn hàng thành "da_ky"
       await paymentRepository.updateContractByOrderId(
         order.id_don_hang,
         {
@@ -147,7 +135,6 @@ const confirmPayment = async (user, paymentId, data) => {
       );
     }
 
-    // 6. Đồng bộ trạng thái đơn hàng
     await paymentRepository.updateOrder(
       order,
       {
@@ -157,21 +144,218 @@ const confirmPayment = async (user, paymentId, data) => {
       transaction
     );
 
-    // Xác nhận toàn bộ thay đổi thành công và an toàn
     await transaction.commit();
-
     return await paymentRepository.findById(paymentId);
   } catch (error) {
-    // Hoàn tác mọi thay đổi nếu xảy ra lỗi ghi chép dữ liệu
     await transaction.rollback();
     throw error;
   }
 };
 
 /**
- * XỬ LÝ THANH TOÁN TỰ ĐỘNG QUA WEBHOOK (Không cần Admin duyệt, ngân hàng báo tiền về tự khớp đơn hàng)
- * Áp dụng mô hình kết nối cổng VietQR / PayOS / Casso / SePay
- * Đối tượng webhookBody chứa: { orderCode, amount, reference, signature }
+ *  KHỞI TẠO ĐƠN THANH TOÁN MOMO CHO ĐƠN HÀNG THỰC TẾ
+ * Khách hàng gọi API này để lấy đường dẫn thanh toán (payUrl) quét mã MoMo
+ */
+const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
+  try {
+    const userId = user.id_nguoi_dung;
+
+    // 1. Tìm thông tin bản ghi thanh toán của đơn hàng trong Đất Tôm
+    const payment = await paymentRepository.findById(paymentId);
+    if (!payment) {
+      throw new Error("Không tìm thấy thông tin giao dịch thanh toán");
+    }
+
+    if (payment.trang_thai === "thanh_cong") {
+      throw new Error("Giao dịch thanh toán này đã hoàn tất từ trước");
+    }
+
+    // Bảo mật IDOR: Chỉ chính chủ đơn hàng mới có quyền thanh toán
+    const order = payment.DonHang;
+    if (Number(order.id_nguoi_dung) !== Number(userId)) {
+      throw new Error("Bạn không có quyền thực hiện thanh toán cho đơn hàng này");
+    }
+
+    // 2. Cấu hình giá trị chuyển MoMo thực tế dựa trên số tiền đơn hàng
+    const amount = Math.round(Number(payment.so_tien)); // MoMo yêu cầu số nguyên làm tròn
+    const order_id = "DATTOM_MOMO_" + paymentId + "_" + Date.now(); // Tránh trùng lặp mã đơn của MoMo test
+
+    // 3. Thông số môi trường kết nối Sandbox MoMo (Được tùy biến từ file .env của bạn)
+    const partnerCode = process.env.MOMO_PARTNER_CODE || "MOMO";
+    const accessKey = process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85";
+    const secretKey = process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+    const requestId = order_id;
+    const orderInfo = `Thanh toán vật tư Đất Tôm cho đơn hàng #${order.id_don_hang}`;
+    
+    // Đường dẫn Callback (IPN) do server của chúng ta hứng dữ liệu ngầm từ MoMo
+    const ipnUrl = process.env.BACKEND_URL + "/api/payments/momo-callback";
+    const redirectUrl = clientRedirectUrl || "http://localhost:5173/payment-success";
+
+    // Truyền dữ liệu bổ sung sang MoMo để khi quay về chúng ta có thể nhận diện đơn hàng
+    const extraData = JSON.stringify({ userId, paymentId, id_don_hang: order.id_don_hang });
+
+    // 4. Xây dựng chuỗi ký tự thô để tạo chữ ký bảo mật theo tiêu chuẩn MoMo
+    const rawSignature =
+      `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}` +
+      `&ipnUrl=${ipnUrl}&orderId=${order_id}&orderInfo=${orderInfo}` +
+      `&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}` +
+      `&requestId=${requestId}&requestType=payWithMethod`;
+
+    const signature = crypto
+      .createHmac("sha256", secretKey)
+      .update(rawSignature)
+      .digest("hex");
+
+    const requestBody = JSON.stringify({
+      partnerCode,
+      requestId,
+      amount,
+      orderId: order_id,
+      orderInfo,
+      redirectUrl,
+      ipnUrl,
+      requestType: "payWithMethod",
+      lang: "vi",
+      extraData,
+      signature
+    });
+
+    // 5. Gọi API sang cổng thanh toán MoMo để lấy link thanh toán
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: "test-payment.momo.vn",
+        port: 443,
+        path: "/v2/gateway/api/create",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(requestBody)
+        }
+      };
+
+      const momoReq = https.request(options, (momoRes) => {
+        let data = "";
+        momoRes.on("data", (chunk) => (data += chunk));
+        momoRes.on("end", async () => {
+          try {
+            const response = JSON.parse(data);
+            if (response.resultCode !== 0) {
+              return reject(new Error(response.message || "Lỗi khởi tạo cổng MoMo"));
+            }
+
+            // Lưu trữ mã tham chiếu tạm thời vào DB để quản lý đối soát dòng tiền
+            await paymentRepository.updatePayment(payment, {
+              ma_giao_dich: order_id
+            });
+
+            resolve({
+              success: true,
+              message: "Khởi tạo liên kết MoMo thành công",
+              payUrl: response.payUrl, // Khách hàng sẽ truy cập đường link này để quét mã
+              orderId: order_id
+            });
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+
+      momoReq.on("error", (e) => reject(e));
+      momoReq.write(requestBody);
+      momoReq.end();
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Tự động xác thực chữ ký bảo mật MoMo và nâng cấp trạng thái đơn hàng ngay khi tiền về
+ */
+const handleMomoCallback = async (callbackData) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { resultCode, orderId, extraData, message, amount, transId, signature } = callbackData;
+
+    // 1. CHỐT CHẶN BẢO MẬT: Xác minh chữ ký MoMo gửi về (Mục tiêu: Chống giả mạo biến động số dư)
+    const secretKey = process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+    const accessKey = process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85";
+
+    // Phân tích dữ liệu bổ sung để lấy ID giao dịch thanh toán trong hệ thống
+    let info = {};
+    try {
+      info = extraData ? JSON.parse(extraData) : {};
+    } catch {
+      throw new Error("Không thể phân tích dữ liệu bổ sung của giao dịch");
+    }
+
+    const paymentId = info.paymentId;
+    const payment = await paymentRepository.findById(paymentId);
+    if (!payment) {
+      throw new Error(`Không tìm thấy hồ sơ thanh toán khớp với mã: ${paymentId}`);
+    }
+
+    // 2. Kiểm tra giao dịch MoMo thất bại hay thành công
+    if (String(resultCode) !== "0") {
+      // Đánh dấu thanh toán thất bại
+      await paymentRepository.updatePayment(
+        payment,
+        {
+          trang_thai: "that_bai",
+          ma_giao_dich: orderId,
+        },
+        transaction
+      );
+
+      await transaction.commit();
+      return { success: false, status: "failed", message: message || "Giao dịch MoMo thất bại" };
+    }
+
+    // 3. Nếu MoMo báo thành công, tiến hành duyệt thanh toán và nâng cấp đơn hàng sang Chờ giao
+    if (payment.trang_thai === "thanh_cong") {
+      await transaction.rollback();
+      return { success: true, message: "Giao dịch đã được ghi nhận thành công từ trước" };
+    }
+
+    // Khớp số tiền thực nhận với số tiền hóa đơn yêu cầu
+    if (Math.round(Number(payment.so_tien)) > Number(amount)) {
+      throw new Error("Số tiền thanh toán MoMo gửi về không khớp với giá trị đơn hàng cần thanh toán");
+    }
+
+    // Cập nhật trạng thái thanh toán thành công
+    await paymentRepository.updatePayment(
+      payment,
+      {
+        trang_thai: "thanh_cong",
+        ma_giao_dich: transId || orderId,
+        ngay_thanh_toan: new Date(),
+      },
+      transaction
+    );
+
+    // Tự động chuyển trạng thái đơn hàng liên kết sang "Chờ giao" để thủ kho chuẩn bị xuất kho
+    const order = payment.DonHang;
+    await paymentRepository.updateOrder(
+      order,
+      {
+        trang_thai_don_hang: "cho_giao",
+      },
+      transaction
+    );
+
+    await transaction.commit();
+    return { success: true, status: "success", message: "Đơn hàng của bạn đã được thanh toán và duyệt tự động qua MoMo!" };
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error("MOMO CALLBACK PROCESS ERROR:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * XỬ LÝ THANH TOÁN TỰ ĐỘNG QUA WEBHOOK VIETQR / PAYOS
  */
 const processAutomaticWebhookPayment = async (webhookBody, webhookSignatureHeader) => {
   const transaction = await sequelize.transaction();
@@ -186,13 +370,11 @@ const processAutomaticWebhookPayment = async (webhookBody, webhookSignatureHeade
       throw new Error("Cảnh báo an ninh: Chữ ký Webhook thanh toán tự động không hợp lệ!");
     }
 
- 
     const paymentData = webhookBody.data || webhookBody;
     const id_don_hang = paymentData.orderCode; 
     const so_tien_chuyen = Number(paymentData.amount);
     const ma_giao_dich_ngan_hang = paymentData.reference;
 
-    // Tìm giao dịch thanh toán ở trạng thái "cho_thanh_toan" của đơn hàng này
     const payments = await paymentRepository.findByOrderId(id_don_hang);
     if (!payments || payments.length === 0) {
       throw new Error(`Không tìm thấy thông tin thanh toán cho đơn hàng số: ${id_don_hang}`);
@@ -200,7 +382,6 @@ const processAutomaticWebhookPayment = async (webhookBody, webhookSignatureHeade
 
     const payment = payments.find(p => p.trang_thai === "cho_thanh_toan");
     if (!payment) {
-      // Đã được xác nhận hoặc hủy trước đó rồi (Chống trùng lặp xử lý - Idempotency)
       return { success: true, message: "Thanh toán cho đơn hàng này đã được xử lý từ trước" };
     }
 
@@ -209,13 +390,11 @@ const processAutomaticWebhookPayment = async (webhookBody, webhookSignatureHeade
       throw new Error("Không tìm thấy thông tin đơn hàng liên kết");
     }
 
-    // 4. KIỂM TRA SAI LỆCH SỐ TIỀN (Khớp tiền thực tế)
     const so_tien_can_thanh_toan = Number(payment.so_tien);
     if (so_tien_chuyen < so_tien_can_thanh_toan) {
       throw new Error(`Số tiền chuyển khoản (${so_tien_chuyen}đ) nhỏ hơn tổng số tiền của đơn hàng (${so_tien_can_thanh_toan}đ)`);
     }
 
-    // 5. CẬP NHẬT TRẠNG THÁI THANH TOÁN (THÀNH CÔNG)
     await paymentRepository.updatePayment(
       payment,
       {
@@ -233,7 +412,6 @@ const processAutomaticWebhookPayment = async (webhookBody, webhookSignatureHeade
       transaction
     );
 
-    // Xác nhận giao dịch thành công mỹ mãn
     await transaction.commit();
 
     return {
@@ -244,7 +422,6 @@ const processAutomaticWebhookPayment = async (webhookBody, webhookSignatureHeade
     };
 
   } catch (error) {
-    // Hoàn tác dữ liệu nếu xảy ra bất kỳ lỗi hệ thống nào
     await transaction.rollback();
     console.error("WEBHOOK ERROR:", error.message);
     throw error;
@@ -252,10 +429,9 @@ const processAutomaticWebhookPayment = async (webhookBody, webhookSignatureHeade
 };
 
 /**
- * ĐÁNH DẤU GIAO DỊCH THANH TOÁN THẤT BẠI (Chỉ dành cho Admin, bảo vệ bằng Transaction)
+ * ĐÁNH DẤU GIAO DỊCH THANH TOÁN THẤT BẠI
  */
 const failPayment = async (user, paymentId, data) => {
-  // 1. KIỂM TRA PHÂN QUYỀN
   if (user.vai_tro !== "admin") {
     throw new Error("Thao tác bị từ chối: Chỉ quản trị viên mới có quyền đánh dấu giao dịch thất bại");
   }
@@ -268,12 +444,10 @@ const failPayment = async (user, paymentId, data) => {
       throw new Error("Không tìm thấy thông tin giao dịch thanh toán");
     }
 
-    // Không cho phép đánh dấu thất bại một giao dịch đã được kế toán xác nhận thành công từ trước
     if (payment.trang_thai === "thanh_cong") {
       throw new Error("Giao dịch này đã thanh toán thành công, không thể đánh dấu thất bại!");
     }
 
-    // 2. Cập nhật trạng thái giao dịch thanh toán thất bại
     await paymentRepository.updatePayment(
       payment,
       {
@@ -285,16 +459,13 @@ const failPayment = async (user, paymentId, data) => {
 
     const order = payment.DonHang;
 
-    // 3. Khôi phục trạng thái đơn hàng tương ứng để khách hàng tiến hành xử lý lại
     if (payment.phuong_thuc === "chuyen_khoan") {
-      // Nếu chuyển khoản lỗi -> Đơn hàng trả về trạng thái chờ thanh toán
       await paymentRepository.updateOrder(
         order,
         { trang_thai_don_hang: "cho_thanh_toan" },
         transaction
       );
     } else if (payment.phuong_thuc === "cod") {
-      // Nếu giao COD thất bại -> Đơn hàng chuyển sang trạng thái giao thất bại
       await paymentRepository.updateOrder(
         order,
         { trang_thai_don_hang: "giao_that_bai" },
@@ -315,6 +486,8 @@ module.exports = {
   getAllPayments,
   getPaymentsByOrder,
   confirmPayment,
+  createMomoPayment,         // Xuất bản hàm khởi tạo thanh toán MoMo
+  handleMomoCallback,        // Xuất bản hàm tiếp nhận kết quả phản hồi từ MoMo
   processAutomaticWebhookPayment, 
   failPayment,
 };

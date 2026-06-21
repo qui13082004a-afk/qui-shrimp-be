@@ -262,7 +262,19 @@ const updateProfile = async (userId, updateData) => {
     throw new Error("Không tìm thấy thông tin tài khoản");
   }
 
-  // Định nghĩa cụ thể các trường được phép sửa thủ công tránh lỗ hổng bảo mật ghi đè quyền (vai_tro)
+  if (
+    updateData.so_dien_thoai !== undefined &&
+    updateData.so_dien_thoai !== user.so_dien_thoai
+  ) {
+    const existedPhone = await authRepository.findByPhoneExceptUser(
+      updateData.so_dien_thoai,
+      userId
+    );
+
+    if (existedPhone) {
+      throw new Error("Số điện thoại đã được sử dụng bởi tài khoản khác");
+    }
+  }
   const allowedFields = ["ho_ten", "so_dien_thoai", "dia_chi", "tinh_thanh", "anh_dai_dien"];
   
   allowedFields.forEach((field) => {

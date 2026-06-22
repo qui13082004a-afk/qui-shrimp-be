@@ -323,12 +323,17 @@ const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
           }
         });
       });
-
+console.log("IPN URL:", ipnUrl);
+console.log("REDIRECT URL:", redirectUrl);
+console.log("MOMO CREATE RESPONSE:", response);
       momoReq.on("error", (e) => reject(e));
       momoReq.write(requestBody);
       momoReq.end();
     });
   } catch (error) {
+    console.log("IPN URL:", ipnUrl);
+console.log("REDIRECT URL:", redirectUrl);
+console.log("MOMO CREATE RESPONSE:", response);
     throw error;
   }
 };

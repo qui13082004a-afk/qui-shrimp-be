@@ -339,9 +339,7 @@ const handleMomoCallback = async (callbackData) => {
   const transaction = await sequelize.transaction();
 
   try {
-    console.log("MOMO CALLBACK DATA:", callbackData);
-    console.log("RESULT CODE:", callbackData?.resultCode);
-
+   
     const {
       resultCode,
       orderId,

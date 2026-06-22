@@ -302,6 +302,7 @@ const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
         momoRes.on("end", async () => {
           try {
             const response = JSON.parse(data);
+            console.log("MOMO CREATE RESPONSE:", response);
             if (response.resultCode !== 0) {
               return reject(new Error(response.message || "Lỗi khởi tạo cổng MoMo"));
             }

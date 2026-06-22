@@ -143,10 +143,6 @@ const createMomoPayment = async (req, res) => {
  */
 const handleMomoCallback = async (req, res) => {
   try {
-    console.log("===== MOMO IPN CALLBACK RECEIVED =====");
-    console.log("BODY:", req.body);
-    console.log("RESULT CODE:", req.body?.resultCode);
-    console.log("MESSAGE:", req.body?.message);
     const result = await paymentService.handleMomoCallback(req.body);
 
     // Trả về kết quả JSON hoặc mã HTTP 204 để báo hiệu cho MoMo ngừng gửi IPN lặp lại

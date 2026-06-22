@@ -7,23 +7,33 @@ require("./api/models");
 
 const app = express();
 
-app.use(express.json());
-app.use(cors({
+const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:3000",
-    "https://qui-shrimp-fe.vercel.app"
+    "https://qui-shrimp-fe.vercel.app",
   ],
-  credentials: true
-}));
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+// dùng regex thay cho "*"
+app.options(/.*/, cors(corsOptions));
+
+app.use(express.json());
+
 app.use("/api", apiRoutes);
+
 const startServer = async () => {
   await connectDB();
-
   await sequelize.sync();
 
   app.listen(process.env.PORT, () => {
     console.log(`Server chạy tại port ${process.env.PORT}`);
   });
 };
+
 startServer();

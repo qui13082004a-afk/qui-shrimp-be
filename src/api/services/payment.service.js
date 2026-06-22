@@ -213,131 +213,144 @@ const confirmPayment = async (user, paymentId, data) => {
  * Khách hàng gọi API này để lấy đường dẫn thanh toán (payUrl) quét mã MoMo
  */
 const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
-  try {
-    const userId = user.id_nguoi_dung;
+  const userId = user.id_nguoi_dung;
 
-    // 1. Tìm thông tin bản ghi thanh toán của đơn hàng trong Đất Tôm
-    const payment = await paymentRepository.findById(paymentId);
-    if (!payment) {
-      throw new Error("Không tìm thấy thông tin giao dịch thanh toán");
-    }
-
-    if (payment.trang_thai === "thanh_cong") {
-      throw new Error("Giao dịch thanh toán này đã hoàn tất từ trước");
-    }
-
-    if (payment.phuong_thuc !== "chuyen_khoan") {
-      throw new Error("Chi giao dich chuyen khoan moi duoc khoi tao thanh toan MoMo");
-    }
-
-    // Bảo mật IDOR: Chỉ chính chủ đơn hàng mới có quyền thanh toán
-    const order = payment.DonHang;
-    if (Number(order.id_nguoi_dung) !== Number(userId)) {
-      throw new Error("Bạn không có quyền thực hiện thanh toán cho đơn hàng này");
-    }
-
-    if (!order.NguoiDung || order.NguoiDung.trang_thai_tai_khoan !== "hoat_dong") {
-      throw new Error("Tai khoan dat hang da bi khoa hoac chua duoc xac thuc");
-    }
-
-    // 2. Cấu hình giá trị chuyển MoMo thực tế dựa trên số tiền đơn hàng
-    const amount = Math.round(Number(payment.so_tien)); // MoMo yêu cầu số nguyên làm tròn
-    const order_id = "DATTOM_MOMO_" + paymentId + "_" + Date.now(); // Tránh trùng lặp mã đơn của MoMo test
-
-    // 3. Thông số môi trường kết nối Sandbox MoMo (Được tùy biến từ file .env của bạn)
-    const { partnerCode, accessKey, secretKey } = getMomoConfig();
-    const requestId = order_id;
-    const orderInfo = `Thanh toán vật tư Đất Tôm cho đơn hàng #${order.id_don_hang}`;
-    
-    // Đường dẫn Callback (IPN) do server của chúng ta hứng dữ liệu ngầm từ MoMo
-    const backendUrl = getRequiredUrl(process.env.BACKEND_URL, "BACKEND_URL");
-    const ipnUrl = `${backendUrl}/api/payments/momo-callback`;
-    const redirectUrl = clientRedirectUrl || "http://localhost:5173/payment-result";
-
-    // Truyền dữ liệu bổ sung sang MoMo để khi quay về chúng ta có thể nhận diện đơn hàng
-    const extraData = JSON.stringify({ userId, paymentId, id_don_hang: order.id_don_hang });
-
-    // 4. Xây dựng chuỗi ký tự thô để tạo chữ ký bảo mật theo tiêu chuẩn MoMo
-    const rawSignature =
-      `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}` +
-      `&ipnUrl=${ipnUrl}&orderId=${order_id}&orderInfo=${orderInfo}` +
-      `&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}` +
-      `&requestId=${requestId}&requestType=payWithMethod`;
-
-    const signature = crypto
-      .createHmac("sha256", secretKey)
-      .update(rawSignature)
-      .digest("hex");
-
-    const requestBody = JSON.stringify({
-      partnerCode,
-      requestId,
-      amount,
-      orderId: order_id,
-      orderInfo,
-      redirectUrl,
-      ipnUrl,
-      requestType: "payWithMethod",
-      lang: "vi",
-      extraData,
-      signature
-    });
-
-    // 5. Gọi API sang cổng thanh toán MoMo để lấy link thanh toán
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: "test-payment.momo.vn",
-        port: 443,
-        path: "/v2/gateway/api/create",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(requestBody)
-        }
-      };
-
-      const momoReq = https.request(options, (momoRes) => {
-        let data = "";
-        momoRes.on("data", (chunk) => (data += chunk));
-        momoRes.on("end", async () => {
-          try {
-            const response = JSON.parse(data);
-            console.log("MOMO CREATE RESPONSE:", response);
-            if (response.resultCode !== 0) {
-              return reject(new Error(response.message || "Lỗi khởi tạo cổng MoMo"));
-            }
-
-            // Lưu trữ mã tham chiếu tạm thời vào DB để quản lý đối soát dòng tiền
-            await paymentRepository.updatePayment(payment, {
-              ma_giao_dich: order_id
-            });
-
-            resolve({
-              success: true,
-              message: "Khởi tạo liên kết MoMo thành công",
-              payUrl: response.payUrl, // Khách hàng sẽ truy cập đường link này để quét mã
-              orderId: order_id
-            });
-          } catch (err) {
-            reject(err);
-          }
-        });
-      });
-console.log("IPN URL:", ipnUrl);
-console.log("REDIRECT URL:", redirectUrl);
-console.log("MOMO CREATE RESPONSE:", response);
-      momoReq.on("error", (e) => reject(e));
-      momoReq.write(requestBody);
-      momoReq.end();
-    });
-  } catch (error) {
-    console.log("IPN URL:", ipnUrl);
-console.log("REDIRECT URL:", redirectUrl);
-console.log("MOMO CREATE RESPONSE:", response);
-    throw error;
+  const payment = await paymentRepository.findById(paymentId);
+  if (!payment) {
+    throw new Error("Không tìm thấy thông tin giao dịch thanh toán");
   }
-};
 
+  if (payment.trang_thai === "thanh_cong") {
+    throw new Error("Giao dịch thanh toán này đã hoàn tất từ trước");
+  }
+
+  if (payment.phuong_thuc !== "chuyen_khoan") {
+    throw new Error("Chỉ giao dịch chuyển khoản mới được khởi tạo thanh toán MoMo");
+  }
+
+  const order = payment.DonHang;
+  if (Number(order.id_nguoi_dung) !== Number(userId)) {
+    throw new Error("Bạn không có quyền thực hiện thanh toán cho đơn hàng này");
+  }
+
+  if (!order.NguoiDung || order.NguoiDung.trang_thai_tai_khoan !== "hoat_dong") {
+    throw new Error("Tài khoản đặt hàng đã bị khóa hoặc chưa được xác thực");
+  }
+
+  const amount = Math.round(Number(payment.so_tien));
+  const order_id = "DATTOM_MOMO_" + paymentId + "_" + Date.now();
+
+  const { partnerCode, accessKey, secretKey } = getMomoConfig();
+
+  const requestId = order_id;
+  const orderInfo = `Thanh toán vật tư Đất Tôm cho đơn hàng #${order.id_don_hang}`;
+
+  const backendUrl = getRequiredUrl(process.env.BACKEND_URL, "BACKEND_URL");
+  const ipnUrl = `${backendUrl}/api/payments/momo-callback`;
+
+  const redirectUrl =
+    clientRedirectUrl ||
+    process.env.FRONTEND_URL + `/payment-success?appOrderId=${order.id_don_hang}`;
+
+  const extraData = Buffer.from(
+    JSON.stringify({
+      userId,
+      paymentId,
+      id_don_hang: order.id_don_hang,
+    })
+  ).toString("base64");
+
+  const requestType = "payWithMethod";
+
+  const rawSignature =
+    `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}` +
+    `&ipnUrl=${ipnUrl}&orderId=${order_id}&orderInfo=${orderInfo}` +
+    `&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}` +
+    `&requestId=${requestId}&requestType=${requestType}`;
+
+  const signature = crypto
+    .createHmac("sha256", secretKey)
+    .update(rawSignature)
+    .digest("hex");
+
+  const requestBody = JSON.stringify({
+    partnerCode,
+    partnerName: "Dat Tom",
+    storeId: "DatTomStore",
+    requestId,
+    amount,
+    orderId: order_id,
+    orderInfo,
+    redirectUrl,
+    ipnUrl,
+    lang: "vi",
+    requestType,
+    autoCapture: true,
+    extraData,
+    signature,
+  });
+
+  console.log("IPN URL:", ipnUrl);
+  console.log("REDIRECT URL:", redirectUrl);
+  console.log("MOMO REQUEST BODY:", requestBody);
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: "test-payment.momo.vn",
+      port: 443,
+      path: "/v2/gateway/api/create",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(requestBody),
+      },
+    };
+
+    const momoReq = https.request(options, (momoRes) => {
+      let data = "";
+
+      momoRes.on("data", (chunk) => {
+        data += chunk;
+      });
+
+      momoRes.on("end", async () => {
+        try {
+          console.log("MOMO RAW RESPONSE:", data);
+
+          const response = JSON.parse(data);
+          console.log("MOMO CREATE RESPONSE:", response);
+
+          if (response.resultCode !== 0) {
+            return reject(
+              new Error(response.message || "Lỗi khởi tạo cổng MoMo")
+            );
+          }
+
+          await paymentRepository.updatePayment(payment, {
+            ma_giao_dich: order_id,
+          });
+
+          return resolve({
+            success: true,
+            message: "Khởi tạo liên kết MoMo thành công",
+            payUrl: response.payUrl,
+            orderId: order_id,
+          });
+        } catch (err) {
+          return reject(err);
+        }
+      });
+    });
+
+    momoReq.on("error", (error) => {
+      console.log("MOMO REQUEST ERROR:", error.message);
+      return reject(new Error("Không kết nối được MoMo: " + error.message));
+    });
+
+    momoReq.write(requestBody);
+    momoReq.end();
+  });
+};
 /**
  * Tự động xác thực chữ ký bảo mật MoMo và nâng cấp trạng thái đơn hàng ngay khi tiền về
  */

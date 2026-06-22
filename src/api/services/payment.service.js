@@ -348,7 +348,6 @@ const handleMomoCallback = async (callbackData) => {
       extraData,
       message,
       amount,
-      transId,
       signature,
     } = callbackData;
 
@@ -389,11 +388,13 @@ const handleMomoCallback = async (callbackData) => {
       throw new Error("Không tìm thấy đơn hàng liên kết với giao dịch MoMo");
     }
 
-    if (!order.NguoiDung || order.NguoiDung.trang_thai_tai_khoan !== "hoat_dong") {
+    if (
+      !order.NguoiDung ||
+      order.NguoiDung.trang_thai_tai_khoan !== "hoat_dong"
+    ) {
       throw new Error("Tài khoản đặt hàng đã bị khóa hoặc chưa được xác thực");
     }
 
-    // Nếu giao dịch đã thành công trước đó thì không xử lý lại
     if (payment.trang_thai === "thanh_cong") {
       await transaction.rollback();
 
@@ -404,13 +405,13 @@ const handleMomoCallback = async (callbackData) => {
       };
     }
 
-    // MoMo trả resultCode khác 0 => thanh toán thất bại
     if (String(resultCode) !== "0") {
       await paymentRepository.updatePayment(
         payment,
         {
           trang_thai: "that_bai",
           ma_giao_dich: orderId,
+          thong_bao_loi: message || "Giao dịch MoMo thất bại",
           ngay_thanh_toan: null,
         },
         transaction
@@ -433,24 +434,19 @@ const handleMomoCallback = async (callbackData) => {
       };
     }
 
-    // MoMo thành công thì kiểm tra số tiền
     if (Math.round(Number(payment.so_tien)) !== Number(amount)) {
       throw new Error(
         "Số tiền thanh toán MoMo gửi về không khớp với giá trị đơn hàng cần thanh toán"
       );
     }
 
-    // Cập nhật thanh toán thành công
-    // Lưu ý: giữ ma_giao_dich = orderId để callback lần sau vẫn đối chiếu được
     await paymentRepository.updatePayment(
       payment,
       {
         trang_thai: "thanh_cong",
         ma_giao_dich: orderId,
+        thong_bao_loi: null,
         ngay_thanh_toan: new Date(),
-
-        // Nếu bảng bạn có cột trans_id thì mở dòng này:
-        // trans_id: transId,
       },
       transaction
     );
@@ -468,8 +464,7 @@ const handleMomoCallback = async (callbackData) => {
     return {
       success: true,
       status: "success",
-      message:
-        "Đơn hàng của bạn đã được thanh toán và chuyển sang trạng thái chờ giao!",
+      message: "Đơn hàng đã thanh toán thành công và chuyển sang chờ giao",
     };
   } catch (error) {
     await transaction.rollback();
@@ -477,7 +472,6 @@ const handleMomoCallback = async (callbackData) => {
     throw error;
   }
 };
-
 /**
  * XỬ LÝ THANH TOÁN TỰ ĐỘNG QUA WEBHOOK VIETQR / PAYOS
  */

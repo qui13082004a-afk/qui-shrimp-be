@@ -339,14 +339,23 @@ const handleMomoCallback = async (callbackData) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { resultCode, orderId, extraData, message, amount, transId, signature } = callbackData;
+    console.log("MOMO CALLBACK DATA:", callbackData);
+    console.log("RESULT CODE:", callbackData?.resultCode);
+
+    const {
+      resultCode,
+      orderId,
+      extraData,
+      message,
+      amount,
+      transId,
+      signature,
+    } = callbackData;
 
     if (!signature || !verifyMomoCallbackSignature(callbackData)) {
-      throw new Error("Chu ky MoMo callback khong hop le");
+      throw new Error("Chữ ký MoMo callback không hợp lệ");
     }
 
-    // 1. CHỐT CHẶN BẢO MẬT: Xác minh chữ ký MoMo gửi về (Mục tiêu: Chống giả mạo biến động số dư)
-    // Phân tích dữ liệu bổ sung để lấy ID giao dịch thanh toán trong hệ thống
     let info = {};
     try {
       info = extraData ? JSON.parse(extraData) : {};
@@ -355,67 +364,97 @@ const handleMomoCallback = async (callbackData) => {
     }
 
     const paymentId = info.paymentId;
+
+    if (!paymentId) {
+      throw new Error("Thiếu paymentId trong extraData");
+    }
+
     const payment = await paymentRepository.findById(paymentId);
+
     if (!payment) {
       throw new Error(`Không tìm thấy hồ sơ thanh toán khớp với mã: ${paymentId}`);
     }
 
     if (payment.phuong_thuc !== "chuyen_khoan") {
-      throw new Error("Giao dich nay khong phai thanh toan MoMo");
+      throw new Error("Giao dịch này không phải thanh toán MoMo");
     }
 
     if (payment.ma_giao_dich !== orderId) {
-      throw new Error("Ma don hang MoMo khong khop voi giao dich da khoi tao");
+      throw new Error("Mã đơn hàng MoMo không khớp với giao dịch đã khởi tạo");
     }
 
     const order = payment.DonHang;
+
     if (!order) {
-      throw new Error("Khong tim thay don hang lien ket voi giao dich MoMo");
+      throw new Error("Không tìm thấy đơn hàng liên kết với giao dịch MoMo");
     }
 
     if (!order.NguoiDung || order.NguoiDung.trang_thai_tai_khoan !== "hoat_dong") {
-      throw new Error("Tai khoan dat hang da bi khoa hoac chua duoc xac thuc");
+      throw new Error("Tài khoản đặt hàng đã bị khóa hoặc chưa được xác thực");
     }
 
-    // 2. Kiểm tra giao dịch MoMo thất bại hay thành công
+    // Nếu giao dịch đã thành công trước đó thì không xử lý lại
+    if (payment.trang_thai === "thanh_cong") {
+      await transaction.rollback();
+
+      return {
+        success: true,
+        status: "success",
+        message: "Giao dịch đã được ghi nhận thành công từ trước",
+      };
+    }
+
+    // MoMo trả resultCode khác 0 => thanh toán thất bại
     if (String(resultCode) !== "0") {
-      // Đánh dấu thanh toán thất bại
       await paymentRepository.updatePayment(
         payment,
         {
           trang_thai: "that_bai",
           ma_giao_dich: orderId,
+          ngay_thanh_toan: null,
+        },
+        transaction
+      );
+
+      await paymentRepository.updateOrder(
+        order,
+        {
+          trang_thai_don_hang: "cho_thanh_toan",
         },
         transaction
       );
 
       await transaction.commit();
-      return { success: false, status: "failed", message: message || "Giao dịch MoMo thất bại" };
+
+      return {
+        success: false,
+        status: "failed",
+        message: message || "Giao dịch MoMo thất bại",
+      };
     }
 
-    // 3. Nếu MoMo báo thành công, tiến hành duyệt thanh toán và nâng cấp đơn hàng sang Chờ giao
-    if (payment.trang_thai === "thanh_cong") {
-      await transaction.rollback();
-      return { success: true, message: "Giao dịch đã được ghi nhận thành công từ trước" };
-    }
-
-    // Khớp số tiền thực nhận với số tiền hóa đơn yêu cầu
+    // MoMo thành công thì kiểm tra số tiền
     if (Math.round(Number(payment.so_tien)) !== Number(amount)) {
-      throw new Error("Số tiền thanh toán MoMo gửi về không khớp với giá trị đơn hàng cần thanh toán");
+      throw new Error(
+        "Số tiền thanh toán MoMo gửi về không khớp với giá trị đơn hàng cần thanh toán"
+      );
     }
 
-    // Cập nhật trạng thái thanh toán thành công
+    // Cập nhật thanh toán thành công
+    // Lưu ý: giữ ma_giao_dich = orderId để callback lần sau vẫn đối chiếu được
     await paymentRepository.updatePayment(
       payment,
       {
         trang_thai: "thanh_cong",
-        ma_giao_dich: transId || orderId,
+        ma_giao_dich: orderId,
         ngay_thanh_toan: new Date(),
+
+        // Nếu bảng bạn có cột trans_id thì mở dòng này:
+        // trans_id: transId,
       },
       transaction
     );
 
-    // Tự động chuyển trạng thái đơn hàng liên kết sang "Chờ giao" để thủ kho chuẩn bị xuất kho
     await paymentRepository.updateOrder(
       order,
       {
@@ -425,8 +464,13 @@ const handleMomoCallback = async (callbackData) => {
     );
 
     await transaction.commit();
-    return { success: true, status: "success", message: "Đơn hàng của bạn đã được thanh toán và duyệt tự động qua MoMo!" };
 
+    return {
+      success: true,
+      status: "success",
+      message:
+        "Đơn hàng của bạn đã được thanh toán và chuyển sang trạng thái chờ giao!",
+    };
   } catch (error) {
     await transaction.rollback();
     console.error("MOMO CALLBACK PROCESS ERROR:", error.message);

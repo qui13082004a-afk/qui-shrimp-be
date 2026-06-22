@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken"); 
+const { NguoiDung } = require("../models");
 // Import thư viện jsonwebtoken để xác thực và giải mã JWT
 
 const ROLES = {
@@ -7,7 +8,7 @@ const ROLES = {
   DELIVERY_STAFF: "nhan_vien_giao_hang",
 };
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     // Lấy Authorization Header từ request
     const authHeader = req.headers.authorization;
@@ -37,7 +38,30 @@ const authMiddleware = (req, res, next) => {
     // Lưu thông tin đã giải mã vào request
     // req.user.id_nguoi_dung
     // req.user.vai_tro
-    req.user = decoded;
+    const user = await NguoiDung.findByPk(decoded.id_nguoi_dung, {
+      attributes: ["id_nguoi_dung", "vai_tro", "trang_thai_tai_khoan"],
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Tai khoan khong ton tai",
+      });
+    }
+
+    if (user.trang_thai_tai_khoan !== "hoat_dong") {
+      return res.status(403).json({
+        success: false,
+        message: "Tai khoan da bi khoa hoac chua duoc xac thuc",
+      });
+    }
+
+    req.user = {
+      ...decoded,
+      id_nguoi_dung: user.id_nguoi_dung,
+      vai_tro: user.vai_tro,
+      trang_thai_tai_khoan: user.trang_thai_tai_khoan,
+    };
 
     // Cho phép request đi tiếp tới controller
     next();

@@ -36,7 +36,7 @@ const findAll = async () => {
 const findByOrderId = async (id_don_hang) => {
   return await ThanhToan.findAll({
     where: { id_don_hang },
-    include: [{ model: DonHang }],
+    include: [{ model: DonHang, include: [{ model: NguoiDung }] }],
   });
 };
 
@@ -45,7 +45,7 @@ const findByOrderId = async (id_don_hang) => {
  */
 const findById = async (id_thanh_toan) => {
   return await ThanhToan.findByPk(id_thanh_toan, {
-    include: [{ model: DonHang }],
+    include: [{ model: DonHang, include: [{ model: NguoiDung }] }],
   });
 };
 

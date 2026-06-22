@@ -3,6 +3,62 @@ const { paymentRepository } = require("../repositories");
 const crypto = require("crypto");
 const https = require("https");
 
+const getMomoConfig = () => ({
+  partnerCode: process.env.MOMO_PARTNER_CODE || "MOMO",
+  accessKey: process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85",
+  secretKey: process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz",
+});
+
+const createHmacSha256 = (data, secretKey) => {
+  return crypto.createHmac("sha256", secretKey).update(data).digest("hex");
+};
+
+const timingSafeEqualText = (left, right) => {
+  if (!left || !right || left.length !== right.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right));
+};
+
+const getRequiredUrl = (value, name) => {
+  if (!value) {
+    throw new Error(`${name} chua duoc cau hinh`);
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    throw new Error(`${name} khong phai URL hop le`);
+  }
+};
+
+const verifyMomoCallbackSignature = (callbackData) => {
+  const { accessKey, secretKey } = getMomoConfig();
+  const {
+    amount,
+    extraData,
+    message,
+    orderId,
+    orderInfo,
+    orderType,
+    partnerCode,
+    payType,
+    requestId,
+    responseTime,
+    resultCode,
+    transId,
+    signature,
+  } = callbackData;
+
+  const rawSignature =
+    `accessKey=${accessKey}&amount=${amount}&extraData=${extraData || ""}` +
+    `&message=${message || ""}&orderId=${orderId}&orderInfo=${orderInfo || ""}` +
+    `&orderType=${orderType || ""}&partnerCode=${partnerCode || ""}` +
+    `&payType=${payType || ""}&requestId=${requestId || ""}` +
+    `&responseTime=${responseTime || ""}&resultCode=${resultCode}&transId=${transId || ""}`;
+
+  const computedSignature = createHmacSha256(rawSignature, secretKey);
+  return timingSafeEqualText(computedSignature, signature);
+};
+
 /**
  * LẤY LỊCH SỬ THANH TOÁN CỦA TÔI (Dành cho Khách hàng)
  */
@@ -170,10 +226,18 @@ const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
       throw new Error("Giao dịch thanh toán này đã hoàn tất từ trước");
     }
 
+    if (payment.phuong_thuc !== "chuyen_khoan") {
+      throw new Error("Chi giao dich chuyen khoan moi duoc khoi tao thanh toan MoMo");
+    }
+
     // Bảo mật IDOR: Chỉ chính chủ đơn hàng mới có quyền thanh toán
     const order = payment.DonHang;
     if (Number(order.id_nguoi_dung) !== Number(userId)) {
       throw new Error("Bạn không có quyền thực hiện thanh toán cho đơn hàng này");
+    }
+
+    if (!order.NguoiDung || order.NguoiDung.trang_thai_tai_khoan !== "hoat_dong") {
+      throw new Error("Tai khoan dat hang da bi khoa hoac chua duoc xac thuc");
     }
 
     // 2. Cấu hình giá trị chuyển MoMo thực tế dựa trên số tiền đơn hàng
@@ -181,15 +245,14 @@ const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
     const order_id = "DATTOM_MOMO_" + paymentId + "_" + Date.now(); // Tránh trùng lặp mã đơn của MoMo test
 
     // 3. Thông số môi trường kết nối Sandbox MoMo (Được tùy biến từ file .env của bạn)
-    const partnerCode = process.env.MOMO_PARTNER_CODE || "MOMO";
-    const accessKey = process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85";
-    const secretKey = process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+    const { partnerCode, accessKey, secretKey } = getMomoConfig();
     const requestId = order_id;
     const orderInfo = `Thanh toán vật tư Đất Tôm cho đơn hàng #${order.id_don_hang}`;
     
     // Đường dẫn Callback (IPN) do server của chúng ta hứng dữ liệu ngầm từ MoMo
-    const ipnUrl = process.env.BACKEND_URL + "/api/payments/momo-callback";
-    const redirectUrl = clientRedirectUrl || "http://localhost:5173/payment-success";
+    const backendUrl = getRequiredUrl(process.env.BACKEND_URL, "BACKEND_URL");
+    const ipnUrl = `${backendUrl}/api/payments/momo-callback`;
+    const redirectUrl = clientRedirectUrl || "http://localhost:5173/payment-result";
 
     // Truyền dữ liệu bổ sung sang MoMo để khi quay về chúng ta có thể nhận diện đơn hàng
     const extraData = JSON.stringify({ userId, paymentId, id_don_hang: order.id_don_hang });
@@ -278,10 +341,11 @@ const handleMomoCallback = async (callbackData) => {
   try {
     const { resultCode, orderId, extraData, message, amount, transId, signature } = callbackData;
 
-    // 1. CHỐT CHẶN BẢO MẬT: Xác minh chữ ký MoMo gửi về (Mục tiêu: Chống giả mạo biến động số dư)
-    const secretKey = process.env.MOMO_SECRET_KEY || "K951B6PE1waDMi640xX08PD3vg6EkVlz";
-    const accessKey = process.env.MOMO_ACCESS_KEY || "F8BBA842ECF85";
+    if (!signature || !verifyMomoCallbackSignature(callbackData)) {
+      throw new Error("Chu ky MoMo callback khong hop le");
+    }
 
+    // 1. CHỐT CHẶN BẢO MẬT: Xác minh chữ ký MoMo gửi về (Mục tiêu: Chống giả mạo biến động số dư)
     // Phân tích dữ liệu bổ sung để lấy ID giao dịch thanh toán trong hệ thống
     let info = {};
     try {
@@ -294,6 +358,23 @@ const handleMomoCallback = async (callbackData) => {
     const payment = await paymentRepository.findById(paymentId);
     if (!payment) {
       throw new Error(`Không tìm thấy hồ sơ thanh toán khớp với mã: ${paymentId}`);
+    }
+
+    if (payment.phuong_thuc !== "chuyen_khoan") {
+      throw new Error("Giao dich nay khong phai thanh toan MoMo");
+    }
+
+    if (payment.ma_giao_dich !== orderId) {
+      throw new Error("Ma don hang MoMo khong khop voi giao dich da khoi tao");
+    }
+
+    const order = payment.DonHang;
+    if (!order) {
+      throw new Error("Khong tim thay don hang lien ket voi giao dich MoMo");
+    }
+
+    if (!order.NguoiDung || order.NguoiDung.trang_thai_tai_khoan !== "hoat_dong") {
+      throw new Error("Tai khoan dat hang da bi khoa hoac chua duoc xac thuc");
     }
 
     // 2. Kiểm tra giao dịch MoMo thất bại hay thành công
@@ -319,7 +400,7 @@ const handleMomoCallback = async (callbackData) => {
     }
 
     // Khớp số tiền thực nhận với số tiền hóa đơn yêu cầu
-    if (Math.round(Number(payment.so_tien)) > Number(amount)) {
+    if (Math.round(Number(payment.so_tien)) !== Number(amount)) {
       throw new Error("Số tiền thanh toán MoMo gửi về không khớp với giá trị đơn hàng cần thanh toán");
     }
 
@@ -335,7 +416,6 @@ const handleMomoCallback = async (callbackData) => {
     );
 
     // Tự động chuyển trạng thái đơn hàng liên kết sang "Chờ giao" để thủ kho chuẩn bị xuất kho
-    const order = payment.DonHang;
     await paymentRepository.updateOrder(
       order,
       {

@@ -48,6 +48,38 @@ const HoSoKhachHang = sequelize.define(
     ghi_chu: {
       type: DataTypes.TEXT,
     },
+    anh_cccd_mat_truoc: {
+  type: DataTypes.STRING(500),
+},
+
+anh_cccd_mat_sau: {
+  type: DataTypes.STRING(500),
+},
+
+anh_selfie: {
+  type: DataTypes.STRING(500),
+},
+
+do_tuong_dong: {
+  type: DataTypes.DECIMAL(5, 2),
+},
+
+trang_thai_xac_thuc: {
+  type: DataTypes.ENUM(
+    "chua_xac_thuc",
+    "da_xac_thuc",
+    "that_bai"
+  ),
+  defaultValue: "chua_xac_thuc",
+},
+
+ly_do_xac_thuc_that_bai: {
+  type: DataTypes.TEXT,
+},
+
+ngay_xac_thuc: {
+  type: DataTypes.DATE,
+},
   },
   {
     tableName: "ho_so_khach_hang",

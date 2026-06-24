@@ -4,7 +4,7 @@ const {
 } = require("@aws-sdk/client-rekognition");
 
 const { rekognitionClient } = require("../../config/aws");
-const uploadToS3 = require("../../helpers/uploadS3");
+const uploadToS3 = require("../../helpers/upLoadS3");
 const HoSoKhachHang = require("../models/HoSoKhachHang");
 
 const detectFacesFromS3 = async (imageKey) => {

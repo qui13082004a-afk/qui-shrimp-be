@@ -152,6 +152,7 @@ HoSoKhachHang.hasMany(GiaHanThanhToan, {
 GiaHanThanhToan.belongsTo(HoSoKhachHang, {
   foreignKey: "id_ho_so",
 }); 
+
 module.exports = {
   NguoiDung,
   DanhMuc,

@@ -209,8 +209,7 @@ const confirmPayment = async (user, paymentId, data) => {
 };
 
 /**
- *  KHỞI TẠO ĐƠN THANH TOÁN MOMO CHO ĐƠN HÀNG THỰC TẾ
- * Khách hàng gọi API này để lấy đường dẫn thanh toán (payUrl) quét mã MoMo
+ *  KHỞI TẠO ĐƠN THANH TOÁN MOMO
  */
 const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
   const userId = user.id_nguoi_dung;
@@ -238,12 +237,12 @@ const createMomoPayment = async (user, paymentId, clientRedirectUrl) => {
   }
 
   const amount = Math.round(Number(payment.so_tien));
-  const order_id = "DATTOM_MOMO_" + paymentId + "_" + Date.now();
+  const order_id = "NhaNong_MOMO_" + paymentId + "_" + Date.now();
 
   const { partnerCode, accessKey, secretKey } = getMomoConfig();
 
   const requestId = order_id;
-  const orderInfo = `Thanh toán vật tư Đất Tôm cho đơn hàng #${order.id_don_hang}`;
+  const orderInfo = `Thanh toán vật tư Nhà Nông cho đơn hàng #${order.id_don_hang}`;
 
   const backendUrl = getRequiredUrl(process.env.BACKEND_URL, "BACKEND_URL");
   const ipnUrl = `${backendUrl}/api/payments/momo-callback`;
@@ -621,8 +620,8 @@ module.exports = {
   getAllPayments,
   getPaymentsByOrder,
   confirmPayment,
-  createMomoPayment,         // Xuất bản hàm khởi tạo thanh toán MoMo
-  handleMomoCallback,        // Xuất bản hàm tiếp nhận kết quả phản hồi từ MoMo
+  createMomoPayment,        
+  handleMomoCallback,       
   processAutomaticWebhookPayment, 
   failPayment,
 };

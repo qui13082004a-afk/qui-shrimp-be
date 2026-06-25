@@ -5,12 +5,29 @@ const create = async (data) => {
 };
 
 const findByUserId = async (id_nguoi_dung) => {
-  return await AoNuoi.findAll({
+  const ponds = await AoNuoi.findAll({
     where: { id_nguoi_dung },
     order: [["id_ao", "DESC"]],
   });
-};
 
+  const result = await Promise.all(
+    ponds.map(async (pond) => {
+      const activeCrop = await VuNuoi.findOne({
+        where: {
+          id_ao: pond.id_ao,
+          trang_thai: "dang_nuoi",
+        },
+      });
+
+      return {
+        ...pond.toJSON(),
+        co_vu_dang_nuoi: !!activeCrop,
+      };
+    })
+  );
+
+  return result;
+};
 const findById = async (id_ao) => {
   return await AoNuoi.findByPk(id_ao);
 };

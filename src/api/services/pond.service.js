@@ -94,7 +94,7 @@ const deletePond = async (id_ao, userId) => {
   const cropSeasons = await cropSeasonRepository.findByPondId(id_ao);
   if (cropSeasons && cropSeasons.length > 0) {
     throw new Error(
-      "Không thể xóa ao nuôi này do hệ thống ghi nhận đã có dữ liệu lịch sử vụ nuôi liên kết. Vui lòng đổi trạng thái ao sang 'Tạm ngưng' để bảo lưu dữ liệu báo cáo thống kê công nợ!"
+      "Không thể xóa ao nuôi này do hệ thống ghi nhận đã có dữ liệu lịch sử vụ nuôi liên kết."
     );
   }
 

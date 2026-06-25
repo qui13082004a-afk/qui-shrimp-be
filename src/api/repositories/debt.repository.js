@@ -34,6 +34,10 @@ const getMyDebtOrders = async (id_nguoi_dung) => {
       {
         model: ThanhToan,
         required: false,
+        where: {
+          trang_thai: "thanh_cong",
+          phuong_thuc: "tra_sau",
+        },
       },
     ],
     order: [["ngay_dat", "DESC"]],
@@ -43,8 +47,12 @@ const getMyDebtOrders = async (id_nguoi_dung) => {
     const plain = order.toJSON();
 
     const da_thanh_toan = (plain.ThanhToans || [])
-      .filter((p) => p.trang_thai === "thanh_cong")
-      .reduce((sum, p) => sum + Number(p.so_tien || 0), 0);
+      .filter(
+        (payment) =>
+          payment.trang_thai === "thanh_cong" &&
+          payment.phuong_thuc === "tra_sau"
+      )
+      .reduce((sum, payment) => sum + Number(payment.so_tien || 0), 0);
 
     const tong_tien = Number(plain.tong_thanh_toan || 0);
     const con_lai = Math.max(tong_tien - da_thanh_toan, 0);
@@ -80,8 +88,12 @@ const getMyDebtOrders = async (id_nguoi_dung) => {
       id_don_hang: plain.id_don_hang,
       id_vu_nuoi: plain.id_vu_nuoi,
       ten_vu_nuoi: plain.VuNuoi?.ten_vu_nuoi || null,
+
       id_ao: ao?.id_ao || null,
       ten_ao: ao?.ten_ao || null,
+
+      id_ho_so: hoSo?.id_ho_so || null,
+      dinh_muc_cong_no: Number(hoSo?.dinh_muc_cong_no || 0),
 
       ngay_dat: plain.ngay_dat,
       han_thanh_toan,
@@ -103,9 +115,28 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
       duoc_phep_tra_sau: true,
       trang_thai_xac_thuc: "da_xac_thuc",
     },
+    include: [
+      {
+        model: AoNuoi,
+        required: false,
+      },
+    ],
   });
 
   const debtOrders = await getMyDebtOrders(id_nguoi_dung);
+
+  const han_muc_theo_ho_so = profiles.map((profile) => {
+    const plain = profile.toJSON();
+
+    return {
+      id_ho_so: plain.id_ho_so,
+      id_ao: plain.id_ao,
+      id_vu_nuoi: plain.id_vu_nuoi,
+      ten_ao: plain.AoNuoi?.ten_ao || `Ao #${plain.id_ao}`,
+      dinh_muc_cong_no: Number(plain.dinh_muc_cong_no || 0),
+      han_thanh_toan: plain.han_thanh_toan || null,
+    };
+  });
 
   const tong_han_muc = profiles.reduce(
     (sum, item) => sum + Number(item.dinh_muc_cong_no || 0),
@@ -147,6 +178,7 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
     han_gan_nhat,
     so_ho_so_duoc_duyet: profiles.length,
     so_don_tra_sau: debtOrders.length,
+    han_muc_theo_ho_so,
   };
 };
 

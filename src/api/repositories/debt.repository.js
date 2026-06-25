@@ -5,6 +5,7 @@ const {
   VuNuoi,
   AoNuoi,
   HoSoKhachHang,
+  GiaoHang,
 } = require("../models");
 
 const getMyDebtOrders = async (id_nguoi_dung) => {
@@ -34,9 +35,12 @@ const getMyDebtOrders = async (id_nguoi_dung) => {
       {
         model: ThanhToan,
         required: false,
+      },
+      {
+        model: GiaoHang,
+        required: true,
         where: {
-          trang_thai: "thanh_cong",
-          phuong_thuc: "tra_sau",
+          trang_thai: "giao_thanh_cong",
         },
       },
     ],
@@ -128,13 +132,37 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
   const han_muc_theo_ho_so = profiles.map((profile) => {
     const plain = profile.toJSON();
 
+    const relatedOrders = debtOrders.filter(
+      (order) => Number(order.id_ho_so) === Number(plain.id_ho_so)
+    );
+
+    const tong_cong_no_ho_so = relatedOrders.reduce(
+      (sum, order) => sum + Number(order.con_lai || 0),
+      0
+    );
+
+    const da_thanh_toan_ho_so = relatedOrders.reduce(
+      (sum, order) => sum + Number(order.da_thanh_toan || 0),
+      0
+    );
+
+    const dinh_muc = Number(plain.dinh_muc_cong_no || 0);
+
     return {
       id_ho_so: plain.id_ho_so,
       id_ao: plain.id_ao,
       id_vu_nuoi: plain.id_vu_nuoi,
       ten_ao: plain.AoNuoi?.ten_ao || `Ao #${plain.id_ao}`,
-      dinh_muc_cong_no: Number(plain.dinh_muc_cong_no || 0),
+      dinh_muc_cong_no: dinh_muc,
       han_thanh_toan: plain.han_thanh_toan || null,
+
+      tong_cong_no: tong_cong_no_ho_so,
+      da_thanh_toan: da_thanh_toan_ho_so,
+      con_lai: Math.max(dinh_muc - tong_cong_no_ho_so, 0),
+      phan_tram_su_dung:
+        dinh_muc > 0
+          ? Math.min((tong_cong_no_ho_so / dinh_muc) * 100, 100)
+          : 0,
     };
   });
 

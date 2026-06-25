@@ -1,4 +1,4 @@
-const { AoNuoi } = require("../models");
+const { AoNuoi,VuNuoi } = require("../models");
 
 const create = async (data) => {
   return await AoNuoi.create(data);

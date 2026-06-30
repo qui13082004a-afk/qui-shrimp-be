@@ -124,15 +124,15 @@ const handlePayOSWebhook = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error("PAYOS WEBHOOK CONTROLLER ERROR:", error.message);
+    console.error("PAYOS WEBHOOK ERROR:", error);
+    console.error("BODY:", JSON.stringify(req.body, null, 2));
 
-    return res.status(400).json({
+    return res.status(200).json({
       success: false,
       message: error.message,
     });
   }
 };
-
 module.exports = {
   getMyPayments,
   getAllPayments,

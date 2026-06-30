@@ -1,8 +1,5 @@
 const { paymentService } = require("../services");
 
-/**
- * Khách hàng lấy danh sách lịch sử thanh toán của bản thân
- */
 const getMyPayments = async (req, res) => {
   try {
     const payments = await paymentService.getMyPayments(req.user.id_nguoi_dung);
@@ -20,9 +17,6 @@ const getMyPayments = async (req, res) => {
   }
 };
 
-/**
- * Admin xem toàn bộ danh sách giao dịch thanh toán của hệ thống
- */
 const getAllPayments = async (req, res) => {
   try {
     const payments = await paymentService.getAllPayments(req.user);
@@ -40,9 +34,6 @@ const getAllPayments = async (req, res) => {
   }
 };
 
-/**
- * Khách hàng hoặc Admin xem lịch sử thanh toán của đơn hàng cụ thể
- */
 const getPaymentsByOrder = async (req, res) => {
   try {
     const payments = await paymentService.getPaymentsByOrder(
@@ -63,9 +54,6 @@ const getPaymentsByOrder = async (req, res) => {
   }
 };
 
-/**
- * Duyệt thanh toán thủ công (Nhân viên vận đơn COD / Admin duyệt trả sau)
- */
 const confirmPayment = async (req, res) => {
   try {
     const payment = await paymentService.confirmPayment(
@@ -87,9 +75,6 @@ const confirmPayment = async (req, res) => {
   }
 };
 
-/**
- * Đánh dấu giao dịch thanh toán thất bại (Chỉ dành cho Admin hệ thống)
- */
 const failPayment = async (req, res) => {
   try {
     const payment = await paymentService.failPayment(
@@ -111,23 +96,18 @@ const failPayment = async (req, res) => {
   }
 };
 
-/**
- * API Khởi tạo link thanh toán MoMo dựa trên hóa đơn của khách
- */
-const createMomoPayment = async (req, res) => {
+const createPayOSPayment = async (req, res) => {
   try {
-    const { clientRedirectUrl } = req.body;
-    const paymentId = req.params.id; // Lấy ID thanh toán từ URL
+    const paymentId = req.params.id;
 
-    const result = await paymentService.createMomoPayment(
+    const result = await paymentService.createPayOSPayment(
       req.user,
-      paymentId,
-      clientRedirectUrl
+      paymentId
     );
 
     return res.status(200).json({
       success: true,
-      message: "Khởi tạo cổng thanh toán điện tử MoMo thành công",
+      message: "Tạo link thanh toán payOS thành công",
       data: result,
     });
   } catch (error) {
@@ -138,38 +118,14 @@ const createMomoPayment = async (req, res) => {
   }
 };
 
-/**
- * Webhook (IPN) tiếp nhận kết quả phản hồi tự động bảo mật từ ví MoMo
- */
-const handleMomoCallback = async (req, res) => {
+const handlePayOSWebhook = async (req, res) => {
   try {
-    const result = await paymentService.handleMomoCallback(req.body);
-
-    // Trả về kết quả JSON hoặc mã HTTP 204 để báo hiệu cho MoMo ngừng gửi IPN lặp lại
-    return res.status(200).json({
-      success: true,
-      message: "Nhận kết quả giao dịch MoMo thành công",
-      data: result
-    });
-  } catch (error) {
-    console.error("MOMO IPN CONTROLLER ERROR:", error.message);
-    return res.status(400).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-/**
- * Webhook tiếp nhận kết quả biến động số dư tự động từ VietQR / PayOS
- */
-const processWebhook = async (req, res) => {
-  try {
-    const signature = req.headers["x-signature"];
-    const result = await paymentService.processAutomaticWebhookPayment(req.body, signature);
+    const result = await paymentService.handlePayOSWebhook(req.body);
 
     return res.status(200).json(result);
   } catch (error) {
+    console.error("PAYOS WEBHOOK CONTROLLER ERROR:", error.message);
+
     return res.status(400).json({
       success: false,
       message: error.message,
@@ -183,7 +139,6 @@ module.exports = {
   getPaymentsByOrder,
   confirmPayment,
   failPayment,
-  createMomoPayment,
-  handleMomoCallback,
-  processWebhook,
+  createPayOSPayment,
+  handlePayOSWebhook,
 };

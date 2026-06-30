@@ -216,8 +216,134 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
     han_muc_theo_ho_so,
   };
 };
+const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
+  const profile = await HoSoKhachHang.findOne({
+    where: {
+      id_ho_so,
+      id_nguoi_dung,
+      duoc_phep_tra_sau: true,
+    },
+    include: [
+      { model: AoNuoi, required: false },
+      { model: VuNuoi, required: false },
+    ],
+  });
 
+  if (!profile) {
+    throw new Error("Không tìm thấy hồ sơ công nợ hoặc bạn không có quyền truy cập");
+  }
+
+  const plain = profile.toJSON();
+  const debtOrders = await getMyDebtOrders(id_nguoi_dung);
+
+  const relatedOrders = debtOrders.filter(
+    (order) => Number(order.id_ho_so) === Number(id_ho_so)
+  );
+
+  const cong_no_hien_tai = relatedOrders
+    .filter((order) => order.trang_thai_don_hang === "hoan_tat")
+    .reduce((sum, order) => sum + Number(order.con_lai || 0), 0);
+
+  const dang_giu_han_muc = relatedOrders
+    .filter((order) =>
+      ["cho_xu_ly", "cho_giao", "dang_giao"].includes(order.trang_thai_don_hang)
+    )
+    .reduce((sum, order) => sum + Number(order.con_lai || 0), 0);
+
+  const da_thanh_toan = relatedOrders.reduce(
+    (sum, order) => sum + Number(order.da_thanh_toan || 0),
+    0
+  );
+
+  const dinh_muc = Number(plain.dinh_muc_cong_no || 0);
+  const da_su_dung = cong_no_hien_tai + dang_giu_han_muc;
+  const con_lai = Math.max(dinh_muc - da_su_dung, 0);
+
+  return {
+    id_ho_so: plain.id_ho_so,
+    id_nguoi_dung: plain.id_nguoi_dung,
+    id_ao: plain.id_ao,
+    id_vu_nuoi: plain.id_vu_nuoi,
+
+    ten_ao: plain.AoNuoi?.ten_ao || `Ao #${plain.id_ao}`,
+    dien_tich: plain.AoNuoi?.dien_tich || null,
+    dia_chi_ao: plain.AoNuoi?.dia_chi_ao || null,
+    loai_hinh_nuoi: plain.AoNuoi?.loai_hinh_nuoi || null,
+
+    ten_vu_nuoi: plain.VuNuoi?.ten_vu_nuoi || null,
+    ngay_tha_giong: plain.VuNuoi?.ngay_tha_giong || null,
+    so_luong_giong: plain.VuNuoi?.so_luong_giong || null,
+    ngay_thu_hoach_du_kien: plain.VuNuoi?.ngay_thu_hoach_du_kien || null,
+
+    dinh_muc_cong_no: dinh_muc,
+    cong_no_hien_tai,
+    dang_giu_han_muc,
+    da_su_dung,
+    da_thanh_toan,
+    con_lai,
+    phan_tram_su_dung:
+      dinh_muc > 0 ? Math.min((da_su_dung / dinh_muc) * 100, 100) : 0,
+
+    han_thanh_toan: plain.han_thanh_toan || null,
+    ngay_duyet: plain.ngay_duyet || null,
+    ghi_chu: plain.ghi_chu || null,
+
+    so_don_lien_quan: relatedOrders.length,
+  };
+};
+
+const getDebtProfileTransactions = async (id_nguoi_dung, id_ho_so) => {
+  const profile = await HoSoKhachHang.findOne({
+    where: {
+      id_ho_so,
+      id_nguoi_dung,
+      duoc_phep_tra_sau: true,
+    },
+  });
+
+  if (!profile) {
+    throw new Error("Không tìm thấy hồ sơ công nợ hoặc bạn không có quyền truy cập");
+  }
+
+  const debtOrders = await getMyDebtOrders(id_nguoi_dung);
+
+  const relatedOrders = debtOrders.filter(
+    (order) => Number(order.id_ho_so) === Number(id_ho_so)
+  );
+
+  const orderTransactions = relatedOrders.map((order) => ({
+    id: `ORDER-${order.id_don_hang}`,
+    ngay: order.ngay_dat,
+    loai: "mua_hang",
+    noi_dung: `Mua vật tư đơn #DH-${order.id_don_hang}`,
+    so_tien: -Number(order.tong_tien || 0),
+    trang_thai: order.trang_thai_don_hang,
+    id_don_hang: order.id_don_hang,
+  }));
+
+  const paymentTransactions = [];
+
+  relatedOrders.forEach((order) => {
+    if (Number(order.da_thanh_toan || 0) > 0) {
+      paymentTransactions.push({
+        id: `PAY-${order.id_don_hang}`,
+        ngay: order.ngay_dat,
+        loai: "thanh_toan",
+        noi_dung: `Thanh toán công nợ đơn #DH-${order.id_don_hang}`,
+        so_tien: Number(order.da_thanh_toan || 0),
+        trang_thai: "thanh_cong",
+        id_don_hang: order.id_don_hang,
+      });
+    }
+  });
+
+  return [...orderTransactions, ...paymentTransactions].sort(
+    (a, b) => new Date(b.ngay).getTime() - new Date(a.ngay).getTime()
+  );
+};
 module.exports = {
   getMyDebtOrders,
   getMyDebtSummary,
+  getDebtProfileDetail,
+  getDebtProfileTransactions,
 };

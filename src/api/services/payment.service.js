@@ -203,11 +203,23 @@ const createPayOSPayment = async (user, paymentId) => {
 };
 
 const handlePayOSWebhook = async (webhookBody) => {
+  let webhookData;
+
+  try {
+    webhookData = payOS.webhooks.verify(webhookBody);
+  } catch (error) {
+    console.error("PAYOS VERIFY WEBHOOK ERROR:", error.message);
+    console.log("PAYOS WEBHOOK BODY:", JSON.stringify(webhookBody, null, 2));
+
+    return {
+      success: true,
+      message: "Webhook URL hoạt động, nhưng dữ liệu kiểm tra không phải giao dịch hợp lệ",
+    };
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
- const webhookData = payOS.webhooks.verify(webhookBody);
-
     const orderCode = webhookData.orderCode;
     const amount = Number(webhookData.amount);
     const code = webhookData.code;
@@ -219,12 +231,15 @@ const handlePayOSWebhook = async (webhookBody) => {
     );
 
     if (!payment) {
-      throw new Error("Không tìm thấy giao dịch thanh toán payOS");
+      await transaction.rollback();
+      return {
+        success: true,
+        message: "Không tìm thấy giao dịch, có thể đây là request kiểm tra webhook",
+      };
     }
 
     if (payment.trang_thai === "thanh_cong") {
       await transaction.rollback();
-
       return {
         success: true,
         message: "Giao dịch đã được xử lý trước đó",
@@ -240,24 +255,20 @@ const handlePayOSWebhook = async (webhookBody) => {
     if (code !== "00") {
       await paymentRepository.updatePayment(
         payment,
-        {
-          trang_thai: "that_bai",
-        },
+        { trang_thai: "that_bai" },
         transaction
       );
 
       await paymentRepository.updateOrder(
         order,
-        {
-          trang_thai_don_hang: "cho_thanh_toan",
-        },
+        { trang_thai_don_hang: "cho_thanh_toan" },
         transaction
       );
 
       await transaction.commit();
 
       return {
-        success: false,
+        success: true,
         message: "Thanh toán payOS thất bại",
       };
     }
@@ -277,9 +288,7 @@ const handlePayOSWebhook = async (webhookBody) => {
 
     await paymentRepository.updateOrder(
       order,
-      {
-        trang_thai_don_hang: "cho_giao",
-      },
+      { trang_thai_don_hang: "cho_giao" },
       transaction
     );
 

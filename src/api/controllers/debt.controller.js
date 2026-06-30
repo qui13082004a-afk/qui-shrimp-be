@@ -33,8 +33,48 @@ const getMyDebtOrders = async (req, res) => {
     });
   }
 };
+const getDebtProfileDetail = async (req, res) => {
+  try {
+    const data = await debtService.getDebtProfileDetail(
+      req.user.id_nguoi_dung,
+      req.params.profileId
+    );
 
+    return res.status(200).json({
+      success: true,
+      message: "Lấy chi tiết hồ sơ công nợ thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const getDebtProfileTransactions = async (req, res) => {
+  try {
+    const data = await debtService.getDebtProfileTransactions(
+      req.user.id_nguoi_dung,
+      req.params.profileId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy lịch sử phát sinh công nợ thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   getMyDebtSummary,
   getMyDebtOrders,
+  getDebtProfileDetail,
+  getDebtProfileTransactions,
 };

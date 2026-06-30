@@ -215,8 +215,7 @@ const handlePayOSWebhook = async (webhookBody) => {
     };
   }
 
-  const paymentData = verifiedData.data || verifiedData;
-
+  const paymentData = webhookBody.data;
   const orderCode = paymentData.orderCode;
   const amount = Number(paymentData.amount);
   const code = paymentData.code;

@@ -203,27 +203,29 @@ const createPayOSPayment = async (user, paymentId) => {
 };
 
 const handlePayOSWebhook = async (webhookBody) => {
-  let webhookData;
+  let verifiedData;
 
   try {
-    webhookData = payOS.webhooks.verify(webhookBody);
+    verifiedData = payOS.webhooks.verify(webhookBody);
   } catch (error) {
-    console.error("PAYOS VERIFY WEBHOOK ERROR:", error.message);
-    console.log("PAYOS WEBHOOK BODY:", JSON.stringify(webhookBody, null, 2));
-
+    console.error("PAYOS VERIFY ERROR:", error.message);
     return {
       success: true,
-      message: "Webhook URL hoạt động, nhưng dữ liệu kiểm tra không phải giao dịch hợp lệ",
+      message: "Webhook URL hoạt động",
     };
   }
+
+  const paymentData = verifiedData.data || verifiedData;
+
+  const orderCode = paymentData.orderCode;
+  const amount = Number(paymentData.amount);
+  const code = paymentData.code;
+
+  console.log("PAYOS DATA:", paymentData);
 
   const transaction = await sequelize.transaction();
 
   try {
-    const orderCode = webhookData.orderCode;
-    const amount = Number(webhookData.amount);
-    const code = webhookData.code;
-
     const allPayments = await paymentRepository.findAll();
 
     const payment = allPayments.find(
@@ -232,14 +234,17 @@ const handlePayOSWebhook = async (webhookBody) => {
 
     if (!payment) {
       await transaction.rollback();
+      console.log("Không tìm thấy payment với orderCode:", orderCode);
+
       return {
         success: true,
-        message: "Không tìm thấy giao dịch, có thể đây là request kiểm tra webhook",
+        message: "Không tìm thấy giao dịch thanh toán payOS",
       };
     }
 
     if (payment.trang_thai === "thanh_cong") {
       await transaction.rollback();
+
       return {
         success: true,
         message: "Giao dịch đã được xử lý trước đó",
@@ -281,6 +286,7 @@ const handlePayOSWebhook = async (webhookBody) => {
       payment,
       {
         trang_thai: "thanh_cong",
+        ma_giao_dich: String(orderCode),
         ngay_thanh_toan: new Date(),
       },
       transaction
@@ -288,7 +294,9 @@ const handlePayOSWebhook = async (webhookBody) => {
 
     await paymentRepository.updateOrder(
       order,
-      { trang_thai_don_hang: "cho_giao" },
+      {
+        trang_thai_don_hang: "cho_giao",
+      },
       transaction
     );
 
@@ -304,7 +312,6 @@ const handlePayOSWebhook = async (webhookBody) => {
     throw error;
   }
 };
-
 const failPayment = async (user, paymentId, data) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ quản trị viên mới có quyền đánh dấu giao dịch thất bại");

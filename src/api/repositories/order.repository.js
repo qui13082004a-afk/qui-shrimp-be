@@ -1,4 +1,11 @@
-const { DonHang, ChiTietDonHang, SanPham, NguoiDung, ThanhToan, HoSoKhachHang } = require("../models");
+const {
+  DonHang,
+  ChiTietDonHang,
+  SanPham,
+  NguoiDung,
+  ThanhToan,
+  HoSoKhachHang,
+} = require("../models");
 const { Op } = require("sequelize");
 
 const createOrder = async (data, transaction) => {
@@ -96,13 +103,29 @@ const findApprovedPostpaidProfile = async (id_nguoi_dung, id_vu_nuoi) => {
   });
 };
 
+// Công nợ thực tế: chỉ tính các đơn trả sau đã hoàn tất giao hàng,
+// tức là nghĩa vụ thanh toán đã phát sinh.
 const getCurrentDebt = async (id_nguoi_dung) => {
   const result = await DonHang.sum("tong_thanh_toan", {
     where: {
       id_nguoi_dung,
       hinh_thuc_thanh_toan: "tra_sau",
+      trang_thai_don_hang: "hoan_tat",
+    },
+  });
+
+  return Number(result || 0);
+};
+
+// Hạn mức đang giữ: các đơn trả sau đã tạo nhưng chưa hoàn tất,
+// dùng để chặn khách đặt nhiều đơn cùng lúc vượt hạn mức.
+const getReservedDebt = async (id_nguoi_dung) => {
+  const result = await DonHang.sum("tong_thanh_toan", {
+    where: {
+      id_nguoi_dung,
+      hinh_thuc_thanh_toan: "tra_sau",
       trang_thai_don_hang: {
-        [Op.notIn]: ["hoan_tat", "da_huy", "giao_that_bai"],
+        [Op.in]: ["cho_xu_ly", "cho_giao", "dang_giao"],
       },
     },
   });
@@ -122,4 +145,5 @@ module.exports = {
   updateStatus,
   findApprovedPostpaidProfile,
   getCurrentDebt,
+  getReservedDebt,
 };

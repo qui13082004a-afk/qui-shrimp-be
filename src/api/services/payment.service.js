@@ -1,7 +1,7 @@
 const { sequelize } = require("../../config/database");
 const payOS = require("../../config/payos");
 const { paymentRepository } = require("../repositories");
-
+const debtPaymentRepository = require("../repositories/debtPayment.repository");
 const getMyPayments = async (userId) => {
   return await paymentRepository.findByUserId(userId);
 };
@@ -215,12 +215,31 @@ const handlePayOSWebhook = async (webhookBody) => {
     };
   }
 
-  const paymentData = webhookBody.data;
+  const paymentData = webhookBody.data || verifiedData.data || verifiedData;
   const orderCode = paymentData.orderCode;
   const amount = Number(paymentData.amount);
   const code = paymentData.code;
 
   console.log("PAYOS DATA:", paymentData);
+
+  if (code !== "00") {
+    return {
+      success: true,
+      message: "Thanh toán payOS không thành công",
+    };
+  }
+
+  const debtPayment =
+    await debtPaymentRepository.findPendingDebtPaymentByOrderCode(orderCode);
+
+  if (debtPayment) {
+    await debtPaymentRepository.allocateDebtPayment(debtPayment, amount);
+
+    return {
+      success: true,
+      message: "Thanh toán công nợ thành công",
+    };
+  }
 
   const transaction = await sequelize.transaction();
 
@@ -233,8 +252,6 @@ const handlePayOSWebhook = async (webhookBody) => {
 
     if (!payment) {
       await transaction.rollback();
-      console.log("Không tìm thấy payment với orderCode:", orderCode);
-
       return {
         success: true,
         message: "Không tìm thấy giao dịch thanh toán payOS",
@@ -243,7 +260,6 @@ const handlePayOSWebhook = async (webhookBody) => {
 
     if (payment.trang_thai === "thanh_cong") {
       await transaction.rollback();
-
       return {
         success: true,
         message: "Giao dịch đã được xử lý trước đó",
@@ -254,27 +270,6 @@ const handlePayOSWebhook = async (webhookBody) => {
 
     if (!order) {
       throw new Error("Không tìm thấy đơn hàng liên kết");
-    }
-
-    if (code !== "00") {
-      await paymentRepository.updatePayment(
-        payment,
-        { trang_thai: "that_bai" },
-        transaction
-      );
-
-      await paymentRepository.updateOrder(
-        order,
-        { trang_thai_don_hang: "cho_thanh_toan" },
-        transaction
-      );
-
-      await transaction.commit();
-
-      return {
-        success: true,
-        message: "Thanh toán payOS thất bại",
-      };
     }
 
     if (Math.round(Number(payment.so_tien)) !== amount) {

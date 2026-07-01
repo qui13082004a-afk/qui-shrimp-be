@@ -72,9 +72,68 @@ const getDebtProfileTransactions = async (req, res) => {
     });
   }
 };
+const createPartialDebtPayment = async (req, res) => {
+  try {
+    const data = await debtService.createPartialDebtPayment(
+      req.user.id_nguoi_dung,
+      req.body
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Tạo thanh toán công nợ thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const getMyDebtPayments = async (req, res) => {
+  try {
+    const data = await debtService.getMyDebtPayments(req.user.id_nguoi_dung);
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy lịch sử thanh toán công nợ thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const getDebtPaymentDetail = async (req, res) => {
+  try {
+    const data = await debtService.getDebtPaymentDetail(
+      req.user.id_nguoi_dung,
+      req.params.id
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy chi tiết thanh toán công nợ thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   getMyDebtSummary,
   getMyDebtOrders,
   getDebtProfileDetail,
   getDebtProfileTransactions,
+  createPartialDebtPayment,
+getMyDebtPayments,
+getDebtPaymentDetail,
 };

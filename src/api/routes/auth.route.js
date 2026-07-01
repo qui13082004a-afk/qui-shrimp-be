@@ -19,7 +19,7 @@ const {
   validateChangePassword,
   validateUpdateProfile,
 } = require("../middlewares/validate");
-
+const upload = require("../middlewares/upload.middleware");
 router.post("/register", validateRegister, authController.register);
 router.post("/verify-email", validateVerifyEmail, authController.verifyEmail);
 router.post("/login", validateLogin, authController.login);
@@ -31,7 +31,14 @@ router.post("/reset-password", validateResetPassword, authController.resetPasswo
 router.get("/me", authMiddleware, authController.getMe);
 
 // Cập nhật profile cá nhân
-router.put("/update-profile", authMiddleware, validateUpdateProfile, authController.updateProfile);
+
+router.put(
+  "/update-profile",
+  authMiddleware,
+  upload.single("anh_dai_dien"),
+  validateUpdateProfile,
+  authController.updateProfile
+);
 
 // Đổi mật khẩu cá nhân
 router.put("/change-password", authMiddleware, validateChangePassword, authController.changePassword);

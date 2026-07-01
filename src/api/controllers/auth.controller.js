@@ -129,9 +129,17 @@ const getMe = async (req, res) => {
  */
 const updateProfile = async (req, res) => {
   try {
+    const updateData = {
+      ...(req.body || {}),
+    };
+
+    if (req.file) {
+      updateData.anh_dai_dien = req.file.path;
+    }
+
     const updatedUser = await authService.updateProfile(
       req.user.id_nguoi_dung,
-      req.body
+      updateData
     );
 
     return res.status(200).json({
@@ -146,7 +154,6 @@ const updateProfile = async (req, res) => {
     });
   }
 };
-
 /**
  * ĐỔI MẬT KHẨU
  */

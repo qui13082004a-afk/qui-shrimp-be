@@ -13,6 +13,28 @@ const BaiViet = require("./BaiViet");
 const BinhLuan = require("./BinhLuan");
 const NhanVienGiaoHang = require("./NhanVienGiaoHang");
 const GiaHanThanhToan = require("./GiaHanThanhToan");
+const ThanhToanCongNo = require("./ThanhToanCongNo");
+const ChiTietThanhToanCongNo = require("./ChiTietThanhToanCongNo");
+NguoiDung.hasMany(ThanhToanCongNo, {
+  foreignKey: "id_nguoi_dung",
+});
+ThanhToanCongNo.belongsTo(NguoiDung, {
+  foreignKey: "id_nguoi_dung",
+});
+
+ThanhToanCongNo.hasMany(ChiTietThanhToanCongNo, {
+  foreignKey: "id_thanh_toan_cong_no",
+});
+ChiTietThanhToanCongNo.belongsTo(ThanhToanCongNo, {
+  foreignKey: "id_thanh_toan_cong_no",
+});
+
+DonHang.hasMany(ChiTietThanhToanCongNo, {
+  foreignKey: "id_don_hang",
+});
+ChiTietThanhToanCongNo.belongsTo(DonHang, {
+  foreignKey: "id_don_hang",
+});
 // 1-n NguoiDung - HoSoKhachHang
 NguoiDung.hasMany(HoSoKhachHang, {
   foreignKey: "id_nguoi_dung",
@@ -169,4 +191,6 @@ module.exports = {
   BinhLuan,
   NhanVienGiaoHang,
   GiaHanThanhToan,
+  ThanhToanCongNo,
+ChiTietThanhToanCongNo,
 };

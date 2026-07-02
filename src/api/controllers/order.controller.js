@@ -88,40 +88,24 @@ const updateOrderStatus = async (req, res) => {
     });
   }
 };
-const cancelMyOrder = async (userId, orderId) => {
-  const order = await DonHang.findOne({
-    where: {
-      id_don_hang: orderId,
-      id_nguoi_dung: userId,
-    },
-    include: [
-      {
-        model: ChiTietDonHang,
-        required: false,
-        include: [{ model: SanPham, required: false }],
-      },
-      {
-        model: ThanhToan,
-        required: false,
-      },
-    ],
-  });
+const cancelMyOrder = async (req, res) => {
+  try {
+    const order = await orderService.cancelMyOrder(
+      req.user.id_nguoi_dung,
+      req.params.id
+    );
 
-  if (!order) {
-    throw new Error("Không tìm thấy đơn hàng hoặc bạn không có quyền hủy");
+    return res.status(200).json({
+      success: true,
+      message: "Hủy đơn hàng thành công",
+      data: order,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
-
-  const allowedStatus = ["cho_xu_ly", "cho_thanh_toan"];
-
-  if (!allowedStatus.includes(order.trang_thai_don_hang)) {
-    throw new Error("Chỉ có thể hủy đơn hàng khi đơn còn chờ xử lý hoặc chờ thanh toán");
-  }
-
-  await order.update({
-    trang_thai_don_hang: "da_huy",
-  });
-
-  return order;
 };
 module.exports = {
   createOrder,

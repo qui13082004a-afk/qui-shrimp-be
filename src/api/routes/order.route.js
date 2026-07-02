@@ -22,7 +22,8 @@ router.get(
 
 // Khách hàng hoặc admin xem chi tiết một đơn hàng
 router.get("/:id", authMiddleware, orderController.getOrderById);
-
+// khách hàng hủy đơn hàng
+router.put("/:id/cancel", authMiddleware, orderController.cancelMyOrder);
 // Admin hoặc nhân viên giao hàng cập nhật trạng thái đơn hàng
 router.put(
   "/:id/status",

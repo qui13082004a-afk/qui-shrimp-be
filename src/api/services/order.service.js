@@ -57,7 +57,7 @@ const createOrder = async (user, data) => {
     let trang_thai_don_hang = "cho_xu_ly";
 
     if (data.hinh_thuc_thanh_toan === "cod") {
-      trang_thai_don_hang = "cho_giao";
+      trang_thai_don_hang = "cho_xu_ly";
     } else if (data.hinh_thuc_thanh_toan === "chuyen_khoan") {
       trang_thai_don_hang = "cho_thanh_toan";
     } else if (data.hinh_thuc_thanh_toan === "tra_sau") {
@@ -200,11 +200,14 @@ const updateOrderStatus = async (user, id_don_hang, data) => {
 
   return await orderRepository.updateStatus(id_don_hang, targetStatus);
 };
-
+const cancelMyOrder = async (userId, orderId) => {
+  return await orderRepository.cancelMyOrder(userId, orderId);
+};
 module.exports = {
   createOrder,
   getMyOrders,
   getAllOrders,
   getOrderById,
   updateOrderStatus,
+  cancelMyOrder
 };

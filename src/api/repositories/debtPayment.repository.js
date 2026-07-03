@@ -7,6 +7,7 @@ const {
   ThanhToanCongNo,
   ChiTietThanhToanCongNo,
   VuNuoi,
+  AoNuoi,
   HoSoKhachHang,
 } = require("../models");
 
@@ -87,9 +88,29 @@ const getMyDebtPayments = async (id_nguoi_dung) => {
     where: { id_nguoi_dung },
     include: [
       {
+        model: HoSoKhachHang,
+        required: false,
+        include: [
+          { model: AoNuoi, required: false },
+          { model: VuNuoi, required: false },
+        ],
+      },
+      {
         model: ChiTietThanhToanCongNo,
         required: false,
-        include: [{ model: DonHang }],
+        include: [
+          {
+            model: DonHang,
+            required: false,
+            include: [
+              {
+                model: VuNuoi,
+                required: false,
+                include: [{ model: AoNuoi, required: false }],
+              },
+            ],
+          },
+        ],
       },
     ],
     order: [["ngay_tao", "DESC"]],

@@ -23,7 +23,13 @@ NguoiDung.hasMany(ThanhToanCongNo, {
 ThanhToanCongNo.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
-
+// HoSoKhachHang - ThanhToanCongNo
+HoSoKhachHang.hasMany(ThanhToanCongNo, {
+  foreignKey: "id_ho_so",
+});
+ThanhToanCongNo.belongsTo(HoSoKhachHang, {
+  foreignKey: "id_ho_so",
+});
 // ThanhToanCongNo - ChiTietThanhToanCongNo
 ThanhToanCongNo.hasMany(ChiTietThanhToanCongNo, {
   foreignKey: "id_thanh_toan_cong_no",

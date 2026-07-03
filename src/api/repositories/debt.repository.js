@@ -9,7 +9,6 @@ const {
   HoSoKhachHang,
   GiaoHang,
 } = require("../models");
-
 const getMyDebtOrders = async (id_nguoi_dung) => {
   const debtOrders = await DonHang.findAll({
     where: {
@@ -49,10 +48,29 @@ const getMyDebtOrders = async (id_nguoi_dung) => {
     },
     attributes: [
       "id_thanh_toan_cong_no",
+      "id_ho_so",
       "so_tien",
       "ma_giao_dich",
       "ngay_thanh_toan",
       "trang_thai",
+    ],
+    include: [
+      {
+        model: HoSoKhachHang,
+        required: false,
+        include: [
+          {
+            model: VuNuoi,
+            required: false,
+            attributes: ["ten_vu_nuoi"],
+          },
+          {
+            model: AoNuoi,
+            required: false,
+            attributes: ["ten_ao"],
+          },
+        ],
+      },
     ],
   });
 
@@ -77,8 +95,8 @@ const getMyDebtOrders = async (id_nguoi_dung) => {
       loai: "thanh_toan",
       ngay_giao_dich: plain.ngay_thanh_toan,
       noi_dung: "Thanh toán công nợ",
-      vu_nuoi: null,
-      ao_nuoi: null,
+      vu_nuoi: plain.HoSoKhachHang?.VuNuoi?.ten_vu_nuoi || null,
+      ao_nuoi: plain.HoSoKhachHang?.AoNuoi?.ten_ao || null,
       so_tien: Number(plain.so_tien || 0),
       trang_thai: plain.trang_thai,
       ma_giao_dich: plain.ma_giao_dich || null,

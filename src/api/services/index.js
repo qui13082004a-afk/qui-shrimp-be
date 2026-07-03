@@ -7,6 +7,7 @@ const customerProfileService = require("./customerProfile.service");
 const orderService = require("./order.service");
 const paymentService = require("./payment.service");
 const deliveryService = require("./delivery.service");
+const debtExtensionService=require("./debtExtension.service")
 module.exports = {
   authService,
   categoryService,
@@ -16,5 +17,6 @@ module.exports = {
   customerProfileService,
   orderService,
   paymentService,
-  deliveryService
+  deliveryService,
+  debtExtensionService
 };

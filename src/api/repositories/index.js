@@ -7,6 +7,7 @@ const customerProfileRepository = require("./customerProfile.repository");
 const orderRepository = require("./order.repository");
 const paymentRepository = require("./payment.repository");
 const deliveryRepository = require("./delivery.repository");
+const debtExtensionRepository = require("./debtExtension.repository");
 module.exports = {
   authRepository,
   categoryRepository,
@@ -16,6 +17,7 @@ module.exports = {
   customerProfileRepository,
   orderRepository,
   paymentRepository,
-  deliveryRepository
+  deliveryRepository,
+  debtExtensionRepository
 };
   

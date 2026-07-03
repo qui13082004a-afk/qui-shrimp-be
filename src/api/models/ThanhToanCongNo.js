@@ -1,6 +1,3 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../../config/database");
-
 const ThanhToanCongNo = sequelize.define(
   "ThanhToanCongNo",
   {
@@ -12,6 +9,10 @@ const ThanhToanCongNo = sequelize.define(
     id_nguoi_dung: {
       type: DataTypes.BIGINT,
       allowNull: false,
+    },
+    id_ho_so: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
     },
     so_tien: {
       type: DataTypes.DECIMAL(15, 2),
@@ -39,5 +40,3 @@ const ThanhToanCongNo = sequelize.define(
     timestamps: false,
   }
 );
-
-module.exports = ThanhToanCongNo;

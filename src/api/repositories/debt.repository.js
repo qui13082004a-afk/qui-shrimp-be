@@ -299,23 +299,88 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
   }
 
   const plain = profile.toJSON();
-  const debtOrders = await getMyDebtOrders(id_nguoi_dung);
 
-  const relatedOrders = debtOrders.filter(
-    (order) => Number(order.id_ho_so) === Number(id_ho_so)
-  );
+  const orders = await DonHang.findAll({
+    where: {
+      id_nguoi_dung,
+      id_vu_nuoi: plain.id_vu_nuoi,
+      hinh_thuc_thanh_toan: "tra_sau",
+      trang_thai_don_hang: {
+        [Op.notIn]: ["da_huy", "giao_that_bai"],
+      },
+    },
+    attributes: [
+      "id_don_hang",
+      "tong_thanh_toan",
+      "trang_thai_don_hang",
+    ],
+  });
 
-  const cong_no_hien_tai = relatedOrders
+  const plainOrders = orders.map((order) => order.toJSON());
+  const orderIds = plainOrders.map((order) => order.id_don_hang);
+
+  let paymentDetails = [];
+
+  if (orderIds.length > 0) {
+    paymentDetails = await ChiTietThanhToanCongNo.findAll({
+      where: {
+        id_don_hang: {
+          [Op.in]: orderIds,
+        },
+      },
+      attributes: ["id_don_hang", "so_tien_phan_bo"],
+      include: [
+        {
+          model: ThanhToanCongNo,
+          required: true,
+          attributes: [],
+          where: {
+            trang_thai: "thanh_cong",
+          },
+        },
+      ],
+    });
+  }
+
+  const paidMap = {};
+
+  paymentDetails.forEach((item) => {
+    const data = item.toJSON();
+    paidMap[data.id_don_hang] =
+      (paidMap[data.id_don_hang] || 0) +
+      Number(data.so_tien_phan_bo || 0);
+  });
+
+  const ordersWithDebt = plainOrders.map((order) => {
+    const tong_tien = Number(order.tong_thanh_toan || 0);
+    const da_thanh_toan = Number(paidMap[order.id_don_hang] || 0);
+    const con_lai = Math.max(tong_tien - da_thanh_toan, 0);
+
+    return {
+      ...order,
+      tong_tien,
+      da_thanh_toan,
+      con_lai,
+    };
+  });
+
+  const cong_no_hien_tai = ordersWithDebt
     .filter((order) => order.trang_thai_don_hang === "hoan_tat")
     .reduce((sum, order) => sum + Number(order.con_lai || 0), 0);
 
-  const dang_giu_han_muc = relatedOrders
+  const dang_giu_han_muc = ordersWithDebt
     .filter((order) =>
-      ["cho_xu_ly", "cho_giao", "dang_giao"].includes(order.trang_thai_don_hang)
+      [
+        "cho_xu_ly",
+        "cho_thanh_toan",
+        "da_thanh_toan",
+        "cho_giao",
+        "dang_giao",
+      ].includes(order.trang_thai_don_hang)
     )
     .reduce((sum, order) => sum + Number(order.con_lai || 0), 0);
 
-  const da_thanh_toan = relatedOrders.reduce(
+  const da_thanh_toan = ordersWithDebt.reduce(
     (sum, order) => sum + Number(order.da_thanh_toan || 0),
     0
   );
@@ -346,6 +411,7 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
     da_su_dung,
     da_thanh_toan,
     con_lai,
+
     phan_tram_su_dung:
       dinh_muc > 0 ? Math.min((da_su_dung / dinh_muc) * 100, 100) : 0,
 
@@ -353,7 +419,7 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
     ngay_duyet: plain.ngay_duyet || null,
     ghi_chu: plain.ghi_chu || null,
 
-    so_don_lien_quan: relatedOrders.length,
+    so_don_lien_quan: ordersWithDebt.length,
   };
 };
 

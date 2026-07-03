@@ -15,6 +15,8 @@ const NhanVienGiaoHang = require("./NhanVienGiaoHang");
 const GiaHanThanhToan = require("./GiaHanThanhToan");
 const ThanhToanCongNo = require("./ThanhToanCongNo");
 const ChiTietThanhToanCongNo = require("./ChiTietThanhToanCongNo");
+
+// NguoiDung - ThanhToanCongNo
 NguoiDung.hasMany(ThanhToanCongNo, {
   foreignKey: "id_nguoi_dung",
 });
@@ -22,6 +24,7 @@ ThanhToanCongNo.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
 
+// ThanhToanCongNo - ChiTietThanhToanCongNo
 ThanhToanCongNo.hasMany(ChiTietThanhToanCongNo, {
   foreignKey: "id_thanh_toan_cong_no",
 });
@@ -29,151 +32,177 @@ ChiTietThanhToanCongNo.belongsTo(ThanhToanCongNo, {
   foreignKey: "id_thanh_toan_cong_no",
 });
 
+// DonHang - ChiTietThanhToanCongNo
 DonHang.hasMany(ChiTietThanhToanCongNo, {
   foreignKey: "id_don_hang",
 });
 ChiTietThanhToanCongNo.belongsTo(DonHang, {
   foreignKey: "id_don_hang",
 });
-// 1-n NguoiDung - HoSoKhachHang
+
+// NguoiDung - HoSoKhachHang
 NguoiDung.hasMany(HoSoKhachHang, {
   foreignKey: "id_nguoi_dung",
 });
-
 HoSoKhachHang.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
-// 1-n AoNuoi - HoSoKhachHang
+
+// AoNuoi - HoSoKhachHang
 AoNuoi.hasMany(HoSoKhachHang, {
   foreignKey: "id_ao",
 });
-
 HoSoKhachHang.belongsTo(AoNuoi, {
   foreignKey: "id_ao",
 });
-// 1-n AoNuoi - VuNuoi
+
+// AoNuoi - VuNuoi
 AoNuoi.hasMany(VuNuoi, {
   foreignKey: "id_ao",
 });
 VuNuoi.belongsTo(AoNuoi, {
   foreignKey: "id_ao",
 });
-// 1-1 VuNuoi - HoSoKhachHang
+
+// VuNuoi - HoSoKhachHang
 VuNuoi.hasOne(HoSoKhachHang, {
   foreignKey: "id_vu_nuoi",
 });
-
 HoSoKhachHang.belongsTo(VuNuoi, {
   foreignKey: "id_vu_nuoi",
 });
-// 1-n NguoiDung - DonHang
+
+// NguoiDung - DonHang
 NguoiDung.hasMany(DonHang, {
   foreignKey: "id_nguoi_dung",
 });
 DonHang.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
-// 1-n VuNuoi - DonHang
+
+// VuNuoi - DonHang
 VuNuoi.hasMany(DonHang, {
   foreignKey: "id_vu_nuoi",
 });
 DonHang.belongsTo(VuNuoi, {
   foreignKey: "id_vu_nuoi",
 });
-// 1-n DanhMuc - SanPham
+
+// DanhMuc - SanPham
 DanhMuc.hasMany(SanPham, {
   foreignKey: "id_danh_muc",
 });
 SanPham.belongsTo(DanhMuc, {
   foreignKey: "id_danh_muc",
 });
-// 1-n DonHang - ChiTietDonHang
+
+// DonHang - ChiTietDonHang
 DonHang.hasMany(ChiTietDonHang, {
   foreignKey: "id_don_hang",
 });
 ChiTietDonHang.belongsTo(DonHang, {
   foreignKey: "id_don_hang",
 });
-// 1-n SanPham - ChiTietDonHang
+
+// SanPham - ChiTietDonHang
 SanPham.hasMany(ChiTietDonHang, {
   foreignKey: "id_san_pham",
 });
 ChiTietDonHang.belongsTo(SanPham, {
   foreignKey: "id_san_pham",
 });
-//DonHang 1 ----- 0..n ThanhToan
+
+// DonHang - ThanhToan
 DonHang.hasMany(ThanhToan, {
   foreignKey: "id_don_hang",
 });
 ThanhToan.belongsTo(DonHang, {
   foreignKey: "id_don_hang",
 });
-// 1-n DonHang - GiaoHang
+
+// DonHang - GiaoHang
 DonHang.hasMany(GiaoHang, {
   foreignKey: "id_don_hang",
 });
-
 GiaoHang.belongsTo(DonHang, {
   foreignKey: "id_don_hang",
 });
-// 1-0..1 NguoiDung - NhanVienGiaoHang
+
+// NguoiDung - NhanVienGiaoHang
 NguoiDung.hasOne(NhanVienGiaoHang, {
   foreignKey: "id_nguoi_dung",
 });
 NhanVienGiaoHang.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
-// 1-n NhanVienGiaoHang - GiaoHang
+
+// NhanVienGiaoHang - GiaoHang
 NhanVienGiaoHang.hasMany(GiaoHang, {
   foreignKey: "id_nhan_vien_giao",
 });
 GiaoHang.belongsTo(NhanVienGiaoHang, {
   foreignKey: "id_nhan_vien_giao",
 });
-// 1-1 DonHang - HopDong
+
+// DonHang - HopDong
 DonHang.hasOne(HopDong, {
   foreignKey: "id_don_hang",
 });
 HopDong.belongsTo(DonHang, {
   foreignKey: "id_don_hang",
 });
-// 1-n NguoiDung - BaiViet
+
+// NguoiDung - BaiViet
 NguoiDung.hasMany(BaiViet, {
   foreignKey: "id_nguoi_dung",
 });
 BaiViet.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
-// 1-n BaiViet - BinhLuan
+
+// BaiViet - BinhLuan
 BaiViet.hasMany(BinhLuan, {
   foreignKey: "id_bai_viet",
 });
 BinhLuan.belongsTo(BaiViet, {
   foreignKey: "id_bai_viet",
 });
-// 1-n NguoiDung - BinhLuan
+
+// NguoiDung - BinhLuan
 NguoiDung.hasMany(BinhLuan, {
   foreignKey: "id_nguoi_dung",
 });
 BinhLuan.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
-// 1-n HoSoKhachHang - GiaHanThanhToan
+
+// HoSoKhachHang - GiaHanThanhToan
 HoSoKhachHang.hasMany(GiaHanThanhToan, {
   foreignKey: "id_ho_so",
 });
-
 GiaHanThanhToan.belongsTo(HoSoKhachHang, {
   foreignKey: "id_ho_so",
 });
-// 1-n HoSoKhachHang - GiaHanThanhToan
-HoSoKhachHang.hasMany(GiaHanThanhToan, {
-  foreignKey: "id_ho_so",
+
+// NguoiDung - GiaHanThanhToan người gửi
+NguoiDung.hasMany(GiaHanThanhToan, {
+  foreignKey: "id_nguoi_gui",
+  as: "gia_han_da_gui",
+});
+GiaHanThanhToan.belongsTo(NguoiDung, {
+  foreignKey: "id_nguoi_gui",
+  as: "nguoi_gui",
 });
 
-GiaHanThanhToan.belongsTo(HoSoKhachHang, {
-  foreignKey: "id_ho_so",
-}); 
+// NguoiDung - GiaHanThanhToan người duyệt
+NguoiDung.hasMany(GiaHanThanhToan, {
+  foreignKey: "id_nguoi_duyet",
+  as: "gia_han_da_duyet",
+});
+GiaHanThanhToan.belongsTo(NguoiDung, {
+  foreignKey: "id_nguoi_duyet",
+  as: "nguoi_duyet",
+});
 
 module.exports = {
   NguoiDung,
@@ -192,5 +221,5 @@ module.exports = {
   NhanVienGiaoHang,
   GiaHanThanhToan,
   ThanhToanCongNo,
-ChiTietThanhToanCongNo,
+  ChiTietThanhToanCongNo,
 };

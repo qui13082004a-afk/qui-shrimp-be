@@ -1,212 +1,169 @@
 const { Op } = require("sequelize");
 const { SanPham, DanhMuc } = require("../models");
-const countByCategoryId = async (id_danh_muc) => {
-  return await SanPham.count({
-    where: {
-      id_danh_muc: id_danh_muc,
-    },
-  });
-};
-// 1. Hàm lấy danh sách sản phẩm đang bán (Dành cho khách hàng / Store)
-const findAllActive = async ({
-  page = 1,
-  limit = 9,
-  keyword = "",
-  id_danh_muc,
-  minPrice,
-  maxPrice,
-  sortBy = "newest",
-}) => {
-  const offset = (page - 1) * limit;
 
-  const where = {
-    trang_thai: "dang_ban",
+const PRODUCT_LIST_ATTRIBUTES = [
+  "id_san_pham",
+  "id_danh_muc",
+  "ten_san_pham",
+  "gia",
+  "don_vi_tinh",
+  "ton_kho",
+  "ton_kho_toi_thieu",
+  "hinh_anh",
+  "han_su_dung",
+  "xuat_xu",
+  "trang_thai",
+  "ngay_tao",
+  "ngay_cap_nhat",
+];
+
+const PRODUCT_DETAIL_ATTRIBUTES = [
+  "id_san_pham",
+  "id_danh_muc",
+  "ten_san_pham",
+  "mo_ta",
+  "cong_dung",
+  "huong_dan_su_dung",
+  "gia",
+  "don_vi_tinh",
+  "ton_kho",
+  "ton_kho_toi_thieu",
+  "hinh_anh",
+  "han_su_dung",
+  "xuat_xu",
+  "trang_thai",
+  "ngay_tao",
+  "ngay_cap_nhat",
+];
+
+const CATEGORY_ATTRIBUTES = ["id_danh_muc", "ten_danh_muc", "anh_danh_muc"];
+
+const getSafePagination = (page = 1, limit = 9) => {
+  const safePage = Math.max(Number(page) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number(limit) || 9, 1), 50);
+
+  return {
+    page: safePage,
+    limit: safeLimit,
+    offset: (safePage - 1) * safeLimit,
   };
-
-  if (id_danh_muc) {
-    where.id_danh_muc = id_danh_muc;
-  }
-
-  if (keyword) {
-    where[Op.or] = [
-      {
-        ten_san_pham: {
-          [Op.like]: `%${keyword}%`,
-        },
-      },
-      {
-        cong_dung: {
-          [Op.like]: `%${keyword}%`,
-        },
-      },
-    ];
-  }
-
-  if (minPrice || maxPrice) {
-    where.gia = {};
-
-    if (minPrice) {
-      where.gia[Op.gte] = minPrice;
-    }
-
-    if (maxPrice) {
-      where.gia[Op.lte] = maxPrice;
-    }
-  }
-
-  let order = [["id_san_pham", "DESC"]];
-
-  switch (sortBy) {
-    case "priceAsc":
-      order = [["gia", "ASC"]];
-      break;
-
-    case "priceDesc":
-      order = [["gia", "DESC"]];
-      break;
-
-    case "nameAsc":
-      order = [["ten_san_pham", "ASC"]];
-      break;
-
-    case "nameDesc":
-      order = [["ten_san_pham", "DESC"]];
-      break;
-
-    case "stockDesc":
-      order = [["ton_kho", "DESC"]];
-      break;
-
-    case "oldest":
-      order = [["id_san_pham", "ASC"]];
-      break;
-
-    default:
-      order = [["id_san_pham", "DESC"]];
-  }
-
-  return await SanPham.findAndCountAll({
-    where,
-    include: [{ model: DanhMuc }],
-    limit,
-    offset,
-    order,
-  });
 };
 
-// 2. Hàm lấy TẤT CẢ sản phẩm (Kể cả hàng đã ẩn - Dành cho Admin)
-const findAll = async ({
-  page = 1,
-  limit = 9,
-  keyword = "",
-  id_danh_muc,
-  minPrice,
-  maxPrice,
-  sortBy = "newest",
-}) => {
-  const offset = (page - 1) * limit;
-
+const buildProductWhere = ({ activeOnly = false, keyword = "", id_danh_muc, minPrice, maxPrice }) => {
   const where = {};
 
+  if (activeOnly) {
+    where.trang_thai = "dang_ban";
+  }
+
   if (id_danh_muc) {
     where.id_danh_muc = id_danh_muc;
   }
 
-  if (keyword) {
+  const cleanKeyword = String(keyword || "").trim();
+  if (cleanKeyword) {
     where[Op.or] = [
-      {
-        ten_san_pham: {
-          [Op.like]: `%${keyword}%`,
-        },
-      },
-      {
-        cong_dung: {
-          [Op.like]: `%${keyword}%`,
-        },
-      },
+      { ten_san_pham: { [Op.like]: `%${cleanKeyword}%` } },
+      { cong_dung: { [Op.like]: `%${cleanKeyword}%` } },
     ];
   }
 
   if (minPrice || maxPrice) {
     where.gia = {};
 
-    if (minPrice) {
-      where.gia[Op.gte] = minPrice;
-    }
-
-    if (maxPrice) {
-      where.gia[Op.lte] = maxPrice;
-    }
+    if (minPrice) where.gia[Op.gte] = Number(minPrice);
+    if (maxPrice) where.gia[Op.lte] = Number(maxPrice);
   }
 
-  let order = [["id_san_pham", "DESC"]];
+  return where;
+};
 
+const buildProductOrder = (sortBy = "newest") => {
   switch (sortBy) {
     case "priceAsc":
-      order = [["gia", "ASC"]];
-      break;
-
+      return [["gia", "ASC"]];
     case "priceDesc":
-      order = [["gia", "DESC"]];
-      break;
-
+      return [["gia", "DESC"]];
     case "nameAsc":
-      order = [["ten_san_pham", "ASC"]];
-      break;
-
+      return [["ten_san_pham", "ASC"]];
     case "nameDesc":
-      order = [["ten_san_pham", "DESC"]];
-      break;
-
+      return [["ten_san_pham", "DESC"]];
     case "stockDesc":
-      order = [["ton_kho", "DESC"]];
-      break;
-
+      return [["ton_kho", "DESC"]];
     case "oldest":
-      order = [["id_san_pham", "ASC"]];
-      break;
-
+      return [["id_san_pham", "ASC"]];
     default:
-      order = [["id_san_pham", "DESC"]];
+      return [["id_san_pham", "DESC"]];
   }
+};
 
-  return await SanPham.findAndCountAll({
-    where,
-    include: [{ model: DanhMuc }],
+const countByCategoryId = (id_danh_muc) => {
+  return SanPham.count({ where: { id_danh_muc } });
+};
+
+const findAllActive = async (params = {}) => {
+  const { limit, offset } = getSafePagination(params.page, params.limit);
+
+  return SanPham.findAndCountAll({
+    where: buildProductWhere({ ...params, activeOnly: true }),
+    attributes: PRODUCT_LIST_ATTRIBUTES,
+    include: [
+      {
+        model: DanhMuc,
+        attributes: CATEGORY_ATTRIBUTES,
+        required: false,
+      },
+    ],
+    distinct: true,
     limit,
     offset,
-    order,
+    order: buildProductOrder(params.sortBy),
   });
 };
 
-// 3. Hàm tìm sản phẩm theo ID (Xem chi tiết) - BỔ SUNG
-const findById = async (id) => {
-  return await SanPham.findByPk(id, {
-    include: [{ model: DanhMuc }],
+const findAll = async (params = {}) => {
+  const { limit, offset } = getSafePagination(params.page, params.limit);
+
+  return SanPham.findAndCountAll({
+    where: buildProductWhere(params),
+    attributes: PRODUCT_LIST_ATTRIBUTES,
+    include: [
+      {
+        model: DanhMuc,
+        attributes: CATEGORY_ATTRIBUTES,
+        required: false,
+      },
+    ],
+    distinct: true,
+    limit,
+    offset,
+    order: buildProductOrder(params.sortBy),
   });
 };
 
-// 4. Hàm tạo mới sản phẩm - BỔ SUNG
-const create = async (data) => {
-  return await SanPham.create(data);
+const findById = (id) => {
+  return SanPham.findByPk(id, {
+    attributes: PRODUCT_DETAIL_ATTRIBUTES,
+    include: [{ model: DanhMuc, attributes: CATEGORY_ATTRIBUTES }],
+  });
 };
 
-// 5. Hàm cập nhật thông tin sản phẩm - BỔ SUNG
+const create = (data) => {
+  return SanPham.create(data);
+};
+
 const update = async (id, data) => {
   const product = await SanPham.findByPk(id);
   if (!product) return null;
-  
-  return await product.update(data);
+
+  return product.update(data);
 };
 
-// 6. Hàm xóa sản phẩm (hoặc chuyển trạng thái thành ngung_ban) - BỔ SUNG
 const remove = async (id) => {
   const product = await SanPham.findByPk(id);
   if (!product) return null;
 
-  // Nếu dự án của bạn muốn XÓA HẲN khỏi DB, hãy dùng: return await product.destroy();
-  // Còn code dưới đây tuân theo logic Soft Delete (Ẩn đi) bằng cách đổi trạng thái:
-  return await product.update({ trang_thai: "ngung_ban" });
+  return product.update({ trang_thai: "ngung_ban" });
 };
 
 module.exports = {

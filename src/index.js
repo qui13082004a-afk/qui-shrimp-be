@@ -19,8 +19,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-// dùng regex thay cho "*"
 app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());

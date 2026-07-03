@@ -43,3 +43,4 @@ const ThanhToanCongNo = sequelize.define(
     timestamps: false,
   }
 );
+module.exports = ThanhToanCongNo;

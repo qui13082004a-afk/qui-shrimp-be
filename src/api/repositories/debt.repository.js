@@ -370,40 +370,91 @@ const getDebtProfileTransactions = async (id_nguoi_dung, id_ho_so) => {
     throw new Error("Không tìm thấy hồ sơ công nợ hoặc bạn không có quyền truy cập");
   }
 
-  const debtOrders = await getMyDebtOrders(id_nguoi_dung);
+  const plainProfile = profile.toJSON();
 
-  const relatedOrders = debtOrders.filter(
-    (order) => Number(order.id_ho_so) === Number(id_ho_so)
-  );
+  const orders = await DonHang.findAll({
+    where: {
+      id_nguoi_dung,
+      id_vu_nuoi: plainProfile.id_vu_nuoi,
+      hinh_thuc_thanh_toan: "tra_sau",
+      trang_thai_don_hang: {
+        [Op.notIn]: ["da_huy", "giao_that_bai"],
+      },
+    },
+    attributes: [
+      "id_don_hang",
+      "tong_thanh_toan",
+      "ngay_dat",
+      "trang_thai_don_hang",
+    ],
+    order: [["ngay_dat", "DESC"]],
+  });
 
-  const orderTransactions = relatedOrders.map((order) => ({
+  const plainOrders = orders.map((order) => order.toJSON());
+  const orderIds = plainOrders.map((order) => order.id_don_hang);
+
+  let paymentDetails = [];
+
+  if (orderIds.length > 0) {
+    paymentDetails = await ChiTietThanhToanCongNo.findAll({
+      where: {
+        id_don_hang: {
+          [Op.in]: orderIds,
+        },
+      },
+      attributes: [
+        "id_chi_tiet_thanh_toan_cong_no",
+        "id_don_hang",
+        "so_tien_phan_bo",
+        "ngay_phan_bo",
+      ],
+      include: [
+        {
+          model: ThanhToanCongNo,
+          required: true,
+          attributes: [
+            "id_thanh_toan_cong_no",
+            "ma_giao_dich",
+            "trang_thai",
+            "ngay_thanh_toan",
+          ],
+          where: {
+            trang_thai: "thanh_cong",
+          },
+        },
+      ],
+    });
+  }
+
+  const orderTransactions = plainOrders.map((order) => ({
     id: `ORDER-${order.id_don_hang}`,
     ngay: order.ngay_dat,
     loai: "mua_hang",
     noi_dung: `Mua vật tư đơn #DH-${order.id_don_hang}`,
-    so_tien: -Number(order.tong_tien || 0),
+    so_tien: -Number(order.tong_thanh_toan || 0),
     trang_thai: order.trang_thai_don_hang,
     id_don_hang: order.id_don_hang,
   }));
 
-  const paymentTransactions = [];
+  const paymentTransactions = paymentDetails.map((item) => {
+    const plain = item.toJSON();
 
-  relatedOrders.forEach((order) => {
-    if (Number(order.da_thanh_toan || 0) > 0) {
-      paymentTransactions.push({
-        id: `PAY-${order.id_don_hang}`,
-        ngay: order.ngay_dat,
-        loai: "thanh_toan",
-        noi_dung: `Thanh toán công nợ đơn #DH-${order.id_don_hang}`,
-        so_tien: Number(order.da_thanh_toan || 0),
-        trang_thai: "thanh_cong",
-        id_don_hang: order.id_don_hang,
-      });
-    }
+    return {
+      id: `PAY-${plain.id_chi_tiet_thanh_toan_cong_no}`,
+      ngay:
+        plain.ThanhToanCongNo?.ngay_thanh_toan ||
+        plain.ngay_phan_bo,
+      loai: "thanh_toan",
+      noi_dung: `Thanh toán công nợ đơn #DH-${plain.id_don_hang}`,
+      so_tien: Number(plain.so_tien_phan_bo || 0),
+      trang_thai: plain.ThanhToanCongNo?.trang_thai || "thanh_cong",
+      id_don_hang: plain.id_don_hang,
+      ma_giao_dich: plain.ThanhToanCongNo?.ma_giao_dich || null,
+    };
   });
 
   return [...orderTransactions, ...paymentTransactions].sort(
-    (a, b) => new Date(b.ngay).getTime() - new Date(a.ngay).getTime()
+    (a, b) => new Date(b.ngay || 0).getTime() - new Date(a.ngay || 0).getTime()
   );
 };
 module.exports = {

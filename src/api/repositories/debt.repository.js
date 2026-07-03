@@ -227,16 +227,20 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
     stat.da_thanh_toan += daThanhToanDon;
 
     if (order.trang_thai_don_hang === "hoan_tat") {
-      stat.cong_no_hien_tai += con_lai_don;
+  stat.cong_no_hien_tai += con_lai_don;
+} else if (RESERVED_STATUS.includes(order.trang_thai_don_hang)) {
+  stat.dang_giu_han_muc += con_lai_don;
+}
 
-      if (con_lai_don > 0 && hoSo?.han_thanh_toan) {
-        const current = new Date(hoSo.han_thanh_toan).getTime();
-        const old = han_gan_nhat ? new Date(han_gan_nhat).getTime() : Infinity;
-        if (current < old) han_gan_nhat = hoSo.han_thanh_toan;
-      }
-    } else if (RESERVED_STATUS.includes(order.trang_thai_don_hang)) {
-      stat.dang_giu_han_muc += con_lai_don;
-    }
+// Luôn lấy hạn thanh toán nếu còn tiền phải trả
+if (con_lai_don > 0 && hoSo?.han_thanh_toan) {
+  const current = new Date(hoSo.han_thanh_toan).getTime();
+  const old = han_gan_nhat ? new Date(han_gan_nhat).getTime() : Infinity;
+
+  if (current < old) {
+    han_gan_nhat = hoSo.han_thanh_toan;
+  }
+}
   }
 
   let tong_cong_no = 0;

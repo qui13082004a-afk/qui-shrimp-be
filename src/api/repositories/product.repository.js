@@ -1,6 +1,9 @@
 const { Op } = require("sequelize");
 const { SanPham, DanhMuc } = require("../models");
 
+/**
+ * Các trường dùng khi hiển thị danh sách sản phẩm.
+ */
 const PRODUCT_LIST_ATTRIBUTES = [
   "id_san_pham",
   "id_danh_muc",
@@ -17,6 +20,9 @@ const PRODUCT_LIST_ATTRIBUTES = [
   "ngay_cap_nhat",
 ];
 
+/**
+ * Các trường dùng khi xem chi tiết sản phẩm.
+ */
 const PRODUCT_DETAIL_ATTRIBUTES = [
   "id_san_pham",
   "id_danh_muc",
@@ -36,8 +42,19 @@ const PRODUCT_DETAIL_ATTRIBUTES = [
   "ngay_cap_nhat",
 ];
 
-const CATEGORY_ATTRIBUTES = ["id_danh_muc", "ten_danh_muc", "anh_danh_muc"];
+/**
+ * Chỉ lấy các trường cần thiết của danh mục
+ */
+const CATEGORY_ATTRIBUTES = [
+  "id_danh_muc",
+  "ten_danh_muc",
+  "anh_danh_muc",
+];
 
+/**
+ * Chuẩn hóa page và limit.
+ * - Giới hạn limit tối đa 50 để tránh query quá lớn.
+ */
 const getSafePagination = (page = 1, limit = 9) => {
   const safePage = Math.max(Number(page) || 1, 1);
   const safeLimit = Math.min(Math.max(Number(limit) || 9, 1), 50);
@@ -49,25 +66,47 @@ const getSafePagination = (page = 1, limit = 9) => {
   };
 };
 
-const buildProductWhere = ({ activeOnly = false, keyword = "", id_danh_muc, minPrice, maxPrice }) => {
+/**
+ * Tạo điều kiện WHERE động dựa trên
+ */
+const buildProductWhere = ({
+  activeOnly = false,
+  keyword = "",
+  id_danh_muc,
+  minPrice,
+  maxPrice,
+}) => {
   const where = {};
 
+  // Chỉ lấy sản phẩm đang bán
   if (activeOnly) {
     where.trang_thai = "dang_ban";
   }
 
+  // Lọc theo danh mục
   if (id_danh_muc) {
     where.id_danh_muc = id_danh_muc;
   }
 
+  // Tìm kiếm theo tên hoặc công dụng
   const cleanKeyword = String(keyword || "").trim();
+
   if (cleanKeyword) {
     where[Op.or] = [
-      { ten_san_pham: { [Op.like]: `%${cleanKeyword}%` } },
-      { cong_dung: { [Op.like]: `%${cleanKeyword}%` } },
+      {
+        ten_san_pham: {
+          [Op.like]: `%${cleanKeyword}%`,
+        },
+      },
+      {
+        cong_dung: {
+          [Op.like]: `%${cleanKeyword}%`,
+        },
+      },
     ];
   }
 
+  // Lọc theo khoảng giá
   if (minPrice || maxPrice) {
     where.gia = {};
 
@@ -78,34 +117,61 @@ const buildProductWhere = ({ activeOnly = false, keyword = "", id_danh_muc, minP
   return where;
 };
 
+/**
+ * Xây dựng ORDER BY tương ứng với lựa chọn sắp xếp.
+ */
 const buildProductOrder = (sortBy = "newest") => {
   switch (sortBy) {
     case "priceAsc":
       return [["gia", "ASC"]];
+
     case "priceDesc":
       return [["gia", "DESC"]];
+
     case "nameAsc":
       return [["ten_san_pham", "ASC"]];
+
     case "nameDesc":
       return [["ten_san_pham", "DESC"]];
+
     case "stockDesc":
       return [["ton_kho", "DESC"]];
+
     case "oldest":
       return [["id_san_pham", "ASC"]];
+
     default:
       return [["id_san_pham", "DESC"]];
   }
 };
 
+/**
+ * Đếm số sản phẩm thuộc một danh mục.
+ */
 const countByCategoryId = (id_danh_muc) => {
-  return SanPham.count({ where: { id_danh_muc } });
+  return SanPham.count({
+    where: {
+      id_danh_muc,
+    },
+  });
 };
 
+/**
+ * Lấy danh sách sản phẩm đang bán.
+ * Có hỗ trợ:
+ * - phân trang
+ * - tìm kiếm
+ * - lọc
+ * - sắp xếp
+ */
 const findAllActive = async (params = {}) => {
   const { limit, offset } = getSafePagination(params.page, params.limit);
 
   return SanPham.findAndCountAll({
-    where: buildProductWhere({ ...params, activeOnly: true }),
+    where: buildProductWhere({
+      ...params,
+      activeOnly: true,
+    }),
     attributes: PRODUCT_LIST_ATTRIBUTES,
     include: [
       {
@@ -121,6 +187,10 @@ const findAllActive = async (params = {}) => {
   });
 };
 
+/**
+ * Admin:
+ * Lấy toàn bộ sản phẩm (bao gồm cả ngừng bán).
+ */
 const findAll = async (params = {}) => {
   const { limit, offset } = getSafePagination(params.page, params.limit);
 
@@ -141,29 +211,52 @@ const findAll = async (params = {}) => {
   });
 };
 
+/**
+ * Lấy chi tiết một sản phẩm theo ID.
+ */
 const findById = (id) => {
   return SanPham.findByPk(id, {
     attributes: PRODUCT_DETAIL_ATTRIBUTES,
-    include: [{ model: DanhMuc, attributes: CATEGORY_ATTRIBUTES }],
+    include: [
+      {
+        model: DanhMuc,
+        attributes: CATEGORY_ATTRIBUTES,
+      },
+    ],
   });
 };
 
+/**
+ * Tạo sản phẩm mới.
+ */
 const create = (data) => {
   return SanPham.create(data);
 };
 
+/**
+ * Cập nhật thông tin sản phẩm.
+ */
 const update = async (id, data) => {
   const product = await SanPham.findByPk(id);
+
   if (!product) return null;
 
   return product.update(data);
 };
 
+/**
+ * Soft Delete:
+ * Không xóa dữ liệu khỏi database,
+ * chỉ chuyển trạng thái thành "ngừng bán".
+ */
 const remove = async (id) => {
   const product = await SanPham.findByPk(id);
+
   if (!product) return null;
 
-  return product.update({ trang_thai: "ngung_ban" });
+  return product.update({
+    trang_thai: "ngung_ban",
+  });
 };
 
 module.exports = {

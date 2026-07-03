@@ -2,6 +2,7 @@ const { Op } = require("sequelize");
 const {
   DonHang,
   ThanhToan,
+    ThanhToanCongNo,
   VuNuoi,
   AoNuoi,
   HoSoKhachHang,
@@ -9,7 +10,7 @@ const {
 } = require("../models");
 
 const getMyDebtOrders = async (id_nguoi_dung) => {
-  const orders = await DonHang.findAll({
+  const debtOrders = await DonHang.findAll({
     where: {
       id_nguoi_dung,
       hinh_thuc_thanh_toan: "tra_sau",
@@ -17,88 +18,82 @@ const getMyDebtOrders = async (id_nguoi_dung) => {
         [Op.notIn]: ["da_huy", "giao_that_bai"],
       },
     },
+    attributes: [
+      "id_don_hang",
+      "id_vu_nuoi",
+      "tong_thanh_toan",
+      "ngay_dat",
+      "trang_thai_don_hang",
+    ],
     include: [
       {
         model: VuNuoi,
         required: false,
+        attributes: ["ten_vu_nuoi"],
         include: [
-          { model: AoNuoi, required: false },
-          { model: HoSoKhachHang, required: false },
+          {
+            model: AoNuoi,
+            required: false,
+            attributes: ["ten_ao"],
+          },
         ],
       },
-      { model: ThanhToan, required: false },
-      {
-        model: GiaoHang,
-        required: false,
-      },
     ],
-    order: [["ngay_dat", "DESC"]],
   });
 
-  return orders.map((order) => {
+  const debtPayments = await ThanhToanCongNo.findAll({
+    where: {
+      id_nguoi_dung,
+      trang_thai: "thanh_cong",
+    },
+    attributes: [
+      "id_thanh_toan_cong_no",
+      "so_tien",
+      "ma_giao_dich",
+      "ngay_thanh_toan",
+      "trang_thai",
+    ],
+  });
+
+  const orderHistory = debtOrders.map((order) => {
     const plain = order.toJSON();
 
-    const da_thanh_toan = (plain.ThanhToans || [])
-      .filter(
-        (payment) =>
-          payment.trang_thai === "thanh_cong" &&
-          payment.phuong_thuc === "tra_sau"
-      )
-      .reduce((sum, payment) => sum + Number(payment.so_tien || 0), 0);
-
-    const tong_tien = Number(plain.tong_thanh_toan || 0);
-    const con_lai = Math.max(tong_tien - da_thanh_toan, 0);
-
-    const hoSo = plain.VuNuoi?.HoSoKhachHang || null;
-    const ao = plain.VuNuoi?.AoNuoi || null;
-    const han_thanh_toan = hoSo?.han_thanh_toan || null;
-
-    let trang_thai_cong_no = "trong_han";
-
-    if (con_lai <= 0) {
-      trang_thai_cong_no = "da_thanh_toan";
-    } else if (han_thanh_toan) {
-      const today = new Date();
-      const dueDate = new Date(han_thanh_toan);
-
-      today.setHours(0, 0, 0, 0);
-      dueDate.setHours(0, 0, 0, 0);
-
-      const diffDays = Math.ceil(
-        (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (diffDays < 0) {
-        trang_thai_cong_no = "qua_han";
-      } else if (diffDays <= 7) {
-        trang_thai_cong_no = "gan_den_han";
-      }
-    }
-
     return {
-      id_don_hang: plain.id_don_hang,
-      id_vu_nuoi: plain.id_vu_nuoi,
-      ten_vu_nuoi: plain.VuNuoi?.ten_vu_nuoi || null,
-
-      id_ao: ao?.id_ao || null,
-      ten_ao: ao?.ten_ao || null,
-
-      id_ho_so: hoSo?.id_ho_so || null,
-      dinh_muc_cong_no: Number(hoSo?.dinh_muc_cong_no || 0),
-
-      ngay_dat: plain.ngay_dat,
-      han_thanh_toan,
-
-      tong_tien,
-      da_thanh_toan,
-      con_lai,
-
-      trang_thai_don_hang: plain.trang_thai_don_hang,
-      trang_thai_cong_no,
+      loai: "phat_sinh",
+      ngay_giao_dich: plain.ngay_dat,
+      noi_dung: `Mua vật tư đơn #${plain.id_don_hang}`,
+      vu_nuoi: plain.VuNuoi?.ten_vu_nuoi || null,
+      ao_nuoi: plain.VuNuoi?.AoNuoi?.ten_ao || null,
+      so_tien: Number(plain.tong_thanh_toan || 0),
+      trang_thai: plain.trang_thai_don_hang,
     };
   });
-};
 
+  const paymentHistory = debtPayments.map((payment) => {
+    const plain = payment.toJSON();
+
+    return {
+      loai: "thanh_toan",
+      ngay_giao_dich: plain.ngay_thanh_toan,
+      noi_dung: "Thanh toán công nợ",
+      vu_nuoi: null,
+      ao_nuoi: null,
+      so_tien: Number(plain.so_tien || 0),
+      trang_thai: plain.trang_thai,
+      ma_giao_dich: plain.ma_giao_dich || null,
+    };
+  });
+
+  const history = [...orderHistory, ...paymentHistory];
+
+  history.sort(
+    (a, b) =>
+      new Date(b.ngay_giao_dich || 0).getTime() -
+      new Date(a.ngay_giao_dich || 0).getTime()
+  );
+
+  return history;
+};
 const getMyDebtSummary = async (id_nguoi_dung) => {
   const profiles = await HoSoKhachHang.findAll({
     where: {

@@ -8,6 +8,7 @@ const customerProfileController = require("./customerProfile.controller");
 const orderController = require("./order.controller");
 const paymentController = require("./payment.controller");
 const deliveryController = require("./delivery.controller");
+const debtExtensionController=require("./debtExtension.controller")
 module.exports = {
   authController,
   uploadController,
@@ -18,5 +19,6 @@ module.exports = {
   customerProfileController,
   orderController,
   paymentController,
-  deliveryController
+  deliveryController,
+  debtExtensionController
 };

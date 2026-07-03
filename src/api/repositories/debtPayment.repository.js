@@ -23,9 +23,7 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
 
   const summary = await debtRepository.getMyDebtSummary(id_nguoi_dung);
 
-  let maxDebt =
-    Number(summary.cong_no_hien_tai || 0) +
-    Number(summary.dang_giu_han_muc || 0);
+  let maxDebt = Number(summary.cong_no_hien_tai || 0) + Number(summary.dang_giu_han_muc || 0);
 
   if (id_ho_so) {
     const selectedProfile = summary.han_muc_theo_ho_so.find(
@@ -57,24 +55,18 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
   });
 
   const orderCode = Number(
-    `${debtPayment.id_thanh_toan_cong_no}${Date.now()
-      .toString()
-      .slice(-6)}`
+    `${debtPayment.id_thanh_toan_cong_no}${Date.now().toString().slice(-6)}`
   );
 
-  const paymentData = {
+  const result = await payOS.paymentRequests.create({
     orderCode,
     amount,
     description: `CN${id_nguoi_dung}`,
     returnUrl: `${process.env.FRONTEND_URL}/debt/payment-success?orderCode=${orderCode}`,
     cancelUrl: `${process.env.FRONTEND_URL}/debt/payment-cancel?orderCode=${orderCode}`,
-  };
-
-  const result = await payOS.paymentRequests.create(paymentData);
-
-  await debtPayment.update({
-    ma_giao_dich: String(orderCode),
   });
+
+  await debtPayment.update({ ma_giao_dich: String(orderCode) });
 
   return {
     checkoutUrl: result.checkoutUrl,
@@ -83,30 +75,50 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
   };
 };
 
-const getMyDebtPayments = async (id_nguoi_dung) => {
-  return await ThanhToanCongNo.findAll({
+const getMyDebtPayments = (id_nguoi_dung) => {
+  return ThanhToanCongNo.findAll({
     where: { id_nguoi_dung },
+    attributes: [
+      "id_thanh_toan_cong_no",
+      "id_nguoi_dung",
+      "id_ho_so",
+      "so_tien",
+      "ma_giao_dich",
+      "trang_thai",
+      "ngay_tao",
+      "ngay_thanh_toan",
+    ],
     include: [
       {
         model: HoSoKhachHang,
         required: false,
+        attributes: ["id_ho_so", "id_ao", "id_vu_nuoi", "han_thanh_toan"],
         include: [
-          { model: AoNuoi, required: false },
-          { model: VuNuoi, required: false },
+          { model: AoNuoi, required: false, attributes: ["id_ao", "ten_ao"] },
+          { model: VuNuoi, required: false, attributes: ["id_vu_nuoi", "ten_vu_nuoi"] },
         ],
       },
       {
         model: ChiTietThanhToanCongNo,
         required: false,
+        attributes: [
+          "id_chi_tiet_thanh_toan_cong_no",
+          "id_thanh_toan_cong_no",
+          "id_don_hang",
+          "so_tien_phan_bo",
+          "ngay_phan_bo",
+        ],
         include: [
           {
             model: DonHang,
             required: false,
+            attributes: ["id_don_hang", "id_vu_nuoi", "tong_thanh_toan", "ngay_dat"],
             include: [
               {
                 model: VuNuoi,
                 required: false,
-                include: [{ model: AoNuoi, required: false }],
+                attributes: ["id_vu_nuoi", "ten_vu_nuoi"],
+                include: [{ model: AoNuoi, required: false, attributes: ["id_ao", "ten_ao"] }],
               },
             ],
           },
@@ -119,15 +131,17 @@ const getMyDebtPayments = async (id_nguoi_dung) => {
 
 const getDebtPaymentDetail = async (id_nguoi_dung, id_thanh_toan_cong_no) => {
   const data = await ThanhToanCongNo.findOne({
-    where: {
-      id_thanh_toan_cong_no,
-      id_nguoi_dung,
-    },
+    where: { id_thanh_toan_cong_no, id_nguoi_dung },
     include: [
       {
         model: ChiTietThanhToanCongNo,
         required: false,
-        include: [{ model: DonHang }],
+        include: [
+          {
+            model: DonHang,
+            attributes: ["id_don_hang", "tong_thanh_toan", "ngay_dat", "trang_thai_don_hang"],
+          },
+        ],
       },
     ],
   });
@@ -139,8 +153,8 @@ const getDebtPaymentDetail = async (id_nguoi_dung, id_thanh_toan_cong_no) => {
   return data;
 };
 
-const findPendingDebtPaymentByOrderCode = async (orderCode) => {
-  return await ThanhToanCongNo.findOne({
+const findPendingDebtPaymentByOrderCode = (orderCode) => {
+  return ThanhToanCongNo.findOne({
     where: {
       ma_giao_dich: String(orderCode),
       trang_thai: "cho_thanh_toan",
@@ -176,18 +190,19 @@ const allocateDebtPayment = async (debtPayment, amount) => {
       where: {
         id_nguoi_dung: debtPayment.id_nguoi_dung,
         hinh_thuc_thanh_toan: "tra_sau",
-        trang_thai_don_hang: {
-          [Op.notIn]: ["da_huy", "giao_that_bai"],
-        },
+        trang_thai_don_hang: { [Op.notIn]: ["da_huy", "giao_that_bai"] },
       },
+      attributes: ["id_don_hang", "tong_thanh_toan", "ngay_dat"],
       include: [
         {
           model: VuNuoi,
           required: true,
+          attributes: ["id_vu_nuoi"],
           include: [
             {
               model: HoSoKhachHang,
               required: true,
+              attributes: ["id_ho_so"],
               where: profileWhere,
             },
           ],
@@ -195,34 +210,43 @@ const allocateDebtPayment = async (debtPayment, amount) => {
       ],
       order: [["ngay_dat", "ASC"]],
       transaction,
+      lock: transaction.LOCK.UPDATE,
     });
 
+    const orderIds = orders.map((order) => order.id_don_hang);
+
+    if (orderIds.length === 0) {
+      throw new Error("Không có đơn công nợ để phân bổ");
+    }
+
+    const paidDetails = await ChiTietThanhToanCongNo.findAll({
+      where: { id_don_hang: { [Op.in]: orderIds } },
+      attributes: ["id_don_hang", "so_tien_phan_bo"],
+      include: [
+        {
+          model: ThanhToanCongNo,
+          required: true,
+          attributes: [],
+          where: { trang_thai: "thanh_cong" },
+        },
+      ],
+      transaction,
+    });
+
+    const paidMap = new Map();
+
+    for (const item of paidDetails) {
+      const id = Number(item.id_don_hang);
+      paidMap.set(id, (paidMap.get(id) || 0) + Number(item.so_tien_phan_bo || 0));
+    }
+
     let remaining = paidAmount;
+    const allocationRows = [];
 
     for (const order of orders) {
       if (remaining <= 0) break;
 
-      const paidDetails = await ChiTietThanhToanCongNo.findAll({
-        where: {
-          id_don_hang: order.id_don_hang,
-        },
-        include: [
-          {
-            model: ThanhToanCongNo,
-            required: true,
-            where: {
-              trang_thai: "thanh_cong",
-            },
-          },
-        ],
-        transaction,
-      });
-
-      const daThanhToan = paidDetails.reduce(
-        (sum, item) => sum + Number(item.so_tien_phan_bo || 0),
-        0
-      );
-
+      const daThanhToan = paidMap.get(Number(order.id_don_hang)) || 0;
       const tongTien = Number(order.tong_thanh_toan || 0);
       const conLai = Math.max(tongTien - daThanhToan, 0);
 
@@ -230,15 +254,12 @@ const allocateDebtPayment = async (debtPayment, amount) => {
 
       const allocateAmount = Math.min(remaining, conLai);
 
-      await ChiTietThanhToanCongNo.create(
-        {
-          id_thanh_toan_cong_no: debtPayment.id_thanh_toan_cong_no,
-          id_don_hang: order.id_don_hang,
-          so_tien_phan_bo: allocateAmount,
-          ngay_phan_bo: new Date(),
-        },
-        { transaction }
-      );
+      allocationRows.push({
+        id_thanh_toan_cong_no: debtPayment.id_thanh_toan_cong_no,
+        id_don_hang: order.id_don_hang,
+        so_tien_phan_bo: allocateAmount,
+        ngay_phan_bo: new Date(),
+      });
 
       remaining -= allocateAmount;
     }
@@ -246,6 +267,8 @@ const allocateDebtPayment = async (debtPayment, amount) => {
     if (remaining > 0) {
       throw new Error("Số tiền thanh toán vượt quá công nợ có thể phân bổ");
     }
+
+    await ChiTietThanhToanCongNo.bulkCreate(allocationRows, { transaction });
 
     await debtPayment.update(
       {

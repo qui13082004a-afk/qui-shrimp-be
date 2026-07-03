@@ -19,9 +19,10 @@ const BaiViet = sequelize.define("BaiViet", {
     type: DataTypes.TEXT,
     allowNull: false,
   },
-  hinh_anh: {
-    type: DataTypes.STRING(255),
-  },
+hinh_anh: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+},
   trang_thai: {
     type: DataTypes.ENUM("cho_duyet", "da_dang", "an"),
     defaultValue: "cho_duyet",

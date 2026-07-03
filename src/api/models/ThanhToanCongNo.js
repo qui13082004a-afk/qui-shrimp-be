@@ -1,3 +1,6 @@
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../../config/database");
+
 const ThanhToanCongNo = sequelize.define(
   "ThanhToanCongNo",
   {
@@ -40,3 +43,4 @@ const ThanhToanCongNo = sequelize.define(
     timestamps: false,
   }
 );
+module.exports = ThanhToanCongNo;

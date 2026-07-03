@@ -1,11 +1,13 @@
+const { Op } = require("sequelize");
 const { sequelize } = require("../../config/database");
 const payOS = require("../../config/payos");
 
 const {
   DonHang,
-  ThanhToan,
   ThanhToanCongNo,
   ChiTietThanhToanCongNo,
+  VuNuoi,
+  HoSoKhachHang,
 } = require("../models");
 
 const debtRepository = require("./debt.repository");
@@ -20,7 +22,9 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
 
   const summary = await debtRepository.getMyDebtSummary(id_nguoi_dung);
 
-  let maxDebt = Number(summary.cong_no_hien_tai || 0) + Number(summary.dang_giu_han_muc || 0);
+  let maxDebt =
+    Number(summary.cong_no_hien_tai || 0) +
+    Number(summary.dang_giu_han_muc || 0);
 
   if (id_ho_so) {
     const selectedProfile = summary.han_muc_theo_ho_so.find(
@@ -52,7 +56,9 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
   });
 
   const orderCode = Number(
-    `${debtPayment.id_thanh_toan_cong_no}${Date.now().toString().slice(-6)}`
+    `${debtPayment.id_thanh_toan_cong_no}${Date.now()
+      .toString()
+      .slice(-6)}`
   );
 
   const paymentData = {
@@ -75,6 +81,7 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
     amount,
   };
 };
+
 const getMyDebtPayments = async (id_nguoi_dung) => {
   return await ThanhToanCongNo.findAll({
     where: { id_nguoi_dung },
@@ -124,36 +131,52 @@ const allocateDebtPayment = async (debtPayment, amount) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const whereOrder = {
-      id_nguoi_dung: debtPayment.id_nguoi_dung,
-      hinh_thuc_thanh_toan: "tra_sau",
-      trang_thai_don_hang: {
-        [Op.notIn]: ["da_huy", "giao_that_bai"],
-      },
-    };
+    if (!debtPayment) {
+      throw new Error("Không tìm thấy giao dịch công nợ cần phân bổ");
+    }
 
-    const includeVuNuoi = {
-      model: VuNuoi,
-      required: true,
-      include: [
-        {
-          model: HoSoKhachHang,
-          required: true,
-          where: debtPayment.id_ho_so
-            ? { id_ho_so: debtPayment.id_ho_so }
-            : undefined,
-        },
-      ],
-    };
+    if (debtPayment.trang_thai === "thanh_cong") {
+      await transaction.rollback();
+      return debtPayment;
+    }
+
+    const paidAmount = Math.round(Number(amount || 0));
+    const expectedAmount = Math.round(Number(debtPayment.so_tien || 0));
+
+    if (paidAmount !== expectedAmount) {
+      throw new Error("Số tiền PayOS gửi về không khớp với phiếu công nợ");
+    }
+
+    const profileWhere = debtPayment.id_ho_so
+      ? { id_ho_so: debtPayment.id_ho_so }
+      : undefined;
 
     const orders = await DonHang.findAll({
-      where: whereOrder,
-      include: [includeVuNuoi],
+      where: {
+        id_nguoi_dung: debtPayment.id_nguoi_dung,
+        hinh_thuc_thanh_toan: "tra_sau",
+        trang_thai_don_hang: {
+          [Op.notIn]: ["da_huy", "giao_that_bai"],
+        },
+      },
+      include: [
+        {
+          model: VuNuoi,
+          required: true,
+          include: [
+            {
+              model: HoSoKhachHang,
+              required: true,
+              where: profileWhere,
+            },
+          ],
+        },
+      ],
       order: [["ngay_dat", "ASC"]],
       transaction,
     });
 
-    let remaining = Number(amount);
+    let remaining = paidAmount;
 
     for (const order of orders) {
       if (remaining <= 0) break;
@@ -199,6 +222,10 @@ const allocateDebtPayment = async (debtPayment, amount) => {
       remaining -= allocateAmount;
     }
 
+    if (remaining > 0) {
+      throw new Error("Số tiền thanh toán vượt quá công nợ có thể phân bổ");
+    }
+
     await debtPayment.update(
       {
         trang_thai: "thanh_cong",
@@ -212,9 +239,11 @@ const allocateDebtPayment = async (debtPayment, amount) => {
     return debtPayment;
   } catch (error) {
     await transaction.rollback();
+    console.error("ALLOCATE DEBT PAYMENT ERROR:", error.message);
     throw error;
   }
 };
+
 module.exports = {
   createPartialDebtPayment,
   getMyDebtPayments,

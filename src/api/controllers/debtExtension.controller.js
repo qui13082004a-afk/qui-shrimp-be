@@ -115,7 +115,26 @@ const rejectDebtExtension = async (req, res) => {
     });
   }
 };
+const getDebtExtensionsByProfileId = async (req, res) => {
+  try {
+    const extensions =
+      await debtExtensionService.getDebtExtensionsByProfileId(
+        req.user,
+        req.params.profileId
+      );
 
+    return res.status(200).json({
+      success: true,
+      message: "Lấy lịch sử gia hạn theo hồ sơ thành công",
+      data: extensions,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   createDebtExtension,
   getMyDebtExtensions,
@@ -123,4 +142,5 @@ module.exports = {
   getDebtExtensionById,
   approveDebtExtension,
   rejectDebtExtension,
+  getDebtExtensionsByProfileId,
 };

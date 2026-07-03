@@ -177,7 +177,22 @@ const rejectDebtExtension = async (user, id_gia_han, data = {}) => {
 
   return await debtExtensionRepository.findById(id_gia_han);
 };
+const getDebtExtensionsByProfileId = async (user, id_ho_so) => {
+  const profile = await customerProfileRepository.findById(id_ho_so);
 
+  if (!profile) {
+    throw new Error("Không tìm thấy hồ sơ công nợ");
+  }
+
+  if (
+    user.vai_tro !== "admin" &&
+    Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung)
+  ) {
+    throw new Error("Bạn không có quyền xem lịch sử gia hạn của hồ sơ này");
+  }
+
+  return await debtExtensionRepository.findByProfileId(id_ho_so);
+};
 module.exports = {
   createDebtExtension,
   getMyDebtExtensions,
@@ -185,4 +200,5 @@ module.exports = {
   getDebtExtensionById,
   approveDebtExtension,
   rejectDebtExtension,
+  getDebtExtensionsByProfileId,
 };

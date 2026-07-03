@@ -2,8 +2,8 @@ const {
   customerProfileRepository,
   pondRepository,
   cropSeasonRepository,
+  debtExtensionRepository,
 } = require("../repositories");
-
 /**
  * TẠO MỚI HỒ SƠ KHÁCH HÀNG (CẤP TÍN DỤNG DỰ THẢO)
  */
@@ -53,19 +53,47 @@ const createCustomerProfile = async (userId, data) => {
     ghi_chu: data.ghi_chu,
   });
 };
+const attachLatestExtensionDeadline = async (profile) => {
+  if (!profile) return null;
 
+  const plainProfile =
+    typeof profile.toJSON === "function" ? profile.toJSON() : profile;
+
+  const latestExtension =
+    await debtExtensionRepository.findLatestApprovedByProfileId(
+      plainProfile.id_ho_so
+    );
+
+  return {
+    ...plainProfile,
+    gia_han_moi_nhat: latestExtension || null,
+    han_thanh_toan_goc: plainProfile.han_thanh_toan,
+    han_thanh_toan_hien_tai: latestExtension
+      ? latestExtension.han_de_xuat
+      : plainProfile.han_thanh_toan,
+  };
+};
+
+const attachLatestExtensionDeadlineList = async (profiles) => {
+  return await Promise.all(
+    profiles.map((profile) => attachLatestExtensionDeadline(profile))
+  );
+};
 /**
  * LẤY DANH SÁCH HỒ SƠ CỦA TÔI (Dành cho Khách hàng)
  */
 const getMyCustomerProfiles = async (userId) => {
-  return await customerProfileRepository.findByUserId(userId);
+  const profiles = await customerProfileRepository.findByUserId(userId);
+  return await attachLatestExtensionDeadlineList(profiles);
 };
+
 
 /**
  * LẤY TOÀN BỘ HỒ SƠ HỆ THỐNG (Dành cho Admin)
  */
 const getAllCustomerProfiles = async () => {
-  return await customerProfileRepository.findAll();
+  const profiles = await customerProfileRepository.findAll();
+  return await attachLatestExtensionDeadlineList(profiles);
 };
 
 /**
@@ -78,12 +106,14 @@ const getCustomerProfileById = async (user, id_ho_so) => {
     throw new Error("Không tìm thấy hồ sơ khách hàng yêu cầu");
   }
 
-  // Chỉ Admin hoặc chính chủ sở hữu hồ sơ mới được phép xem thông tin chi tiết
-  if (user.vai_tro !== "admin" && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung)) {
+  if (
+    user.vai_tro !== "admin" &&
+    Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung)
+  ) {
     throw new Error("Bạn không có quyền truy cập thông tin hồ sơ này");
   }
 
-  return profile;
+  return await attachLatestExtensionDeadline(profile);
 };
 
 /**

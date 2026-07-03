@@ -23,7 +23,11 @@ router.get(
   authorizeAdmin,
   debtExtensionController.getAllDebtExtensions
 );
-
+router.get(
+  "/profile/:profileId",
+  authMiddleware,
+  debtExtensionController.getDebtExtensionsByProfileId
+);
 router.get(
   "/:id",
   authMiddleware,

@@ -105,6 +105,24 @@ const findLatestApprovedByProfileId = async (id_ho_so) => {
     order: [["ngay_duyet", "DESC"]],
   });
 };
+const findByProfileId = async (id_ho_so) => {
+  return await GiaHanThanhToan.findAll({
+    where: { id_ho_so },
+    include: [
+      {
+        model: NguoiDung,
+        as: "nguoi_gui",
+        attributes: ["id_nguoi_dung", "ho_ten", "email"],
+      },
+      {
+        model: NguoiDung,
+        as: "nguoi_duyet",
+        attributes: ["id_nguoi_dung", "ho_ten", "email"],
+      },
+    ],
+    order: [["ngay_gui", "DESC"]],
+  });
+};
 module.exports = {
   create,
   findById,
@@ -112,5 +130,6 @@ module.exports = {
   findByUserId,
   findPendingByProfileId,
   update,
-  findLatestApprovedByProfileId
+  findLatestApprovedByProfileId,
+  findByProfileId,
 };

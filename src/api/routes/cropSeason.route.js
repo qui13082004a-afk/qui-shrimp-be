@@ -6,7 +6,11 @@ const { cropSeasonController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
 
 const { authorizeCustomer, authorizeAdminOrCustomer } = require("../middlewares/auth.middleware");
-
+router.get(
+  "/:id_vu_nuoi/orders-summary",
+  authMiddleware,
+  cropSeasonController.getSeasonOrderSummary
+);
 const {
   validateCreateCropSeason,
   validateUpdateCropSeason,

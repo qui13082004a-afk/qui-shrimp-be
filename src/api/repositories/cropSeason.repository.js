@@ -1,5 +1,10 @@
-const { VuNuoi, AoNuoi } = require("../models");
-
+const {
+  VuNuoi,
+  AoNuoi,
+  DonHang,
+  ChiTietDonHang,
+  SanPham,
+} = require("../models");
 const create = async (data) => {
   return await VuNuoi.create(data);
 };
@@ -42,6 +47,59 @@ const remove = async (id_vu_nuoi) => {
   return cropSeason;
 };
 
+const getSeasonOrderSummary = async (id_nguoi_dung, id_vu_nuoi) => {
+  const season = await VuNuoi.findOne({
+    where: { id_vu_nuoi },
+    include: [
+      {
+        model: AoNuoi,
+        required: true,
+        where: { id_nguoi_dung },
+        attributes: ["id_ao", "ten_ao", "dien_tich", "dia_chi_ao"],
+      },
+      {
+        model: DonHang,
+        required: false,
+        where: { id_nguoi_dung },
+        attributes: [
+          "id_don_hang",
+          "tong_tien",
+          "phi_van_chuyen",
+          "tong_thanh_toan",
+          "hinh_thuc_thanh_toan",
+          "trang_thai_don_hang",
+          "ngay_dat",
+          "ghi_chu",
+        ],
+        include: [
+          {
+            model: ChiTietDonHang,
+            required: false,
+            attributes: [
+              "id_chi_tiet",
+              "id_san_pham",
+              "gia_ban",
+              "so_luong_dat",
+              "thanh_tien",
+              "trang_thai_san_pham",
+            ],
+            include: [
+              {
+                model: SanPham,
+                required: false,
+                attributes: ["id_san_pham", "ten_san_pham", "hinh_anh", "don_vi_tinh"],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [[DonHang, "ngay_dat", "DESC"]],
+  });
+
+  return season;
+};
+
 module.exports = {
   create,
   findById,
@@ -49,4 +107,5 @@ module.exports = {
   findActiveByPondId,
   update,
   remove,
+  getSeasonOrderSummary,
 };

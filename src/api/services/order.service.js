@@ -1,5 +1,21 @@
 const { sequelize } = require("../../config/database");
 const { orderRepository } = require("../repositories");
+const notificationService = require("./notification.service");
+
+const getOrderStatusText = (status) => {
+  const map = {
+    cho_xu_ly: "chờ xử lý",
+    cho_thanh_toan: "chờ thanh toán",
+    da_thanh_toan: "đã thanh toán",
+    cho_giao: "chờ giao hàng",
+    dang_giao: "đang giao",
+    hoan_tat: "hoàn tất",
+    giao_that_bai: "giao thất bại",
+    da_huy: "đã hủy",
+  };
+
+  return map[status] || status;
+};
 
 const createOrder = async (user, data) => {
   const transaction = await sequelize.transaction();
@@ -121,6 +137,15 @@ const createOrder = async (user, data) => {
       transaction
     );
 
+    await notificationService.createNotification({
+      id_nguoi_dung: userId,
+      tieu_de: "Đặt hàng thành công",
+      noi_dung: `Đơn hàng #${order.id_don_hang} đã được tạo thành công.`,
+      loai: "don_hang",
+      lien_ket: `/profile/orders/${order.id_don_hang}`,
+      transaction,
+    });
+
     await transaction.commit();
 
     return await orderRepository.findById(order.id_don_hang);
@@ -198,16 +223,43 @@ const updateOrderStatus = async (user, id_don_hang, data) => {
     }
   }
 
-  return await orderRepository.updateStatus(id_don_hang, targetStatus);
+  const updatedOrder = await orderRepository.updateStatus(
+    id_don_hang,
+    targetStatus
+  );
+
+  await notificationService.createNotification({
+    id_nguoi_dung: order.id_nguoi_dung,
+    tieu_de: "Cập nhật đơn hàng",
+    noi_dung: `Đơn hàng #${order.id_don_hang} đã chuyển sang trạng thái ${getOrderStatusText(
+      targetStatus
+    )}.`,
+    loai: "don_hang",
+    lien_ket: `/profile/orders/${order.id_don_hang}`,
+  });
+
+  return updatedOrder;
 };
+
 const cancelMyOrder = async (userId, orderId) => {
-  return await orderRepository.cancelMyOrder(userId, orderId);
+  const order = await orderRepository.cancelMyOrder(userId, orderId);
+
+  await notificationService.createNotification({
+    id_nguoi_dung: userId,
+    tieu_de: "Đơn hàng đã hủy",
+    noi_dung: `Đơn hàng #${order.id_don_hang} đã được hủy thành công.`,
+    loai: "don_hang",
+    lien_ket: `/profile/orders/${order.id_don_hang}`,
+  });
+
+  return order;
 };
+
 module.exports = {
   createOrder,
   getMyOrders,
   getAllOrders,
   getOrderById,
   updateOrderStatus,
-  cancelMyOrder
+  cancelMyOrder,
 };

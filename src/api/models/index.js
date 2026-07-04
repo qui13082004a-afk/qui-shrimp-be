@@ -15,7 +15,14 @@ const NhanVienGiaoHang = require("./NhanVienGiaoHang");
 const GiaHanThanhToan = require("./GiaHanThanhToan");
 const ThanhToanCongNo = require("./ThanhToanCongNo");
 const ChiTietThanhToanCongNo = require("./ChiTietThanhToanCongNo");
+const ThongBao = require("./ThongBao");
+NguoiDung.hasMany(ThongBao, {
+  foreignKey: "id_nguoi_dung",
+});
 
+ThongBao.belongsTo(NguoiDung, {
+  foreignKey: "id_nguoi_dung",
+});
 // NguoiDung - ThanhToanCongNo
 NguoiDung.hasMany(ThanhToanCongNo, {
   foreignKey: "id_nguoi_dung",
@@ -228,4 +235,5 @@ module.exports = {
   GiaHanThanhToan,
   ThanhToanCongNo,
   ChiTietThanhToanCongNo,
+  ThongBao
 };

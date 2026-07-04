@@ -2,6 +2,8 @@ const { sequelize } = require("../../config/database");
 const payOS = require("../../config/payos");
 const { paymentRepository } = require("../repositories");
 const debtPaymentRepository = require("../repositories/debtPayment.repository");
+const notificationService = require("./notification.service");
+
 const getMyPayments = async (userId) => {
   return await paymentRepository.findByUserId(userId);
 };
@@ -83,9 +85,12 @@ const confirmPayment = async (user, paymentId, data) => {
     );
 
     let newOrderStatus = order.trang_thai_don_hang;
+    let notificationTitle = "Thanh toán thành công";
+    let notificationContent = `Đơn hàng #${order.id_don_hang} đã được xác nhận thanh toán thành công.`;
 
     if (payment.phuong_thuc === "cod") {
       newOrderStatus = "hoan_tat";
+      notificationContent = `Đơn hàng #${order.id_don_hang} đã giao thành công và thu đủ tiền COD.`;
 
       await paymentRepository.updateDeliveryByOrderId(
         order.id_don_hang,
@@ -101,10 +106,13 @@ const confirmPayment = async (user, paymentId, data) => {
 
     if (payment.phuong_thuc === "chuyen_khoan") {
       newOrderStatus = "cho_giao";
+      notificationContent = `Đơn hàng #${order.id_don_hang} đã thanh toán thành công và đang chờ giao hàng.`;
     }
 
     if (payment.phuong_thuc === "tra_sau") {
       newOrderStatus = "hoan_tat";
+      notificationTitle = "Hoàn tất đơn trả sau";
+      notificationContent = `Đơn hàng #${order.id_don_hang} đã giao thành công và hợp đồng đã được ký.`;
 
       await paymentRepository.updateDeliveryByOrderId(
         order.id_don_hang,
@@ -136,6 +144,15 @@ const confirmPayment = async (user, paymentId, data) => {
       },
       transaction
     );
+
+    await notificationService.createNotification({
+      id_nguoi_dung: order.id_nguoi_dung,
+      tieu_de: notificationTitle,
+      noi_dung: notificationContent,
+      loai: "thanh_toan",
+      lien_ket: `/profile/orders/${order.id_don_hang}`,
+      transaction,
+    });
 
     await transaction.commit();
 
@@ -191,7 +208,8 @@ const createPayOSPayment = async (user, paymentId) => {
     cancelUrl: `${process.env.FRONTEND_URL}/payment-cancel?paymentId=${paymentId}&orderId=${order.id_don_hang}`,
   };
 
- const result = await payOS.paymentRequests.create(paymentData);
+  const result = await payOS.paymentRequests.create(paymentData);
+
   await paymentRepository.updatePayment(payment, {
     ma_giao_dich: String(orderCode),
   });
@@ -234,6 +252,14 @@ const handlePayOSWebhook = async (webhookBody) => {
 
   if (debtPayment) {
     await debtPaymentRepository.allocateDebtPayment(debtPayment, amount);
+
+    await notificationService.createNotification({
+      id_nguoi_dung: debtPayment.id_nguoi_dung,
+      tieu_de: "Thanh toán công nợ thành công",
+      noi_dung: `Bạn đã thanh toán công nợ thành công với số tiền ${Number(amount).toLocaleString()}đ.`,
+      loai: "thanh_toan",
+      lien_ket: "/debt",
+    });
 
     return {
       success: true,
@@ -294,6 +320,15 @@ const handlePayOSWebhook = async (webhookBody) => {
       transaction
     );
 
+    await notificationService.createNotification({
+      id_nguoi_dung: order.id_nguoi_dung,
+      tieu_de: "Thanh toán thành công",
+      noi_dung: `Đơn hàng #${order.id_don_hang} đã thanh toán thành công và đang chờ giao hàng.`,
+      loai: "thanh_toan",
+      lien_ket: `/profile/orders/${order.id_don_hang}`,
+      transaction,
+    });
+
     await transaction.commit();
 
     return {
@@ -306,6 +341,7 @@ const handlePayOSWebhook = async (webhookBody) => {
     throw error;
   }
 };
+
 const failPayment = async (user, paymentId, data) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ quản trị viên mới có quyền đánh dấu giao dịch thất bại");
@@ -354,6 +390,15 @@ const failPayment = async (user, paymentId, data) => {
         transaction
       );
     }
+
+    await notificationService.createNotification({
+      id_nguoi_dung: order.id_nguoi_dung,
+      tieu_de: "Thanh toán thất bại",
+      noi_dung: `Thanh toán cho đơn hàng #${order.id_don_hang} thất bại. Vui lòng kiểm tra lại.`,
+      loai: "thanh_toan",
+      lien_ket: `/profile/orders/${order.id_don_hang}`,
+      transaction,
+    });
 
     await transaction.commit();
 

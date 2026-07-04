@@ -8,6 +8,7 @@ const orderRepository = require("./order.repository");
 const paymentRepository = require("./payment.repository");
 const deliveryRepository = require("./delivery.repository");
 const debtExtensionRepository = require("./debtExtension.repository");
+const notificationRepository = require( "./notification.repository")
 module.exports = {
   authRepository,
   categoryRepository,
@@ -18,6 +19,7 @@ module.exports = {
   orderRepository,
   paymentRepository,
   deliveryRepository,
-  debtExtensionRepository
+  debtExtensionRepository,
+  notificationRepository
 };
   

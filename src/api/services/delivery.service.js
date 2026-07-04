@@ -1,4 +1,5 @@
 const { deliveryRepository } = require("../repositories");
+const notificationService = require("./notification.service");
 
 const getMyDeliveries = async (user) => {
   if (user.vai_tro !== "nhan_vien_giao_hang") {
@@ -29,9 +30,7 @@ const getDeliveryById = async (user, id_giao_hang) => {
     throw new Error("Không tìm thấy giao hàng");
   }
 
-  if (user.vai_tro === "admin") {
-    return delivery;
-  }
+  if (user.vai_tro === "admin") return delivery;
 
   if (user.vai_tro === "nhan_vien_giao_hang") {
     const shipper = await deliveryRepository.findShipperByUserId(user.id_nguoi_dung);
@@ -52,19 +51,12 @@ const assignDelivery = async (user, data) => {
     throw new Error("Chỉ admin mới có quyền phân công giao hàng");
   }
 
-  if (!data.id_don_hang) {
-    throw new Error("Vui lòng chọn đơn hàng");
-  }
-
-  if (!data.id_nhan_vien_giao) {
-    throw new Error("Vui lòng chọn nhân viên giao hàng");
-  }
+  if (!data.id_don_hang) throw new Error("Vui lòng chọn đơn hàng");
+  if (!data.id_nhan_vien_giao) throw new Error("Vui lòng chọn nhân viên giao hàng");
 
   const order = await deliveryRepository.findOrderById(data.id_don_hang);
 
-  if (!order) {
-    throw new Error("Không tìm thấy đơn hàng");
-  }
+  if (!order) throw new Error("Không tìm thấy đơn hàng");
 
   if (!["cho_giao", "da_thanh_toan"].includes(order.trang_thai_don_hang)) {
     throw new Error("Đơn hàng chưa sẵn sàng để giao");
@@ -87,6 +79,14 @@ const assignDelivery = async (user, data) => {
     trang_thai_don_hang: "cho_giao",
   });
 
+  await notificationService.createNotification({
+    id_nguoi_dung: order.id_nguoi_dung,
+    tieu_de: "Đơn hàng chuẩn bị giao",
+    noi_dung: `Đơn hàng #${order.id_don_hang} đã được phân công giao hàng.`,
+    loai: "giao_hang",
+    lien_ket: `/profile/orders/${order.id_don_hang}`,
+  });
+
   return delivery;
 };
 
@@ -104,6 +104,14 @@ const startDelivery = async (user, id_giao_hang) => {
 
   await deliveryRepository.updateOrder(delivery.DonHang, {
     trang_thai_don_hang: "dang_giao",
+  });
+
+  await notificationService.createNotification({
+    id_nguoi_dung: delivery.DonHang.id_nguoi_dung,
+    tieu_de: "Đơn hàng đang giao",
+    noi_dung: `Đơn hàng #${delivery.DonHang.id_don_hang} đang được giao đến bạn.`,
+    loai: "giao_hang",
+    lien_ket: `/profile/orders/${delivery.DonHang.id_don_hang}`,
   });
 
   return await deliveryRepository.findById(id_giao_hang);
@@ -129,6 +137,14 @@ const successDelivery = async (user, id_giao_hang, data) => {
     ngay_giao: new Date(),
   });
 
+  await notificationService.createNotification({
+    id_nguoi_dung: delivery.DonHang.id_nguoi_dung,
+    tieu_de: "Giao hàng thành công",
+    noi_dung: `Đơn hàng #${delivery.DonHang.id_don_hang} đã được giao thành công.`,
+    loai: "giao_hang",
+    lien_ket: `/profile/orders/${delivery.DonHang.id_don_hang}`,
+  });
+
   return await deliveryRepository.findById(id_giao_hang);
 };
 
@@ -147,6 +163,14 @@ const failDelivery = async (user, id_giao_hang, data) => {
 
   await deliveryRepository.updateOrder(delivery.DonHang, {
     trang_thai_don_hang: "giao_that_bai",
+  });
+
+  await notificationService.createNotification({
+    id_nguoi_dung: delivery.DonHang.id_nguoi_dung,
+    tieu_de: "Giao hàng thất bại",
+    noi_dung: `Đơn hàng #${delivery.DonHang.id_don_hang} giao thất bại. Vui lòng kiểm tra lại thông tin đơn hàng.`,
+    loai: "giao_hang",
+    lien_ket: `/profile/orders/${delivery.DonHang.id_don_hang}`,
   });
 
   return await deliveryRepository.findById(id_giao_hang);

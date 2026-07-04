@@ -14,6 +14,9 @@ const deliveryRoute = require("./delivery.route");
 const faceRoute=require("./face.route");
 const debtRoutes = require("./debt.route");
 const debtExtensionRoute = require("./debtExtension.route");
+const notificationRoute = require("./notification.route");
+
+router.use("/notifications", notificationRoute);
 router.use("/auth", authRoute);
 router.use("/upload", uploadRoute);
 router.use("/categories", categoryRoute);

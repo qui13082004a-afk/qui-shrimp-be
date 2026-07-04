@@ -116,11 +116,81 @@ const deleteCropSeason = async (userId, id_vu_nuoi) => {
 
   return await cropSeasonRepository.remove(id_vu_nuoi);
 };
+// Hàm hỗ trợ chuyển đổi giá trị thành số
+const toNumber = (value) => Number(value || 0);
+//hàm tổng đơn hàng của vụ nuôi
+const getSeasonOrderSummary = async (id_nguoi_dung, id_vu_nuoi) => {
+  const season = await cropSeasonRepository.getSeasonOrderSummary(
+    id_nguoi_dung,
+    id_vu_nuoi
+  );
 
+  if (!season) {
+    throw new Error("Không tìm thấy vụ nuôi hoặc bạn không có quyền xem");
+  }
+
+  const plain = season.toJSON();
+  const orders = plain.DonHangs || [];
+
+  const validOrders = orders.filter(
+    (order) =>
+      !["da_huy", "giao_that_bai"].includes(order.trang_thai_don_hang)
+  );
+
+  const tong_von = validOrders.reduce(
+    (sum, order) => sum + toNumber(order.tong_thanh_toan),
+    0
+  );
+
+  return {
+    id_vu_nuoi: plain.id_vu_nuoi,
+    ten_vu_nuoi: plain.ten_vu_nuoi,
+    trang_thai: plain.trang_thai,
+    ngay_tha_giong: plain.ngay_tha_giong,
+    so_luong_giong: plain.so_luong_giong,
+    ngay_thu_hoach_du_kien: plain.ngay_thu_hoach_du_kien,
+
+    ao_nuoi: plain.AoNuoi,
+
+    tong_so_don: validOrders.length,
+    tong_von,
+    don_hoan_tat: validOrders.filter(
+      (order) => order.trang_thai_don_hang === "hoan_tat"
+    ).length,
+    don_dang_xu_ly: validOrders.filter((order) =>
+      ["cho_xu_ly", "cho_thanh_toan", "da_thanh_toan", "cho_giao", "dang_giao"]
+        .includes(order.trang_thai_don_hang)
+    ).length,
+
+    orders: validOrders.map((order) => ({
+      id_don_hang: order.id_don_hang,
+      ngay_dat: order.ngay_dat,
+      tong_tien: toNumber(order.tong_tien),
+      phi_van_chuyen: toNumber(order.phi_van_chuyen),
+      tong_thanh_toan: toNumber(order.tong_thanh_toan),
+      hinh_thuc_thanh_toan: order.hinh_thuc_thanh_toan,
+      trang_thai_don_hang: order.trang_thai_don_hang,
+      ghi_chu: order.ghi_chu,
+
+      san_pham: (order.ChiTietDonHangs || []).map((item) => ({
+        id_chi_tiet: item.id_chi_tiet,
+        id_san_pham: item.id_san_pham,
+        ten_san_pham: item.SanPham?.ten_san_pham || "Sản phẩm không tồn tại",
+        hinh_anh: item.SanPham?.hinh_anh || null,
+        don_vi_tinh: item.SanPham?.don_vi_tinh || null,
+        gia_ban: toNumber(item.gia_ban),
+        so_luong_dat: item.so_luong_dat,
+        thanh_tien: toNumber(item.thanh_tien),
+        trang_thai_san_pham: item.trang_thai_san_pham,
+      })),
+    })),
+  };
+};
 module.exports = {
   createCropSeason,
   getCropSeasonsByPond,
   getCropSeasonById,
   updateCropSeason,
   deleteCropSeason,
+  getSeasonOrderSummary,
 };

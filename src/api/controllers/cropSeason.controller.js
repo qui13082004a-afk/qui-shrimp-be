@@ -99,6 +99,28 @@ const deleteCropSeason = async (req, res) => {
     });
   }
 };
+const getSeasonOrderSummary = async (req, res) => {
+  try {
+    const id_nguoi_dung = req.user.id_nguoi_dung;
+    const { id_vu_nuoi } = req.params;
+
+    const result = await cropSeasonService.getSeasonOrderSummary(
+      id_nguoi_dung,
+      id_vu_nuoi
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Lấy thông tin mua hàng của vụ nuôi thành công",
+      data: result,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 module.exports = {
   createCropSeason,
@@ -106,4 +128,5 @@ module.exports = {
   getCropSeasonById,
   updateCropSeason,
   deleteCropSeason,
+  getSeasonOrderSummary,
 };

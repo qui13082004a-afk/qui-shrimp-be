@@ -3,6 +3,29 @@ const {
   customerProfileRepository,
 } = require("../repositories");
 
+const canUploadContract = (user) => {
+  return (
+    user.vai_tro === "nhan_vien_dinh_muc" ||
+    user.vai_tro === "admin"
+  );
+};
+
+const getNextStatusAfterUpload = (contract, newData = {}) => {
+  const hasSignedPdf =
+    Boolean(newData.file_hop_dong_da_ky) ||
+    Boolean(contract.file_hop_dong_da_ky);
+
+  const hasSignedImage =
+    Boolean(newData.anh_hop_dong_da_ky) ||
+    Boolean(contract.anh_hop_dong_da_ky);
+
+  if (hasSignedPdf && hasSignedImage) {
+    return "cho_xac_nhan";
+  }
+
+  return contract.trang_thai || "cho_ky";
+};
+
 const createContract = async (user, data) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ Admin mới có quyền tạo hợp đồng");
@@ -30,11 +53,16 @@ const createContract = async (user, data) => {
 
   return await hopDongRepository.create({
     id_ho_so: data.id_ho_so,
-    file_hop_dong: data.file_hop_dong || null,
+
+    file_hop_dong_mau: data.file_hop_dong_mau || null,
+    file_hop_dong_da_ky: null,
+    anh_hop_dong_da_ky: null,
+
     ngay_ky: null,
     trang_thai: "cho_ky",
+
     ghi_chu: data.ghi_chu || null,
-       dieu_khoan_bo_sung: data.dieu_khoan_bo_sung || null,
+    dieu_khoan_bo_sung: data.dieu_khoan_bo_sung || null,
   });
 };
 
@@ -91,13 +119,13 @@ const getContractByProfileId = async (user, id_ho_so) => {
   return contract;
 };
 
-const uploadSignedContract = async (user, id_hop_dong, data) => {
-  if (user.vai_tro !== "nhan_vien_dinh_muc" && user.vai_tro !== "admin") {
+const uploadSignedPdf = async (user, id_hop_dong, data) => {
+  if (!canUploadContract(user)) {
     throw new Error("Chỉ nhân viên định mức hoặc Admin mới được upload hợp đồng");
   }
 
-  if (!data.file_hop_dong) {
-    throw new Error("Vui lòng tải file hợp đồng đã ký");
+  if (!data.file_hop_dong_da_ky) {
+    throw new Error("Vui lòng tải PDF hợp đồng đã ký");
   }
 
   const contract = await hopDongRepository.findById(id_hop_dong);
@@ -114,12 +142,53 @@ const uploadSignedContract = async (user, id_hop_dong, data) => {
     throw new Error("Hợp đồng đã được Admin xác nhận");
   }
 
+  const trang_thai = getNextStatusAfterUpload(contract, {
+    file_hop_dong_da_ky: data.file_hop_dong_da_ky,
+  });
+
   return await hopDongRepository.update(id_hop_dong, {
-    file_hop_dong: data.file_hop_dong,
+    file_hop_dong_da_ky: data.file_hop_dong_da_ky,
     id_nhan_vien_upload: user.id_nguoi_dung,
     ngay_upload: new Date(),
-    ngay_ky: data.ngay_ky || new Date(),
-    trang_thai: "cho_xac_nhan",
+    ngay_ky: data.ngay_ky || contract.ngay_ky || new Date(),
+    trang_thai,
+    ghi_chu: data.ghi_chu || contract.ghi_chu,
+  });
+};
+
+const uploadSignedImage = async (user, id_hop_dong, data) => {
+  if (!canUploadContract(user)) {
+    throw new Error("Chỉ nhân viên định mức hoặc Admin mới được upload hợp đồng");
+  }
+
+  if (!data.anh_hop_dong_da_ky) {
+    throw new Error("Vui lòng tải ảnh hợp đồng đã ký");
+  }
+
+  const contract = await hopDongRepository.findById(id_hop_dong);
+
+  if (!contract) {
+    throw new Error("Không tìm thấy hợp đồng");
+  }
+
+  if (contract.trang_thai === "huy") {
+    throw new Error("Hợp đồng đã bị hủy");
+  }
+
+  if (contract.trang_thai === "da_ky") {
+    throw new Error("Hợp đồng đã được Admin xác nhận");
+  }
+
+  const trang_thai = getNextStatusAfterUpload(contract, {
+    anh_hop_dong_da_ky: data.anh_hop_dong_da_ky,
+  });
+
+  return await hopDongRepository.update(id_hop_dong, {
+    anh_hop_dong_da_ky: data.anh_hop_dong_da_ky,
+    id_nhan_vien_upload: user.id_nguoi_dung,
+    ngay_upload: new Date(),
+    ngay_ky: data.ngay_ky || contract.ngay_ky || new Date(),
+    trang_thai,
     ghi_chu: data.ghi_chu || contract.ghi_chu,
   });
 };
@@ -139,8 +208,8 @@ const confirmContract = async (user, id_hop_dong, data = {}) => {
     throw new Error("Chỉ xác nhận hợp đồng đang chờ xác nhận");
   }
 
-  if (!contract.file_hop_dong) {
-    throw new Error("Hợp đồng chưa có file đã ký");
+  if (!contract.file_hop_dong_da_ky || !contract.anh_hop_dong_da_ky) {
+    throw new Error("Chưa upload đầy đủ PDF và ảnh hợp đồng đã ký");
   }
 
   return await hopDongRepository.update(id_hop_dong, {
@@ -199,7 +268,8 @@ module.exports = {
   getMyContracts,
   getContractById,
   getContractByProfileId,
-  uploadSignedContract,
+  uploadSignedPdf,
+  uploadSignedImage,
   confirmContract,
   cancelContract,
   restoreContract,

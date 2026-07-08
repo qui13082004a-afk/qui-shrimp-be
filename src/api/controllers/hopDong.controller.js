@@ -1,54 +1,71 @@
+
 const hopDongService = require("../services/hopDong.service");
 
 const createContract = async (req, res) => {
   try {
     const data = await hopDongService.createContract(req.user, req.body);
+
     return res.status(201).json({
       success: true,
       message: "Tạo hợp đồng thành công",
       data,
     });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 const getAllContracts = async (req, res) => {
   try {
     const data = await hopDongService.getAllContracts(req.user);
+
     return res.status(200).json({
       success: true,
       message: "Lấy danh sách hợp đồng thành công",
       data,
     });
   } catch (error) {
-    return res.status(403).json({ success: false, message: error.message });
+    return res.status(403).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 const getMyContracts = async (req, res) => {
   try {
     const data = await hopDongService.getMyContracts(req.user);
+
     return res.status(200).json({
       success: true,
       message: "Lấy hợp đồng của tôi thành công",
       data,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 const getContractById = async (req, res) => {
   try {
     const data = await hopDongService.getContractById(req.user, req.params.id);
+
     return res.status(200).json({
       success: true,
       message: "Lấy chi tiết hợp đồng thành công",
       data,
     });
   } catch (error) {
-    return res.status(404).json({ success: false, message: error.message });
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -58,31 +75,89 @@ const getContractByProfileId = async (req, res) => {
       req.user,
       req.params.profileId
     );
+
     return res.status(200).json({
       success: true,
       message: "Lấy hợp đồng theo hồ sơ thành công",
       data,
     });
   } catch (error) {
-    return res.status(404).json({ success: false, message: error.message });
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-const uploadSignedContract = async (req, res) => {
+// ======================================================
+// Upload PDF hợp đồng đã ký
+// field FE gửi lên: file_hop_dong_da_ky
+// ======================================================
+const uploadSignedPdf = async (req, res) => {
   try {
-    const data = await hopDongService.uploadSignedContract(
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng chọn file PDF hợp đồng đã ký",
+      });
+    }
+
+    const data = await hopDongService.uploadSignedPdf(
       req.user,
       req.params.id,
-      req.body
+      {
+        file_hop_dong_da_ky: req.file.path,
+        ngay_ky: req.body.ngay_ky || null,
+        ghi_chu: req.body.ghi_chu || null,
+      }
     );
 
     return res.status(200).json({
       success: true,
-      message: "Upload hợp đồng đã ký thành công, đang chờ Admin xác nhận",
+      message: "Upload PDF hợp đồng đã ký thành công",
       data,
     });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ======================================================
+// Upload ảnh hợp đồng đã ký
+// field FE gửi lên: anh_hop_dong_da_ky
+// ======================================================
+const uploadSignedImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng chọn ảnh hợp đồng đã ký",
+      });
+    }
+
+    const data = await hopDongService.uploadSignedImage(
+      req.user,
+      req.params.id,
+      {
+        anh_hop_dong_da_ky: req.file.path,
+        ngay_ky: req.body.ngay_ky || null,
+        ghi_chu: req.body.ghi_chu || null,
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Upload ảnh hợp đồng đã ký thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -100,7 +175,10 @@ const confirmContract = async (req, res) => {
       data,
     });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -118,9 +196,13 @@ const cancelContract = async (req, res) => {
       data,
     });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
 const restoreContract = async (req, res) => {
   try {
     const data = await hopDongService.restoreContract(
@@ -135,17 +217,22 @@ const restoreContract = async (req, res) => {
       data,
     });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
 module.exports = {
   createContract,
   getAllContracts,
   getMyContracts,
   getContractById,
   getContractByProfileId,
-  uploadSignedContract,
+  uploadSignedPdf,
+  uploadSignedImage,
   confirmContract,
   cancelContract,
-  restoreContract
+  restoreContract,
 };

@@ -123,6 +123,14 @@ const findByProfileId = async (id_ho_so) => {
     order: [["ngay_gui", "DESC"]],
   });
 };
+const countApprovedByProfileId = async (id_ho_so) => {
+  return await GiaHanThanhToan.count({
+    where: {
+      id_ho_so,
+      trang_thai: "da_duyet",
+    },
+  });
+};
 module.exports = {
   create,
   findById,
@@ -132,4 +140,5 @@ module.exports = {
   update,
   findLatestApprovedByProfileId,
   findByProfileId,
+  countApprovedByProfileId
 };

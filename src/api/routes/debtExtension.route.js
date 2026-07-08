@@ -5,9 +5,12 @@ const { debtExtensionController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
 const { authorizeAdmin } = authMiddleware;
 
+const upload = require("../middlewares/upload.middleware");
+
 router.post(
   "/",
   authMiddleware,
+  upload.array("images", 5),
   debtExtensionController.createDebtExtension
 );
 

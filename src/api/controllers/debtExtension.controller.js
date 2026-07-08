@@ -1,16 +1,17 @@
 const { debtExtensionService } = require("../services");
 
-const createDebtExtension = async (req, res) => {
+const createDebtExtension = async (user, data, files) => {
   try {
-    const extension = await debtExtensionService.createDebtExtension(
+    const data = await debtExtensionService.createDebtExtension(
       req.user,
-      req.body
+      req.body,
+      req.files
     );
 
     return res.status(201).json({
       success: true,
-      message: "Gửi đơn xin gia hạn thành công",
-      data: extension,
+      message: "Gửi yêu cầu gia hạn thành công",
+      data,
     });
   } catch (error) {
     return res.status(400).json({

@@ -5,13 +5,17 @@ const {
   NguoiDung,
   ThanhToan,
   HoSoKhachHang,
+  ChiTietThanhToanCongNo,
+  ThanhToanCongNo,
 } = require("../models");
+
 const { Op } = require("sequelize");
 
 const ORDER_ATTRIBUTES = [
   "id_don_hang",
   "id_nguoi_dung",
   "id_vu_nuoi",
+  "id_ho_so",
   "tong_tien",
   "phi_van_chuyen",
   "tong_thanh_toan",
@@ -52,17 +56,16 @@ const PAYMENT_ATTRIBUTES = [
   "ngay_thanh_toan",
 ];
 
-const getSafePagination = (page, limit) => {
-  if (!page && !limit) return {};
+const ACTIVE_POSTPAID_ORDER_STATUS = [
+  "cho_xu_ly",
+  "cho_thanh_toan",
+  "da_thanh_toan",
+  "cho_giao",
+  "dang_giao",
+  "hoan_tat",
+];
 
-  const safePage = Math.max(Number(page) || 1, 1);
-  const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 100);
-
-  return {
-    limit: safeLimit,
-    offset: (safePage - 1) * safeLimit,
-  };
-};
+const toNumber = (value) => Number(value || 0);
 
 const createOrder = (data, transaction) => {
   return DonHang.create(data, { transaction });
@@ -83,6 +86,7 @@ const findProductById = (id_san_pham, transaction) => {
       "trang_thai",
     ],
     transaction,
+    lock: transaction ? true : undefined,
   });
 };
 
@@ -119,11 +123,25 @@ const findById = (id_don_hang) => {
         include: [{ model: SanPham, attributes: PRODUCT_ORDER_ATTRIBUTES }],
       },
       { model: ThanhToan, attributes: PAYMENT_ATTRIBUTES },
+      {
+        model: HoSoKhachHang,
+        required: false,
+        attributes: [
+          "id_ho_so",
+          "id_vu_nuoi",
+          "dinh_muc_cong_no",
+          "han_thanh_toan",
+          "duoc_phep_tra_sau",
+          "bi_khoa_tra_sau",
+          "ly_do_khoa",
+          "trang_thai_ho_so",
+        ],
+      },
     ],
   });
 };
 
-const findByUserId = (id_nguoi_dung, options = {}) => {
+const findByUserId = (id_nguoi_dung) => {
   return DonHang.findAll({
     where: { id_nguoi_dung },
     attributes: ORDER_ATTRIBUTES,
@@ -142,13 +160,17 @@ const findByUserId = (id_nguoi_dung, options = {}) => {
         include: [{ model: SanPham, attributes: PRODUCT_ORDER_ATTRIBUTES }],
       },
       { model: ThanhToan, attributes: PAYMENT_ATTRIBUTES },
+      {
+        model: HoSoKhachHang,
+        required: false,
+        attributes: ["id_ho_so", "han_thanh_toan", "dinh_muc_cong_no"],
+      },
     ],
     order: [["id_don_hang", "DESC"]],
-    ...getSafePagination(options.page, options.limit),
   });
 };
 
-const findAll = (options = {}) => {
+const findAll = () => {
   return DonHang.findAll({
     attributes: ORDER_ATTRIBUTES,
     include: [
@@ -167,9 +189,13 @@ const findAll = (options = {}) => {
         include: [{ model: SanPham, attributes: PRODUCT_ORDER_ATTRIBUTES }],
       },
       { model: ThanhToan, attributes: PAYMENT_ATTRIBUTES },
+      {
+        model: HoSoKhachHang,
+        required: false,
+        attributes: ["id_ho_so", "han_thanh_toan", "dinh_muc_cong_no"],
+      },
     ],
     order: [["id_don_hang", "DESC"]],
-    ...getSafePagination(options.page, options.limit),
   });
 };
 
@@ -193,48 +219,83 @@ const updateStatus = async (id_don_hang, trang_thai_don_hang) => {
   return DonHang.findByPk(id_don_hang, { attributes: ORDER_ATTRIBUTES });
 };
 
-const findApprovedPostpaidProfile = (id_nguoi_dung, id_vu_nuoi) => {
+const findApprovedPostpaidProfile = (id_nguoi_dung, id_vu_nuoi, transaction) => {
   return HoSoKhachHang.findOne({
     where: {
       id_nguoi_dung,
       id_vu_nuoi,
       duoc_phep_tra_sau: true,
+      trang_thai_ho_so: "da_duyet",
     },
     attributes: [
       "id_ho_so",
       "id_nguoi_dung",
       "id_ao",
       "id_vu_nuoi",
+      "id_chinh_sach",
       "dinh_muc_cong_no",
       "han_thanh_toan",
+      "duoc_phep_tra_sau",
+      "bi_khoa_tra_sau",
+      "ly_do_khoa",
+      "trang_thai_ho_so",
     ],
+    transaction,
+    lock: transaction ? true : undefined,
   });
 };
 
-const getCurrentDebt = async (id_nguoi_dung) => {
-  const result = await DonHang.sum("tong_thanh_toan", {
+const getPaidAmountByOrderIds = async (orderIds, transaction) => {
+  if (!orderIds.length) return 0;
+
+  const details = await ChiTietThanhToanCongNo.findAll({
     where: {
-      id_nguoi_dung,
-      hinh_thuc_thanh_toan: "tra_sau",
-      trang_thai_don_hang: "hoan_tat",
+      id_don_hang: { [Op.in]: orderIds },
     },
+    attributes: ["so_tien_phan_bo"],
+    include: [
+      {
+        model: ThanhToanCongNo,
+        required: true,
+        attributes: [],
+        where: { trang_thai: "thanh_cong" },
+      },
+    ],
+    transaction,
   });
 
-  return Number(result || 0);
+  return details.reduce(
+    (sum, item) => sum + toNumber(item.so_tien_phan_bo),
+    0
+  );
 };
 
-const getReservedDebt = async (id_nguoi_dung) => {
-  const result = await DonHang.sum("tong_thanh_toan", {
+const getUsedCreditByProfileId = async (id_ho_so, transaction) => {
+  const orders = await DonHang.findAll({
     where: {
-      id_nguoi_dung,
+      id_ho_so,
       hinh_thuc_thanh_toan: "tra_sau",
       trang_thai_don_hang: {
-        [Op.in]: ["cho_xu_ly", "cho_giao", "dang_giao"],
+        [Op.in]: ACTIVE_POSTPAID_ORDER_STATUS,
       },
     },
+    attributes: ["id_don_hang", "tong_thanh_toan"],
+    transaction,
   });
 
-  return Number(result || 0);
+  const plainOrders = orders.map((order) => order.toJSON());
+
+  const totalPostpaid = plainOrders.reduce(
+    (sum, order) => sum + toNumber(order.tong_thanh_toan),
+    0
+  );
+
+  const paidAmount = await getPaidAmountByOrderIds(
+    plainOrders.map((order) => order.id_don_hang),
+    transaction
+  );
+
+  return Math.max(totalPostpaid - paidAmount, 0);
 };
 
 const cancelMyOrder = async (userId, orderId) => {
@@ -256,7 +317,9 @@ const cancelMyOrder = async (userId, orderId) => {
           "so_luong_dat",
           "thanh_tien",
         ],
-        include: [{ model: SanPham, required: false, attributes: PRODUCT_ORDER_ATTRIBUTES }],
+        include: [
+          { model: SanPham, required: false, attributes: PRODUCT_ORDER_ATTRIBUTES },
+        ],
       },
       {
         model: ThanhToan,
@@ -292,7 +355,6 @@ module.exports = {
   findAll,
   updateStatus,
   findApprovedPostpaidProfile,
-  getCurrentDebt,
-  getReservedDebt,
+  getUsedCreditByProfileId,
   cancelMyOrder,
 };

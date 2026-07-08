@@ -1,36 +1,53 @@
 const express = require("express");
 const router = express.Router();
 
-const { orderController } = require("../controllers");
+const { customerProfileController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
-const { authorizeAdmin, authorizeAdminOrDeliveryStaff } = authMiddleware;
+const { authorizeAdmin } = authMiddleware;
 const {
-  validateCreateOrder,
-  validateUpdateOrderStatus,
+  validateCreateCustomerProfile,
+  validateUpdateCustomerProfile,
 } = require("../middlewares/validate");
 
-router.post("/", authMiddleware, validateCreateOrder, orderController.createOrder);
+// Khách hàng tạo hồ sơ đăng ký mua trả sau
+router.post(
+  "/",
+  authMiddleware,
+  validateCreateCustomerProfile,
+  customerProfileController.createCustomerProfile
+);
 
-router.get("/my", authMiddleware, orderController.getMyOrders);
+// Khách hàng xem hồ sơ của mình
+router.get(
+  "/my",
+  authMiddleware,
+  customerProfileController.getMyCustomerProfiles
+);
 
+// Admin xem toàn bộ hồ sơ
 router.get(
   "/admin",
   authMiddleware,
   authorizeAdmin,
-  orderController.getAllOrders
+  customerProfileController.getAllCustomerProfiles
 );
 
-// Đặt route cụ thể TRƯỚC /:id
-router.put("/:id/cancel", authMiddleware, orderController.cancelMyOrder);
-
-router.put(
-  "/:id/status",
+// Khách hàng / Admin / Nhân viên định mức xem chi tiết hồ sơ
+router.get(
+  "/:id",
   authMiddleware,
-  authorizeAdminOrDeliveryStaff,
-  validateUpdateOrderStatus,
-  orderController.updateOrderStatus
+  customerProfileController.getCustomerProfileById
 );
 
-router.get("/:id", authMiddleware, orderController.getOrderById);
+// Cập nhật hồ sơ:
+// - Khách hàng: ghi chú
+// - Nhân viên định mức: trạng thái kiểm tra / khảo sát
+// - Admin: khóa / mở quyền trả sau, ghi chú xử lý
+router.put(
+  "/:id",
+  authMiddleware,
+  validateUpdateCustomerProfile,
+  customerProfileController.updateCustomerProfile
+);
 
 module.exports = router;

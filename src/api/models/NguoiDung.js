@@ -30,10 +30,15 @@ otp_expires: {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
-  vai_tro: {
-    type: DataTypes.ENUM("admin", "khach_hang", "nhan_vien_giao_hang"),
-    defaultValue: "khach_hang",
-  },
+ vai_tro: {
+  type: DataTypes.ENUM(
+    "admin",
+    "khach_hang",
+    "nhan_vien_giao_hang",
+    "nhan_vien_dinh_muc"
+  ),
+  defaultValue: "khach_hang",
+},
   dia_chi: {
     type: DataTypes.TEXT,
   },

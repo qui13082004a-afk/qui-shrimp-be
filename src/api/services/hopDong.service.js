@@ -34,6 +34,7 @@ const createContract = async (user, data) => {
     ngay_ky: null,
     trang_thai: "cho_ky",
     ghi_chu: data.ghi_chu || null,
+       dieu_khoan_bo_sung: data.dieu_khoan_bo_sung || null,
   });
 };
 

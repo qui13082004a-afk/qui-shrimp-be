@@ -50,7 +50,10 @@ const HopDong = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: true,
     },
-
+ngay_upload: {
+  type: DataTypes.DATE,
+  allowNull: true,
+},
     ghi_chu: {
       type: DataTypes.TEXT,
       allowNull: true,

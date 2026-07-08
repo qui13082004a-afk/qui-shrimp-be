@@ -2,10 +2,16 @@ const express = require("express");
 const router = express.Router();
 
 const hopDongController = require("../controllers/hopDong.controller");
+
 const authMiddleware = require("../middlewares/auth.middleware");
 const { authorizeAdmin } = authMiddleware;
-const upload = require("../middlewares/upload.middleware");
 
+const upload = require("../middlewares/upload.middleware");
+const uploadFile = require("../middlewares/uploadFile.middleware");
+
+// =============================
+// Tạo hợp đồng
+// =============================
 router.post(
   "/",
   authMiddleware,
@@ -13,6 +19,9 @@ router.post(
   hopDongController.createContract
 );
 
+// =============================
+// Danh sách hợp đồng
+// =============================
 router.get(
   "/admin",
   authMiddleware,
@@ -32,25 +41,45 @@ router.get(
   hopDongController.getContractByProfileId
 );
 
-router.put(
-  "/:id/upload",
+router.get(
+  "/:id",
   authMiddleware,
-  upload.single("file_hop_dong"),
-  hopDongController.uploadSignedContract
+  hopDongController.getContractById
 );
 
+// ===================================================
+// Upload PDF hợp đồng đã ký
+// ===================================================
+router.put(
+  "/:id/upload-pdf",
+  authMiddleware,
+  uploadFile.single("file_hop_dong_da_ky"),
+  hopDongController.uploadSignedPdf
+);
+
+// ===================================================
+// Upload ảnh hợp đồng đã ký
+// ===================================================
+router.put(
+  "/:id/upload-image",
+  authMiddleware,
+  upload.single("anh_hop_dong_da_ky"),
+  hopDongController.uploadSignedImage
+);
+
+// ===================================================
+// Admin xác nhận
+// ===================================================
 router.put(
   "/:id/confirm",
   authMiddleware,
   authorizeAdmin,
   hopDongController.confirmContract
 );
-router.put(
-  "/:id/restore",
-  authMiddleware,
-  authorizeAdmin,
-  hopDongController.restoreContract
-);
+
+// ===================================================
+// Hủy
+// ===================================================
 router.put(
   "/:id/cancel",
   authMiddleware,
@@ -58,10 +87,14 @@ router.put(
   hopDongController.cancelContract
 );
 
-router.get(
-  "/:id",
+// ===================================================
+// Khôi phục
+// ===================================================
+router.put(
+  "/:id/restore",
   authMiddleware,
-  hopDongController.getContractById
+  authorizeAdmin,
+  hopDongController.restoreContract
 );
 
 module.exports = router;

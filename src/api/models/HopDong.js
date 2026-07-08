@@ -16,7 +16,26 @@ const HopDong = sequelize.define(
       unique: true,
     },
 
-    file_hop_dong: {
+    // =========================
+    // PDF hợp đồng hệ thống tạo
+    // =========================
+    file_hop_dong_mau: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+
+    // =========================
+    // PDF scan sau khi ký
+    // =========================
+    file_hop_dong_da_ky: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+
+    // =========================
+    // Ảnh chụp hợp đồng đã ký
+    // =========================
+    anh_hop_dong_da_ky: {
       type: DataTypes.STRING(500),
       allowNull: true,
     },
@@ -50,17 +69,24 @@ const HopDong = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: true,
     },
-ngay_upload: {
-  type: DataTypes.DATE,
-  allowNull: true,
-},
+
+    dieu_khoan_bo_sung: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+
     ghi_chu: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
 
     trang_thai: {
-      type: DataTypes.ENUM("cho_ky", "cho_xac_nhan", "da_ky", "huy"),
+      type: DataTypes.ENUM(
+        "cho_ky",
+        "cho_xac_nhan",
+        "da_ky",
+        "huy"
+      ),
       defaultValue: "cho_ky",
     },
   },

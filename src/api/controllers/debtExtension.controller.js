@@ -1,6 +1,6 @@
 const { debtExtensionService } = require("../services");
 
-const createDebtExtension = async (user, data, files) => {
+const createDebtExtension = async (req, res) => {
   try {
     const data = await debtExtensionService.createDebtExtension(
       req.user,
@@ -116,13 +116,13 @@ const rejectDebtExtension = async (req, res) => {
     });
   }
 };
+
 const getDebtExtensionsByProfileId = async (req, res) => {
   try {
-    const extensions =
-      await debtExtensionService.getDebtExtensionsByProfileId(
-        req.user,
-        req.params.profileId
-      );
+    const extensions = await debtExtensionService.getDebtExtensionsByProfileId(
+      req.user,
+      req.params.profileId
+    );
 
     return res.status(200).json({
       success: true,
@@ -136,6 +136,7 @@ const getDebtExtensionsByProfileId = async (req, res) => {
     });
   }
 };
+
 module.exports = {
   createDebtExtension,
   getMyDebtExtensions,

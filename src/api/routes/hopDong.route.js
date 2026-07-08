@@ -45,7 +45,12 @@ router.put(
   authorizeAdmin,
   hopDongController.confirmContract
 );
-
+router.put(
+  "/:id/restore",
+  authMiddleware,
+  authorizeAdmin,
+  hopDongController.restoreContract
+);
 router.put(
   "/:id/cancel",
   authMiddleware,

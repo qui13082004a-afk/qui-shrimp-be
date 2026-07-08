@@ -121,7 +121,23 @@ const cancelContract = async (req, res) => {
     return res.status(400).json({ success: false, message: error.message });
   }
 };
+const restoreContract = async (req, res) => {
+  try {
+    const data = await hopDongService.restoreContract(
+      req.user,
+      req.params.id,
+      req.body
+    );
 
+    return res.status(200).json({
+      success: true,
+      message: "Khôi phục hợp đồng thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
 module.exports = {
   createContract,
   getAllContracts,
@@ -131,4 +147,5 @@ module.exports = {
   uploadSignedContract,
   confirmContract,
   cancelContract,
+  restoreContract
 };

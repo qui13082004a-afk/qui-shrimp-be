@@ -7,23 +7,32 @@ const HopDong = sequelize.define("HopDong", {
     autoIncrement: true,
     primaryKey: true,
   },
-  id_don_hang: {
+
+  id_ho_so: {
     type: DataTypes.BIGINT,
     allowNull: false,
   },
+
   ngay_tao: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
+
   ngay_ky: {
     type: DataTypes.DATE,
   },
+
   file_hop_dong: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(500),
   },
+
   trang_thai: {
     type: DataTypes.ENUM("chua_ky", "da_ky", "huy"),
     defaultValue: "chua_ky",
+  },
+
+  ghi_chu: {
+    type: DataTypes.TEXT,
   },
 }, {
   tableName: "hop_dong",

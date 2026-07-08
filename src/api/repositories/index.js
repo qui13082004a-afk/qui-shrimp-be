@@ -9,6 +9,11 @@ const paymentRepository = require("./payment.repository");
 const deliveryRepository = require("./delivery.repository");
 const debtExtensionRepository = require("./debtExtension.repository");
 const notificationRepository = require( "./notification.repository")
+const chinhSachHanMucRepository = require("./chinhSachHanMuc.repository");
+const phieuDeXuatHanMucRepository = require("./phieuDeXuatHanMuc.repository");
+const hopDongRepository = require("./hopDong.repository");
+const thuongLaiRepository = require("./thuongLai.repository");
+const thoaThuanBaBenRepository = require("./thoaThuanBaBen.repository");
 module.exports = {
   authRepository,
   categoryRepository,
@@ -20,6 +25,8 @@ module.exports = {
   paymentRepository,
   deliveryRepository,
   debtExtensionRepository,
-  notificationRepository
+  notificationRepository,
+  chinhSachHanMucRepository,phieuDeXuatHanMucRepository,
+  hopDongRepository,thuongLaiRepository,thoaThuanBaBenRepository
 };
   

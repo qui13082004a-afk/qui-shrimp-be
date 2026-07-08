@@ -1,10 +1,10 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../../config/database");
 
-const GiaHanThanhToan = sequelize.define(
-  "GiaHanThanhToan",
+const PhieuDeXuatHanMuc = sequelize.define(
+  "PhieuDeXuatHanMuc",
   {
-    id_gia_han: {
+    id_phieu_de_xuat: {
       type: DataTypes.BIGINT,
       autoIncrement: true,
       primaryKey: true,
@@ -15,42 +15,59 @@ const GiaHanThanhToan = sequelize.define(
       allowNull: false,
     },
 
-    id_nguoi_gui: {
+    id_nhan_vien_de_xuat: {
       type: DataTypes.BIGINT,
       allowNull: false,
     },
 
-    id_nguoi_duyet: {
+    id_admin_duyet: {
       type: DataTypes.BIGINT,
       allowNull: true,
     },
 
-    han_cu: {
-      type: DataTypes.DATE,
+    han_muc_hien_tai: {
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
+      defaultValue: 0,
     },
 
-    han_de_xuat: {
-      type: DataTypes.DATE,
+    han_muc_de_xuat: {
+      type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
+      defaultValue: 0,
     },
 
-    so_ngay_gia_han: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
+    han_muc_duoc_duyet: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
     },
 
-    ly_do: {
+    ly_do_de_xuat: {
       type: DataTypes.TEXT,
       allowNull: false,
     },
 
-    ghi_chu: {
+    nhan_xet_khao_sat: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
 
-    ly_do_tu_choi: {
+    ph: {
+      type: DataTypes.DECIMAL(4, 2),
+      allowNull: true,
+    },
+
+    oxy_hoa_tan: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+    },
+
+    kich_co_tom: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+
+    hinh_anh_khao_sat: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
@@ -60,23 +77,25 @@ const GiaHanThanhToan = sequelize.define(
       defaultValue: "cho_duyet",
     },
 
-    ngay_gui: {
+    ly_do_tu_choi: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+
+    ngay_de_xuat: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
-  hinh_anh_minh_chung: {
-    type: DataTypes.JSON,
-    allowNull: true,
-},
+
     ngay_duyet: {
       type: DataTypes.DATE,
       allowNull: true,
     },
   },
   {
-    tableName: "gia_han_thanh_toan",
+    tableName: "phieu_de_xuat_han_muc",
     timestamps: false,
   }
 );
 
-module.exports = GiaHanThanhToan;
+module.exports = PhieuDeXuatHanMuc;

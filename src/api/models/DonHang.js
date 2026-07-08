@@ -15,6 +15,10 @@ const DonHang = sequelize.define("DonHang", {
     type: DataTypes.BIGINT,
     allowNull: true,
   },
+  id_ho_so: {
+  type: DataTypes.BIGINT,
+  allowNull: true,
+},
   tong_tien: {
     type: DataTypes.DECIMAL(15, 2),
     defaultValue: 0,

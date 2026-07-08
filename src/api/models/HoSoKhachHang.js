@@ -14,7 +14,10 @@ const HoSoKhachHang = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
-
+    id_chinh_sach: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+    },
     id_ao: {
       type: DataTypes.BIGINT,
       allowNull: false,
@@ -23,7 +26,7 @@ const HoSoKhachHang = sequelize.define(
     id_vu_nuoi: {
       type: DataTypes.BIGINT,
       allowNull: false,
-      unique: true, // 1 vụ nuôi chỉ có 1 hồ sơ
+      unique: true, 
     },
 
     dinh_muc_cong_no: {
@@ -31,7 +34,29 @@ const HoSoKhachHang = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    trang_thai_ho_so: {
+      type: DataTypes.ENUM(
+        "cho_kiem_tra",
+        "cho_de_xuat",
+        "cho_admin_duyet",
+        "da_duyet",
+        "tu_choi"
+      ),
+      defaultValue: "cho_kiem_tra",
+    },
 
+    ly_do_tu_choi: {
+      type: DataTypes.TEXT,
+    },
+
+    bi_khoa_tra_sau: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+
+    ly_do_khoa: {
+      type: DataTypes.TEXT,
+    },
     duoc_phep_tra_sau: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -49,37 +74,37 @@ const HoSoKhachHang = sequelize.define(
       type: DataTypes.TEXT,
     },
     anh_cccd_mat_truoc: {
-  type: DataTypes.STRING(500),
-},
+      type: DataTypes.STRING(500),
+    },
 
-anh_cccd_mat_sau: {
-  type: DataTypes.STRING(500),
-},
+    anh_cccd_mat_sau: {
+      type: DataTypes.STRING(500),
+    },
 
-anh_selfie: {
-  type: DataTypes.STRING(500),
-},
+    anh_selfie: {
+      type: DataTypes.STRING(500),
+    },
 
-do_tuong_dong: {
-  type: DataTypes.DECIMAL(5, 2),
-},
+    do_tuong_dong: {
+      type: DataTypes.DECIMAL(5, 2),
+    },
 
-trang_thai_xac_thuc: {
-  type: DataTypes.ENUM(
-    "chua_xac_thuc",
-    "da_xac_thuc",
-    "that_bai"
-  ),
-  defaultValue: "chua_xac_thuc",
-},
+    trang_thai_xac_thuc: {
+      type: DataTypes.ENUM(
+        "chua_xac_thuc",
+        "da_xac_thuc",
+        "that_bai"
+      ),
+      defaultValue: "chua_xac_thuc",
+    },
 
-ly_do_xac_thuc_that_bai: {
-  type: DataTypes.TEXT,
-},
+    ly_do_xac_thuc_that_bai: {
+      type: DataTypes.TEXT,
+    },
 
-ngay_xac_thuc: {
-  type: DataTypes.DATE,
-},
+    ngay_xac_thuc: {
+      type: DataTypes.DATE,
+    },
   },
   {
     tableName: "ho_so_khach_hang",

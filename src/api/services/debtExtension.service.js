@@ -17,7 +17,7 @@ const diffDays = (fromDate, toDate) => {
   const to = toStartOfDay(toDate);
   return Math.ceil((to - from) / MS_PER_DAY);
 };
-
+const MAX_EXTENSION_TIMES = 2;
 const createDebtExtension = async (user, data) => {
   const { id_ho_so, han_de_xuat, ly_do } = data;
 
@@ -56,7 +56,12 @@ const createDebtExtension = async (user, data) => {
   if (pending) {
     throw new Error("Hồ sơ này đang có đơn gia hạn chờ duyệt");
   }
+  const approvedCount =
+    await debtExtensionRepository.countApprovedByProfileId(id_ho_so);
 
+  if (approvedCount >= MAX_EXTENSION_TIMES) {
+    throw new Error(`Hồ sơ này đã gia hạn tối đa ${MAX_EXTENSION_TIMES} lần`);
+  }
   const today = new Date();
   const currentDeadline = new Date(profile.han_thanh_toan);
   const proposedDeadline = new Date(han_de_xuat);
@@ -92,14 +97,15 @@ const createDebtExtension = async (user, data) => {
     trang_thai: "cho_duyet",
     ngay_gui: new Date(),
     ngay_duyet: null,
+    hinh_anh_minh_chung: data.hinh_anh_minh_chung || null,
   });
   await notificationService.createNotification({
-  id_nguoi_dung: user.id_nguoi_dung,
-  tieu_de: "Đã gửi yêu cầu gia hạn",
-  noi_dung: `Yêu cầu gia hạn thêm ${extensionDays} ngày đã được gửi và đang chờ duyệt.`,
-  loai: "thanh_toan",
-  lien_ket: `/debt/extensions/${extension.id_gia_han}`,
-});
+    id_nguoi_dung: user.id_nguoi_dung,
+    tieu_de: "Đã gửi yêu cầu gia hạn",
+    noi_dung: `Yêu cầu gia hạn thêm ${extensionDays} ngày đã được gửi và đang chờ duyệt.`,
+    loai: "thanh_toan",
+    lien_ket: `/debt/extensions/${extension.id_gia_han}`,
+  });
 };
 
 const getMyDebtExtensions = async (user) => {
@@ -142,20 +148,22 @@ const approveDebtExtension = async (user, id_gia_han, data = {}) => {
     throw new Error("Đơn gia hạn này đã được xử lý");
   }
 
-
   await debtExtensionRepository.update(id_gia_han, {
     id_nguoi_duyet: user.id_nguoi_dung,
     trang_thai: "da_duyet",
     ngay_duyet: new Date(),
     ghi_chu: data.ghi_chu || null,
   });
-await notificationService.createNotification({
-  id_nguoi_dung: extension.id_nguoi_gui,
-  tieu_de: "Gia hạn được duyệt",
-  noi_dung: "Yêu cầu gia hạn thanh toán của bạn đã được duyệt.",
-  loai: "thanh_toan",
-  lien_ket: `/debt/extensions/${id_gia_han}`,
+  await customerProfileRepository.update(extension.id_ho_so, {
+  han_thanh_toan: extension.han_de_xuat,
 });
+  await notificationService.createNotification({
+    id_nguoi_dung: extension.id_nguoi_gui,
+    tieu_de: "Gia hạn được duyệt",
+    noi_dung: "Yêu cầu gia hạn thanh toán của bạn đã được duyệt.",
+    loai: "thanh_toan",
+    lien_ket: `/debt/extensions/${id_gia_han}`,
+  });
 
   return await debtExtensionRepository.findById(id_gia_han);
 };
@@ -188,13 +196,13 @@ const rejectDebtExtension = async (user, id_gia_han, data = {}) => {
     ly_do_tu_choi: ly_do_tu_choi.trim(),
     ghi_chu: data.ghi_chu || null,
   });
-await notificationService.createNotification({
-  id_nguoi_dung: extension.id_nguoi_gui,
-  tieu_de: "Gia hạn bị từ chối",
-  noi_dung: `Yêu cầu gia hạn thanh toán của bạn đã bị từ chối. Lý do: ${ly_do_tu_choi}`,
-  loai: "thanh_toan",
-  lien_ket: `/debt/extensions/${id_gia_han}`,
-});
+  await notificationService.createNotification({
+    id_nguoi_dung: extension.id_nguoi_gui,
+    tieu_de: "Gia hạn bị từ chối",
+    noi_dung: `Yêu cầu gia hạn thanh toán của bạn đã bị từ chối. Lý do: ${ly_do_tu_choi}`,
+    loai: "thanh_toan",
+    lien_ket: `/debt/extensions/${id_gia_han}`,
+  });
   return await debtExtensionRepository.findById(id_gia_han);
 };
 const getDebtExtensionsByProfileId = async (user, id_ho_so) => {

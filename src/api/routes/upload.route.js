@@ -15,5 +15,9 @@ router.post(
   upload.array("images", 5),
   uploadController.uploadMultipleImages
 );
-
+router.post(
+  "/file",
+  upload.single("file"),
+  uploadController.uploadFile
+);
 module.exports = router;

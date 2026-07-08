@@ -16,12 +16,7 @@ const HopDong = sequelize.define(
       unique: true,
     },
 
-    file_hop_dong_mau: {
-      type: DataTypes.STRING(500),
-      allowNull: true,
-    },
-
-    file_hop_dong_da_ky: {
+    file_hop_dong: {
       type: DataTypes.STRING(500),
       allowNull: true,
     },
@@ -53,11 +48,6 @@ const HopDong = sequelize.define(
 
     id_admin_xac_nhan: {
       type: DataTypes.BIGINT,
-      allowNull: true,
-    },
-
-    dieu_khoan_bo_sung: {
-      type: DataTypes.TEXT,
       allowNull: true,
     },
 

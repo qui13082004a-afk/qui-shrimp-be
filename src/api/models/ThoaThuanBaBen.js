@@ -15,11 +15,10 @@ const ThoaThuanBaBen = sequelize.define(
       allowNull: false,
     },
 
-    id_thuong_lai: {
-      type: DataTypes.BIGINT,
-      allowNull: true,
-    },
-
+ id_thuong_lai: {
+  type: DataTypes.BIGINT,
+  allowNull: true,
+},
     id_admin_yeu_cau: {
       type: DataTypes.BIGINT,
       allowNull: false,

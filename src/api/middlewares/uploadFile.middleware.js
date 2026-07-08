@@ -8,7 +8,7 @@ const storage = new CloudinaryStorage({
     return {
       folder: "dat-tom/files",
       resource_type: "raw",
-      allowed_formats: ["pdf", "doc", "docx"],
+    allowed_formats: ["pdf", "doc", "docx", "jpg", "jpeg", "png", "webp"],
     };
   },
 });

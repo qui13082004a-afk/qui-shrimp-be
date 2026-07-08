@@ -1,4 +1,7 @@
-const { hopDongRepository, customerProfileRepository } = require("../repositories");
+const {
+  hopDongRepository,
+  customerProfileRepository,
+} = require("../repositories");
 
 const createContract = async (user, data) => {
   if (user.vai_tro !== "admin") {
@@ -27,16 +30,10 @@ const createContract = async (user, data) => {
 
   return await hopDongRepository.create({
     id_ho_so: data.id_ho_so,
-    file_hop_dong_mau: data.file_hop_dong_mau || null,
-    file_hop_dong_da_ky: null,
+    file_hop_dong: data.file_hop_dong || null,
     ngay_ky: null,
-    ngay_upload: null,
-    ngay_xac_nhan: null,
-    id_nhan_vien_upload: null,
-    id_admin_xac_nhan: null,
-    dieu_khoan_bo_sung: data.dieu_khoan_bo_sung || null,
-    ghi_chu: data.ghi_chu || null,
     trang_thai: "cho_ky",
+    ghi_chu: data.ghi_chu || null,
   });
 };
 
@@ -61,7 +58,8 @@ const getContractById = async (user, id_hop_dong) => {
 
   if (
     user.vai_tro !== "admin" &&
-    Number(contract.HoSoKhachHang?.id_nguoi_dung) !== Number(user.id_nguoi_dung)
+    Number(contract.HoSoKhachHang?.id_nguoi_dung) !==
+      Number(user.id_nguoi_dung)
   ) {
     throw new Error("Bạn không có quyền xem hợp đồng này");
   }
@@ -97,7 +95,7 @@ const uploadSignedContract = async (user, id_hop_dong, data) => {
     throw new Error("Chỉ nhân viên định mức hoặc Admin mới được upload hợp đồng");
   }
 
-  if (!data.file_hop_dong_da_ky) {
+  if (!data.file_hop_dong) {
     throw new Error("Vui lòng tải file hợp đồng đã ký");
   }
 
@@ -116,7 +114,7 @@ const uploadSignedContract = async (user, id_hop_dong, data) => {
   }
 
   return await hopDongRepository.update(id_hop_dong, {
-    file_hop_dong_da_ky: data.file_hop_dong_da_ky,
+    file_hop_dong: data.file_hop_dong,
     id_nhan_vien_upload: user.id_nguoi_dung,
     ngay_upload: new Date(),
     ngay_ky: data.ngay_ky || new Date(),
@@ -140,7 +138,7 @@ const confirmContract = async (user, id_hop_dong, data = {}) => {
     throw new Error("Chỉ xác nhận hợp đồng đang chờ xác nhận");
   }
 
-  if (!contract.file_hop_dong_da_ky) {
+  if (!contract.file_hop_dong) {
     throw new Error("Hợp đồng chưa có file đã ký");
   }
 
@@ -172,6 +170,7 @@ const cancelContract = async (user, id_hop_dong, data = {}) => {
     ghi_chu: data.ghi_chu || contract.ghi_chu,
   });
 };
+
 const restoreContract = async (user, id_hop_dong, data = {}) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ Admin mới có quyền khôi phục hợp đồng");
@@ -192,14 +191,15 @@ const restoreContract = async (user, id_hop_dong, data = {}) => {
     ghi_chu: data.ghi_chu || contract.ghi_chu,
   });
 };
+
 module.exports = {
   createContract,
   getAllContracts,
   getMyContracts,
   getContractById,
   getContractByProfileId,
-  cancelContract,
   uploadSignedContract,
   confirmContract,
-  restoreContract
+  cancelContract,
+  restoreContract,
 };

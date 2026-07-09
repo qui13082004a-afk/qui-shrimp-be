@@ -24,7 +24,20 @@ const PhieuDeXuatHanMuc = sequelize.define(
       type: DataTypes.BIGINT,
       allowNull: true,
     },
+    id_chinh_sach: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+    },
 
+    ngay_khao_sat: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
+    ngay_nuoi_luc_khao_sat: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     han_muc_hien_tai: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,

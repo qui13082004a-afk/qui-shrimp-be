@@ -67,6 +67,18 @@ const getAllContracts = async (user) => {
   return await hopDongRepository.findAll();
 };
 
+/**
+ * Danh sách hợp đồng dành cho Nhân viên định mức: xem để đi ký khách hàng
+ * và upload ảnh/PDF hợp đồng đã ký. Admin cũng được phép xem.
+ */
+const getStaffContracts = async (user) => {
+  if (user.vai_tro !== "nhan_vien_dinh_muc" && user.vai_tro !== "admin") {
+    throw new Error("Bạn không có quyền xem danh sách hợp đồng này");
+  }
+
+  return await hopDongRepository.findAll();
+};
+
 const getMyContracts = async (user) => {
   return await hopDongRepository.findByUserId(user.id_nguoi_dung);
 };
@@ -256,6 +268,7 @@ const restoreContract = async (user, id_hop_dong, data = {}) => {
 module.exports = {
   createContract,
   getAllContracts,
+  getStaffContracts,
   getMyContracts,
   getContractById,
   getContractByProfileId,

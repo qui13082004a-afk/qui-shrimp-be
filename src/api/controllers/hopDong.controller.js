@@ -1,4 +1,3 @@
-
 const hopDongService = require("../services/hopDong.service");
 
 const createContract = async (req, res) => {
@@ -25,6 +24,23 @@ const getAllContracts = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Lấy danh sách hợp đồng thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(403).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const getStaffContracts = async (req, res) => {
+  try {
+    const data = await hopDongService.getStaffContracts(req.user);
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy danh sách hợp đồng cho nhân viên thành công",
       data,
     });
   } catch (error) {
@@ -89,10 +105,6 @@ const getContractByProfileId = async (req, res) => {
   }
 };
 
-// ======================================================
-// Upload PDF hợp đồng đã ký
-// field FE gửi lên: file_hop_dong_da_ky
-// ======================================================
 const uploadSignedPdf = async (req, res) => {
   try {
     if (!req.file) {
@@ -102,15 +114,11 @@ const uploadSignedPdf = async (req, res) => {
       });
     }
 
-    const data = await hopDongService.uploadSignedPdf(
-      req.user,
-      req.params.id,
-      {
-        file_hop_dong_da_ky: req.file.path,
-        ngay_ky: req.body.ngay_ky || null,
-        ghi_chu: req.body.ghi_chu || null,
-      }
-    );
+    const data = await hopDongService.uploadSignedPdf(req.user, req.params.id, {
+      file_hop_dong_da_ky: req.file.path,
+      ngay_ky: req.body.ngay_ky || null,
+      ghi_chu: req.body.ghi_chu || null,
+    });
 
     return res.status(200).json({
       success: true,
@@ -125,10 +133,6 @@ const uploadSignedPdf = async (req, res) => {
   }
 };
 
-// ======================================================
-// Upload ảnh hợp đồng đã ký
-// field FE gửi lên: anh_hop_dong_da_ky
-// ======================================================
 const uploadSignedImage = async (req, res) => {
   try {
     if (!req.file) {
@@ -227,6 +231,7 @@ const restoreContract = async (req, res) => {
 module.exports = {
   createContract,
   getAllContracts,
+  getStaffContracts,
   getMyContracts,
   getContractById,
   getContractByProfileId,

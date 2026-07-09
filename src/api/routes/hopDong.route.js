@@ -10,6 +10,26 @@ const upload = require("../middlewares/upload.middleware");
 const uploadFile = require("../middlewares/uploadFile.middleware");
 
 router.post(
+  "/upload-file-mau",
+  authMiddleware,
+  authorizeAdmin,
+  uploadFile.single("file_hop_dong_mau"),
+  (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng chọn file hợp đồng mẫu",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Upload file hợp đồng mẫu thành công",
+      data: req.file.path,
+    });
+  }
+);
+router.post(
   "/",
   authMiddleware,
   authorizeAdmin,
@@ -81,5 +101,4 @@ router.put(
   authorizeAdmin,
   hopDongController.restoreContract
 );
-
 module.exports = router;

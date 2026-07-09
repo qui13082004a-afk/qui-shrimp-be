@@ -77,7 +77,7 @@ const normalizeSurveyImages = (files = [], bodyImages = null) => {
         return JSON.stringify(parsed.filter(Boolean));
       }
     } catch (_) {
-      // Nếu FE cũ gửi chuỗi URL đơn lẻ thì vẫn giữ lại để không vỡ chức năng cũ.
+      return trimmed;
     }
 
     return trimmed;
@@ -86,7 +86,7 @@ const normalizeSurveyImages = (files = [], bodyImages = null) => {
   return null;
 };
 
-const validateCreateProposal = async (user, data) => {
+const validateCreateProposal = async (user, data, transaction = null) => {
   if (!canCreateProposal(user.vai_tro)) {
     throw new Error("Chỉ nhân viên định mức hoặc Admin mới được lập phiếu đề xuất");
   }
@@ -103,7 +103,10 @@ const validateCreateProposal = async (user, data) => {
     throw new Error("Vui lòng nhập lý do đề xuất hạn mức");
   }
 
-  const profile = await customerProfileRepository.findById(data.id_ho_so);
+  const profile = await customerProfileRepository.findById(
+    data.id_ho_so,
+    transaction
+  );
 
   if (!profile) {
     throw new Error("Không tìm thấy hồ sơ mua trả sau");
@@ -130,10 +133,11 @@ const createProposal = async (user, data, files = []) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const profile = await validateCreateProposal(user, data);
+    const profile = await validateCreateProposal(user, data, transaction);
 
     const pending = await phieuDeXuatHanMucRepository.findPendingByProfileId(
-      data.id_ho_so
+      data.id_ho_so,
+      transaction
     );
 
     if (pending) {
@@ -173,7 +177,10 @@ const createProposal = async (user, data, files = []) => {
       policy = await findPolicyByFarmingDay(ngayNuoiLucKhaoSat);
     }
 
-    if (policy && toNumber(data.han_muc_de_xuat) > toNumber(policy.han_muc_toi_da)) {
+    if (
+      policy &&
+      toNumber(data.han_muc_de_xuat) > toNumber(policy.han_muc_toi_da)
+    ) {
       throw new Error(
         `Hạn mức đề xuất không được vượt quá hạn mức tối đa của chính sách: ${toNumber(
           policy.han_muc_toi_da
@@ -182,7 +189,10 @@ const createProposal = async (user, data, files = []) => {
     }
 
     const selectedPolicyId =
-      policy?.id_chinh_sach || data.id_chinh_sach || profile.id_chinh_sach || null;
+      policy?.id_chinh_sach ||
+      data.id_chinh_sach ||
+      profile.id_chinh_sach ||
+      null;
 
     const surveyImages = normalizeSurveyImages(files, data.hinh_anh_khao_sat);
 

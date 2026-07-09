@@ -3,12 +3,16 @@ const router = express.Router();
 
 const phieuDeXuatHanMucController = require("../controllers/phieuDeXuatHanMuc.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
+const upload = require("../middlewares/upload.middleware");
+
 const { authorizeAdmin } = authMiddleware;
 
 // Nhân viên định mức hoặc Admin lập phiếu đề xuất
+// Hỗ trợ multipart/form-data để upload tối đa 10 ảnh minh chứng khảo sát.
 router.post(
   "/",
   authMiddleware,
+  upload.array("hinh_anh_khao_sat", 10),
   phieuDeXuatHanMucController.createProposal
 );
 

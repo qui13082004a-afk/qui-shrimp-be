@@ -5,14 +5,15 @@ const cloudinary = require("../../config/cloudinary");
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
-    const ext = file.originalname.split(".").pop();
+    const ext = file.originalname.split(".").pop().toLowerCase();
+    const originalName = file.originalname.replace(/\.[^/.]+$/, "");
+    const publicId = `${Date.now()}-${originalName}.${ext}`;
 
     return {
       folder: "dat-tom/files",
       resource_type: "raw",
       allowed_formats: ["pdf", "doc", "docx", "jpg", "jpeg", "png", "webp"],
-      public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`,
-      format: ext,
+      public_id: publicId,
     };
   },
 });

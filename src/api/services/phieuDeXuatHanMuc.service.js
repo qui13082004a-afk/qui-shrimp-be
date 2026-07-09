@@ -13,6 +13,34 @@ const canCreateProposal = (role) => {
   return role === "nhan_vien_dinh_muc" || role === "admin";
 };
 
+const getDayDiff = (fromDate, toDate) => {
+  if (!fromDate || !toDate) return null;
+
+  const start = new Date(fromDate);
+  const end = new Date(toDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return null;
+  }
+
+  const diffMs = end.getTime() - start.getTime();
+  return Math.max(Math.floor(diffMs / (1000 * 60 * 60 * 24)), 0);
+};
+
+const findPolicyByFarmingDay = async (ngayNuoi) => {
+  if (ngayNuoi === null || ngayNuoi === undefined) return null;
+
+  const activePolicies = await chinhSachHanMucRepository.findActive();
+
+  return (
+    activePolicies.find(
+      (policy) =>
+        Number(ngayNuoi) >= Number(policy.tu_ngay) &&
+        Number(ngayNuoi) <= Number(policy.den_ngay)
+    ) || null
+  );
+};
+
 const validateCreateProposal = async (user, data) => {
   if (!canCreateProposal(user.vai_tro)) {
     throw new Error("Chỉ nhân viên định mức hoặc Admin mới được lập phiếu đề xuất");
@@ -31,6 +59,7 @@ const validateCreateProposal = async (user, data) => {
   }
 
   const profile = await customerProfileRepository.findById(data.id_ho_so);
+
   if (!profile) {
     throw new Error("Không tìm thấy hồ sơ mua trả sau");
   }
@@ -40,11 +69,11 @@ const validateCreateProposal = async (user, data) => {
   }
 
   if (profile.duoc_phep_tra_sau && profile.trang_thai_ho_so === "da_duyet") {
-    // Vẫn cho phép lập phiếu tăng/giảm hạn mức ở giai đoạn sau.
     return profile;
   }
 
   const validStatus = ["cho_de_xuat", "cho_kiem_tra", "cho_admin_duyet"];
+
   if (!validStatus.includes(profile.trang_thai_ho_so)) {
     throw new Error("Trạng thái hồ sơ hiện tại chưa phù hợp để lập phiếu đề xuất");
   }
@@ -66,10 +95,24 @@ const createProposal = async (user, data) => {
       throw new Error("Hồ sơ này đang có phiếu đề xuất chờ Admin duyệt");
     }
 
+    const plainProfile = profile.toJSON ? profile.toJSON() : profile;
+
+    const ngayKhaoSat = data.ngay_khao_sat
+      ? new Date(data.ngay_khao_sat)
+      : new Date();
+
+    const ngayThaGiong =
+      plainProfile.VuNuoi?.ngay_tha_giong ||
+      plainProfile.VuNuoi?.ngay_bat_dau ||
+      null;
+
+    const ngayNuoiLucKhaoSat = getDayDiff(ngayThaGiong, ngayKhaoSat);
+
     let policy = null;
 
     if (data.id_chinh_sach) {
       policy = await chinhSachHanMucRepository.findById(data.id_chinh_sach);
+
       if (!policy) {
         throw new Error("Không tìm thấy chính sách hạn mức");
       }
@@ -77,21 +120,30 @@ const createProposal = async (user, data) => {
       if (policy.trang_thai !== "hoat_dong") {
         throw new Error("Chính sách hạn mức đã tạm dừng");
       }
-
-      if (toNumber(data.han_muc_de_xuat) > toNumber(policy.han_muc_toi_da)) {
-        throw new Error(
-          `Hạn mức đề xuất không được vượt quá hạn mức tối đa của chính sách: ${toNumber(
-            policy.han_muc_toi_da
-          ).toLocaleString()}đ`
-        );
-      }
+    } else {
+      policy = await findPolicyByFarmingDay(ngayNuoiLucKhaoSat);
     }
+
+    if (policy && toNumber(data.han_muc_de_xuat) > toNumber(policy.han_muc_toi_da)) {
+      throw new Error(
+        `Hạn mức đề xuất không được vượt quá hạn mức tối đa của chính sách: ${toNumber(
+          policy.han_muc_toi_da
+        ).toLocaleString()}đ`
+      );
+    }
+
+    const selectedPolicyId =
+      policy?.id_chinh_sach || data.id_chinh_sach || profile.id_chinh_sach || null;
 
     const proposal = await phieuDeXuatHanMucRepository.create(
       {
         id_ho_so: data.id_ho_so,
         id_nhan_vien_de_xuat: user.id_nguoi_dung,
         id_admin_duyet: null,
+
+        id_chinh_sach: selectedPolicyId,
+        ngay_khao_sat: ngayKhaoSat,
+        ngay_nuoi_luc_khao_sat: ngayNuoiLucKhaoSat,
 
         han_muc_hien_tai: toNumber(profile.dinh_muc_cong_no),
         han_muc_de_xuat: toNumber(data.han_muc_de_xuat),
@@ -116,7 +168,7 @@ const createProposal = async (user, data) => {
     await customerProfileRepository.update(
       data.id_ho_so,
       {
-        id_chinh_sach: data.id_chinh_sach || profile.id_chinh_sach || null,
+        id_chinh_sach: selectedPolicyId,
         trang_thai_ho_so: "cho_admin_duyet",
       },
       transaction
@@ -210,6 +262,7 @@ const approveProposal = async (user, id_phieu_de_xuat, data = {}) => {
     }
 
     const profile = proposal.HoSoKhachHang;
+
     if (!profile) {
       throw new Error("Không tìm thấy hồ sơ của phiếu đề xuất");
     }
@@ -226,7 +279,8 @@ const approveProposal = async (user, id_phieu_de_xuat, data = {}) => {
       throw new Error("Vui lòng nhập hạn thanh toán cho hồ sơ");
     }
 
-    const chinhSach = profile.ChinhSachHanMuc;
+    const chinhSach = proposal.ChinhSachHanMuc || profile.ChinhSachHanMuc;
+
     if (
       chinhSach &&
       chinhSach.trang_thai === "hoat_dong" &&
@@ -251,21 +305,22 @@ const approveProposal = async (user, id_phieu_de_xuat, data = {}) => {
       transaction
     );
 
-   await customerProfileRepository.update(
-  profile.id_ho_so,
-  {
-    dinh_muc_cong_no: hanMucDuocDuyet,
-    duoc_phep_tra_sau: true,
-    bi_khoa_tra_sau: false,
-    ly_do_khoa: null,
-    han_thanh_toan: data.han_thanh_toan || profile.han_thanh_toan,
-    ngay_duyet: new Date(),
-    trang_thai_ho_so: "da_duyet",
-    ly_do_tu_choi: null,
-    ghi_chu: data.ghi_chu || profile.ghi_chu,
-  },
-  transaction
-);
+    await customerProfileRepository.update(
+      profile.id_ho_so,
+      {
+        id_chinh_sach: proposal.id_chinh_sach || profile.id_chinh_sach || null,
+        dinh_muc_cong_no: hanMucDuocDuyet,
+        duoc_phep_tra_sau: true,
+        bi_khoa_tra_sau: false,
+        ly_do_khoa: null,
+        han_thanh_toan: data.han_thanh_toan || profile.han_thanh_toan,
+        ngay_duyet: new Date(),
+        trang_thai_ho_so: "da_duyet",
+        ly_do_tu_choi: null,
+        ghi_chu: data.ghi_chu || profile.ghi_chu,
+      },
+      transaction
+    );
 
     await notificationService.createNotification({
       id_nguoi_dung: profile.id_nguoi_dung,
@@ -311,6 +366,7 @@ const rejectProposal = async (user, id_phieu_de_xuat, data = {}) => {
     }
 
     const profile = proposal.HoSoKhachHang;
+
     if (!profile) {
       throw new Error("Không tìm thấy hồ sơ của phiếu đề xuất");
     }

@@ -67,7 +67,13 @@ PhieuDeXuatHanMuc.belongsTo(NguoiDung, {
   foreignKey: "id_admin_duyet",
   as: "admin_duyet",
 });
+PhieuDeXuatHanMuc.belongsTo(ChinhSachHanMuc, {
+  foreignKey: "id_chinh_sach",
+});
 
+ChinhSachHanMuc.hasMany(PhieuDeXuatHanMuc, {
+  foreignKey: "id_chinh_sach",
+});
 /* =========================
    THỎA THUẬN BA BÊN
 ========================= */

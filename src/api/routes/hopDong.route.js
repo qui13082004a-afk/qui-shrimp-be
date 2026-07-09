@@ -13,20 +13,41 @@ router.post(
   "/upload-file-mau",
   authMiddleware,
   authorizeAdmin,
-  uploadFile.single("file_hop_dong_mau"),
+  uploadFile.single("file"),
   (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng chọn file hợp đồng mẫu",
+        });
+      }
+
+      const fileUrl =
+        req.file.path ||
+        req.file.secure_url ||
+        req.file.url ||
+        req.file.location ||
+        null;
+
+      if (!fileUrl) {
+        return res.status(400).json({
+          success: false,
+          message: "Không lấy được đường dẫn file hợp đồng mẫu",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Upload file hợp đồng mẫu thành công",
+        data: fileUrl,
+      });
+    } catch (error) {
+      return res.status(500).json({
         success: false,
-        message: "Vui lòng chọn file hợp đồng mẫu",
+        message: error.message,
       });
     }
-
-    return res.status(200).json({
-      success: true,
-      message: "Upload file hợp đồng mẫu thành công",
-      data: req.file.path,
-    });
   }
 );
 router.post(

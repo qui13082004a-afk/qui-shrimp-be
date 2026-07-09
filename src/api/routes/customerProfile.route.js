@@ -3,7 +3,8 @@ const router = express.Router();
 
 const { customerProfileController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
-const { authorizeAdmin } = authMiddleware;
+const { authorizeAdmin, authorizeAdminOrLimitStaff } = authMiddleware;
+
 const {
   validateCreateCustomerProfile,
   validateUpdateCustomerProfile,
@@ -25,15 +26,15 @@ router.get(
   customerProfileController.getMyCustomerProfiles
 );
 
-// Admin xem toàn bộ hồ sơ khách hàng để xét duyệt trả sau
+// Admin và nhân viên định mức xem toàn bộ hồ sơ khách hàng
 router.get(
   "/admin",
   authMiddleware,
-  authorizeAdmin,
+  authorizeAdminOrLimitStaff,
   customerProfileController.getAllCustomerProfiles
 );
 
-// Khách hàng hoặc admin xem chi tiết một hồ sơ
+// Khách hàng, Admin hoặc nhân viên định mức xem chi tiết một hồ sơ
 router.get(
   "/:id",
   authMiddleware,

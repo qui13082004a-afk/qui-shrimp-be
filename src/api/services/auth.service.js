@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { authRepository } = require("../repositories");
 const sendEmail = require("../../helpers/sendEmail");
-
+const { NhanVienGiaoHang } = require("../models");
 // Hàm tạo mã OTP 6 chữ số ngẫu nhiên
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -329,7 +329,121 @@ const layThongTinTaiKhoan = async (idNguoiDung) => {
 
   return nguoiDung;
 };
+const updateUserRole = async (adminId, id_nguoi_dung, vai_tro) => {
+  const validRoles = [
+    "admin",
+    "khach_hang",
+    "nhan_vien_giao_hang",
+    "nhan_vien_dinh_muc",
+  ];
 
+  if (!validRoles.includes(vai_tro)) {
+    throw new Error("Vai trò không hợp lệ");
+  }
+
+  if (Number(adminId) === Number(id_nguoi_dung)) {
+    throw new Error("Không thể tự thay đổi vai trò của chính mình");
+  }
+
+  const user = await authRepository.findById(id_nguoi_dung);
+
+  if (!user) {
+    throw new Error("Không tìm thấy người dùng");
+  }
+
+  const oldRole = user.vai_tro;
+
+  const updatedUser = await authRepository.updateRole(id_nguoi_dung, vai_tro);
+
+  if (vai_tro === "nhan_vien_giao_hang") {
+    const existedDeliveryStaff = await NhanVienGiaoHang.findOne({
+      where: { id_nguoi_dung },
+    });
+
+    if (!existedDeliveryStaff) {
+      await NhanVienGiaoHang.create({
+        id_nguoi_dung,
+        khu_vuc_phu_trach: null,
+        ngay_bat_dau: new Date(),
+        trang_thai: "dang_lam",
+        ngay_lam_viec: null,
+        ghi_chu: "Tự động tạo khi Admin cấp vai trò nhân viên giao hàng",
+      });
+    } else {
+      await existedDeliveryStaff.update({
+        trang_thai: "dang_lam",
+        ghi_chu: existedDeliveryStaff.ghi_chu || "Kích hoạt lại khi Admin cấp vai trò nhân viên giao hàng",
+      });
+    }
+  }
+
+  if (oldRole === "nhan_vien_giao_hang" && vai_tro !== "nhan_vien_giao_hang") {
+    const deliveryStaff = await NhanVienGiaoHang.findOne({
+      where: { id_nguoi_dung },
+    });
+
+    if (deliveryStaff) {
+      await deliveryStaff.update({
+        trang_thai: "nghi",
+        ghi_chu: "Tự động chuyển nghỉ khi Admin đổi khỏi vai trò nhân viên giao hàng",
+      });
+    }
+  }
+
+  return updatedUser;
+};
+const getAllUsers = async (query) => {
+  const page = Math.max(Number(query.page || 1), 1);
+  const limit = Math.min(Math.max(Number(query.limit || 10), 1), 100);
+
+  const result = await authRepository.findAllUsers({
+    search: query.search || "",
+    vai_tro: query.vai_tro || "tat_ca",
+    trang_thai_tai_khoan: query.trang_thai_tai_khoan || "tat_ca",
+    page,
+    limit,
+  });
+
+  return {
+    items: result.rows,
+    pagination: {
+      page,
+      limit,
+      total: result.count,
+      totalPages: Math.ceil(result.count / limit),
+    },
+  };
+};
+
+const getUserById = async (id_nguoi_dung) => {
+  const user = await authRepository.findUserSafeById(id_nguoi_dung);
+
+  if (!user) {
+    throw new Error("Không tìm thấy người dùng");
+  }
+
+  return user;
+};
+
+const updateUserStatus = async (adminId, id_nguoi_dung, trang_thai_tai_khoan) => {
+  const validStatuses = ["chua_xac_thuc", "hoat_dong", "khoa"];
+
+  if (!validStatuses.includes(trang_thai_tai_khoan)) {
+    throw new Error("Trạng thái tài khoản không hợp lệ");
+  }
+
+  if (Number(adminId) === Number(id_nguoi_dung)) {
+    throw new Error("Không thể tự thay đổi trạng thái tài khoản của chính mình");
+  }
+
+  const user = await authRepository.findById(id_nguoi_dung);
+
+  if (!user) {
+    throw new Error("Không tìm thấy người dùng");
+  }
+
+  return await authRepository.updateStatus(id_nguoi_dung, trang_thai_tai_khoan);
+};
 module.exports = {
   register,
   verifyEmail,
@@ -339,5 +453,9 @@ module.exports = {
   resetPassword,
   updateProfile,
   changePassword,
-  layThongTinTaiKhoan
+  layThongTinTaiKhoan,
+  updateUserRole,
+  getAllUsers,
+  getUserById,
+  updateUserStatus
 };

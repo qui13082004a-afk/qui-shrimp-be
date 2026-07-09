@@ -178,7 +178,80 @@ const changePassword = async (req, res) => {
     });
   }
 };
+const updateUserRole = async (req, res) => {
+  try {
+    const data = await authService.updateUserRole(
+      req.user.id_nguoi_dung,
+      req.params.id,
+      req.body.vai_tro
+    );
 
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật vai trò thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+const getAllUsers = async (req, res) => {
+  try {
+    const data = await authService.getAllUsers(req.query);
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy danh sách người dùng thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const getUserById = async (req, res) => {
+  try {
+    const data = await authService.getUserById(req.params.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy chi tiết người dùng thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const updateUserStatus = async (req, res) => {
+  try {
+    const data = await authService.updateUserStatus(
+      req.user.id_nguoi_dung,
+      req.params.id,
+      req.body.trang_thai_tai_khoan
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật trạng thái tài khoản thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   register,
   verifyEmail,
@@ -189,4 +262,8 @@ module.exports = {
   getMe,
   updateProfile,
   changePassword,
+  updateUserRole,
+  getAllUsers,
+  getUserById,
+  updateUserStatus
 };

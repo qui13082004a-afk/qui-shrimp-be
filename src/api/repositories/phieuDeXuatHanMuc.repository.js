@@ -7,11 +7,11 @@ const {
   ChinhSachHanMuc,
 } = require("../models");
 
-const create = async (data, transaction) => {
+const create = async (data, transaction = null) => {
   return await PhieuDeXuatHanMuc.create(data, { transaction });
 };
 
-const findById = async (id_phieu_de_xuat, transaction) => {
+const findById = async (id_phieu_de_xuat, transaction = null) => {
   return await PhieuDeXuatHanMuc.findByPk(id_phieu_de_xuat, {
     include: [
       {
@@ -79,23 +79,27 @@ const findByProfileId = async (id_ho_so) => {
   });
 };
 
-const findPendingByProfileId = async (id_ho_so) => {
+const findPendingByProfileId = async (id_ho_so, transaction = null) => {
   return await PhieuDeXuatHanMuc.findOne({
     where: {
       id_ho_so,
       trang_thai: "cho_duyet",
     },
+    transaction,
   });
 };
 
-const update = async (id_phieu_de_xuat, data, transaction) => {
+const update = async (id_phieu_de_xuat, data, transaction = null) => {
   const proposal = await PhieuDeXuatHanMuc.findByPk(id_phieu_de_xuat, {
     transaction,
   });
 
   if (!proposal) return null;
 
-  await proposal.update(data, { transaction });
+  await proposal.update(data, {
+    transaction,
+  });
+
   return proposal;
 };
 

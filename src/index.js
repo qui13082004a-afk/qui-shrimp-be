@@ -5,6 +5,10 @@ const cors = require("cors");
 require("dotenv").config();
 require("./api/models");
 
+const {
+  startLimitPolicyReminderJob,
+} = require("./jobs/limitPolicyReminder.job");
+
 const app = express();
 
 const corsOptions = {
@@ -28,6 +32,8 @@ app.use("/api", apiRoutes);
 const startServer = async () => {
   await connectDB();
   await sequelize.sync();
+
+  startLimitPolicyReminderJob();
 
   app.listen(process.env.PORT, () => {
     console.log(`Server chạy tại port ${process.env.PORT}`);

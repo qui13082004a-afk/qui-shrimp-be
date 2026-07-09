@@ -9,9 +9,6 @@ const { authorizeAdmin } = authMiddleware;
 const upload = require("../middlewares/upload.middleware");
 const uploadFile = require("../middlewares/uploadFile.middleware");
 
-// =============================
-// Tạo hợp đồng
-// =============================
 router.post(
   "/",
   authMiddleware,
@@ -19,14 +16,17 @@ router.post(
   hopDongController.createContract
 );
 
-// =============================
-// Danh sách hợp đồng
-// =============================
 router.get(
   "/admin",
   authMiddleware,
   authorizeAdmin,
   hopDongController.getAllContracts
+);
+
+router.get(
+  "/staff",
+  authMiddleware,
+  hopDongController.getStaffContracts
 );
 
 router.get(
@@ -47,9 +47,6 @@ router.get(
   hopDongController.getContractById
 );
 
-// ===================================================
-// Upload PDF hợp đồng đã ký
-// ===================================================
 router.put(
   "/:id/upload-pdf",
   authMiddleware,
@@ -57,9 +54,6 @@ router.put(
   hopDongController.uploadSignedPdf
 );
 
-// ===================================================
-// Upload ảnh hợp đồng đã ký
-// ===================================================
 router.put(
   "/:id/upload-image",
   authMiddleware,
@@ -67,9 +61,6 @@ router.put(
   hopDongController.uploadSignedImage
 );
 
-// ===================================================
-// Admin xác nhận
-// ===================================================
 router.put(
   "/:id/confirm",
   authMiddleware,
@@ -77,9 +68,6 @@ router.put(
   hopDongController.confirmContract
 );
 
-// ===================================================
-// Hủy
-// ===================================================
 router.put(
   "/:id/cancel",
   authMiddleware,
@@ -87,9 +75,6 @@ router.put(
   hopDongController.cancelContract
 );
 
-// ===================================================
-// Khôi phục
-// ===================================================
 router.put(
   "/:id/restore",
   authMiddleware,

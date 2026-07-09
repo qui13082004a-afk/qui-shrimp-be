@@ -4,22 +4,15 @@ const {
 } = require("../repositories");
 
 const canUploadContract = (user) => {
-  return (
-    user.vai_tro === "nhan_vien_dinh_muc" ||
-    user.vai_tro === "admin"
-  );
+  return user.vai_tro === "nhan_vien_dinh_muc" || user.vai_tro === "admin";
 };
 
 const getNextStatusAfterUpload = (contract, newData = {}) => {
-  const hasSignedPdf =
-    Boolean(newData.file_hop_dong_da_ky) ||
-    Boolean(contract.file_hop_dong_da_ky);
-
   const hasSignedImage =
     Boolean(newData.anh_hop_dong_da_ky) ||
     Boolean(contract.anh_hop_dong_da_ky);
 
-  if (hasSignedPdf && hasSignedImage) {
+  if (hasSignedImage) {
     return "cho_xac_nhan";
   }
 
@@ -87,6 +80,7 @@ const getContractById = async (user, id_hop_dong) => {
 
   if (
     user.vai_tro !== "admin" &&
+    user.vai_tro !== "nhan_vien_dinh_muc" &&
     Number(contract.HoSoKhachHang?.id_nguoi_dung) !==
       Number(user.id_nguoi_dung)
   ) {
@@ -105,6 +99,7 @@ const getContractByProfileId = async (user, id_ho_so) => {
 
   if (
     user.vai_tro !== "admin" &&
+    user.vai_tro !== "nhan_vien_dinh_muc" &&
     Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung)
   ) {
     throw new Error("Bạn không có quyền xem hợp đồng của hồ sơ này");
@@ -142,16 +137,12 @@ const uploadSignedPdf = async (user, id_hop_dong, data) => {
     throw new Error("Hợp đồng đã được Admin xác nhận");
   }
 
-  const trang_thai = getNextStatusAfterUpload(contract, {
-    file_hop_dong_da_ky: data.file_hop_dong_da_ky,
-  });
-
   return await hopDongRepository.update(id_hop_dong, {
     file_hop_dong_da_ky: data.file_hop_dong_da_ky,
     id_nhan_vien_upload: user.id_nguoi_dung,
     ngay_upload: new Date(),
     ngay_ky: data.ngay_ky || contract.ngay_ky || new Date(),
-    trang_thai,
+    trang_thai: contract.trang_thai || "cho_ky",
     ghi_chu: data.ghi_chu || contract.ghi_chu,
   });
 };
@@ -208,8 +199,8 @@ const confirmContract = async (user, id_hop_dong, data = {}) => {
     throw new Error("Chỉ xác nhận hợp đồng đang chờ xác nhận");
   }
 
-  if (!contract.file_hop_dong_da_ky || !contract.anh_hop_dong_da_ky) {
-    throw new Error("Chưa upload đầy đủ PDF và ảnh hợp đồng đã ký");
+  if (!contract.anh_hop_dong_da_ky) {
+    throw new Error("Chưa upload ảnh hợp đồng đã ký");
   }
 
   return await hopDongRepository.update(id_hop_dong, {

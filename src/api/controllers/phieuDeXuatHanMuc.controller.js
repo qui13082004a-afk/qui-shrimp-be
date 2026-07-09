@@ -4,7 +4,8 @@ const createProposal = async (req, res) => {
   try {
     const data = await phieuDeXuatHanMucService.createProposal(
       req.user,
-      req.body
+      req.body,
+      req.files || []
     );
 
     return res.status(201).json({

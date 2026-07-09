@@ -41,6 +41,51 @@ const findPolicyByFarmingDay = async (ngayNuoi) => {
   );
 };
 
+const getUploadedFileUrl = (file) => {
+  return (
+    file?.path ||
+    file?.secure_url ||
+    file?.url ||
+    file?.location ||
+    file?.filename ||
+    null
+  );
+};
+
+const normalizeSurveyImages = (files = [], bodyImages = null) => {
+  const uploadedImages = Array.isArray(files)
+    ? files.map(getUploadedFileUrl).filter(Boolean)
+    : [];
+
+  if (uploadedImages.length > 0) {
+    return JSON.stringify(uploadedImages);
+  }
+
+  if (!bodyImages) return null;
+
+  if (Array.isArray(bodyImages)) {
+    return JSON.stringify(bodyImages.filter(Boolean));
+  }
+
+  if (typeof bodyImages === "string") {
+    const trimmed = bodyImages.trim();
+    if (!trimmed) return null;
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return JSON.stringify(parsed.filter(Boolean));
+      }
+    } catch (_) {
+      // Nếu FE cũ gửi chuỗi URL đơn lẻ thì vẫn giữ lại để không vỡ chức năng cũ.
+    }
+
+    return trimmed;
+  }
+
+  return null;
+};
+
 const validateCreateProposal = async (user, data) => {
   if (!canCreateProposal(user.vai_tro)) {
     throw new Error("Chỉ nhân viên định mức hoặc Admin mới được lập phiếu đề xuất");
@@ -81,7 +126,7 @@ const validateCreateProposal = async (user, data) => {
   return profile;
 };
 
-const createProposal = async (user, data) => {
+const createProposal = async (user, data, files = []) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -100,6 +145,10 @@ const createProposal = async (user, data) => {
     const ngayKhaoSat = data.ngay_khao_sat
       ? new Date(data.ngay_khao_sat)
       : new Date();
+
+    if (Number.isNaN(ngayKhaoSat.getTime())) {
+      throw new Error("Ngày khảo sát không hợp lệ");
+    }
 
     const ngayThaGiong =
       plainProfile.VuNuoi?.ngay_tha_giong ||
@@ -135,6 +184,8 @@ const createProposal = async (user, data) => {
     const selectedPolicyId =
       policy?.id_chinh_sach || data.id_chinh_sach || profile.id_chinh_sach || null;
 
+    const surveyImages = normalizeSurveyImages(files, data.hinh_anh_khao_sat);
+
     const proposal = await phieuDeXuatHanMucRepository.create(
       {
         id_ho_so: data.id_ho_so,
@@ -155,7 +206,7 @@ const createProposal = async (user, data) => {
         ph: data.ph || null,
         oxy_hoa_tan: data.oxy_hoa_tan || null,
         kich_co_tom: data.kich_co_tom || null,
-        hinh_anh_khao_sat: data.hinh_anh_khao_sat || null,
+        hinh_anh_khao_sat: surveyImages,
 
         trang_thai: "cho_duyet",
         ly_do_tu_choi: null,

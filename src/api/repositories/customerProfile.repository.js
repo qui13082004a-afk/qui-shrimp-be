@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const { HoSoKhachHang, NguoiDung, AoNuoi, VuNuoi } = require("../models");
 
 const create = async (data, transaction = null) => {
@@ -33,6 +34,16 @@ const findByCropSeasonId = async (id_vu_nuoi, transaction = null) => {
   });
 };
 
+// Đếm số hồ sơ hiện có của 1 khách hàng, có thể loại trừ một số trạng thái
+// (ví dụ loại trừ "tu_choi" để hồ sơ bị từ chối không tính vào giới hạn).
+const countByUserId = async (id_nguoi_dung, excludeStatuses = [], transaction = null) => {
+  const where = { id_nguoi_dung };
+  if (excludeStatuses.length) {
+    where.trang_thai_ho_so = { [Op.notIn]: excludeStatuses };
+  }
+  return await HoSoKhachHang.count({ where, transaction });
+};
+
 const update = async (id_ho_so, data, transaction = null) => {
   const profile = await HoSoKhachHang.findByPk(id_ho_so, {
     transaction,
@@ -53,5 +64,6 @@ module.exports = {
   findByUserId,
   findAll,
   findByCropSeasonId,
+  countByUserId,
   update,
 };

@@ -14,6 +14,10 @@ const requiredTextFields = [
   ["ngay_thu_hoach_du_kien", "Ngày thu hoạch dự kiến"], ["mat_hang_du_kien", "Mặt hàng dự kiến mua"],
 ];
 
+// Số hồ sơ mua trả sau tối đa 1 khách hàng được phép có (không tính hồ sơ
+// đã bị Admin từ chối - khách bị từ chối vẫn được nộp lại hồ sơ mới).
+const MAX_ACTIVE_PROFILES = 2;
+
 const validateCreateData = (data) => {
   for (const [field, label] of requiredTextFields) {
     if (!String(data[field] || "").trim()) throw new Error(`Vui lòng nhập ${label}`);
@@ -47,6 +51,11 @@ const createCustomerProfile = async (userId, data) => {
 
   const existed = await customerProfileRepository.findByCropSeasonId(data.id_vu_nuoi);
   if (existed) throw new Error("Vụ nuôi này đã có hồ sơ mua trả sau");
+
+  const activeProfileCount = await customerProfileRepository.countByUserId(userId, ["tu_choi"]);
+  if (activeProfileCount >= MAX_ACTIVE_PROFILES) {
+    throw new Error(`Bạn chỉ được gửi tối đa ${MAX_ACTIVE_PROFILES} hồ sơ mua trả sau`);
+  }
 
   const supportedArea = await khuVucHoTroTraSauRepository.findSupportedArea({
     tinh_thanh: data.tinh_thanh_ao,

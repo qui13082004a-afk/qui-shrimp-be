@@ -16,6 +16,9 @@ const phieuDeXuatHanMucController = require("./phieuDeXuatHanMuc.controller");
 const hopDongController = require("./hopDong.controller");
 const thuongLaiController = require("./thuongLai.controller");
 const thoaThuanBaBenController = require("./thoaThuanBaBen.controller");
+const khuVucHoTroTraSauController = require(
+  "./khuVucHoTroTraSau.controller"
+);
 module.exports = {
   authController,
   uploadController,
@@ -33,4 +36,5 @@ module.exports = {
   phieuDeXuatHanMucController,
   hopDongController,
   thuongLaiController,thoaThuanBaBenController,
+  khuVucHoTroTraSauController
 };

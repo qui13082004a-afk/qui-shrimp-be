@@ -40,10 +40,6 @@ router.post(
       name: "anh_ao_nuoi",
       maxCount: 5,
     },
-    {
-      name: "chu_ky_khach_hang",
-      maxCount: 1,
-    },
   ]),
   customerProfileController.createCustomerProfile
 );

@@ -2,7 +2,10 @@ const { customerProfileService } = require("../services");
 
 const filePath = (req, field) => {
   const file = req.files?.[field]?.[0];
-  return file ? `/uploads/customer-profiles/${file.filename}` : null;
+
+  if (!file) return null;
+
+  return file.path || file.secure_url || null;
 };
 
 const toBoolean = (value) => value === true || value === "true" || value === "1" || value === 1;

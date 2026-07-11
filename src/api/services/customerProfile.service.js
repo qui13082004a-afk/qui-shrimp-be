@@ -57,7 +57,7 @@ const createCustomerProfile = async (userId, data) => {
     throw new Error("Khu vực ao nuôi hiện chưa được Admin hỗ trợ mua trả sau");
   }
 
-  const requiredImages = ["anh_cccd_mat_truoc", "anh_cccd_mat_sau", "anh_selfie", "anh_bien_lai_tha_giong", "anh_chu_ky"];
+  const requiredImages = ["anh_cccd_mat_truoc", "anh_cccd_mat_sau", "anh_selfie", "anh_bien_lai_tha_giong"];
   for (const imageField of requiredImages) {
     if (!data[imageField]) throw new Error(`Thiếu ảnh bắt buộc: ${imageField}`);
   }

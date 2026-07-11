@@ -19,7 +19,6 @@ const createCustomerProfile = async (req, res) => {
       anh_selfie: filePath(req, "anh_selfie"),
       anh_bien_lai_tha_giong: filePath(req, "anh_bien_lai_tha_giong"),
       anh_ao_nuoi: filePath(req, "anh_ao_nuoi"),
-      anh_chu_ky: filePath(req, "anh_chu_ky"),
     };
     const profile = await customerProfileService.createCustomerProfile(req.user.id_nguoi_dung, payload);
     return res.status(201).json({ success: true, message: "Gửi hồ sơ đăng ký mua trả sau thành công", data: profile });

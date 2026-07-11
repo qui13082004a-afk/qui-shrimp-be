@@ -65,7 +65,6 @@ const HoSoKhachHang = sequelize.define(
     anh_selfie: { type: DataTypes.STRING(500), allowNull: false },
     anh_bien_lai_tha_giong: { type: DataTypes.STRING(500), allowNull: false },
     anh_ao_nuoi: { type: DataTypes.STRING(500), allowNull: true },
-    anh_chu_ky: { type: DataTypes.STRING(500), allowNull: false },
 
     dinh_muc_cong_no: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
     trang_thai_ho_so: {

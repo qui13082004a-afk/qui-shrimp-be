@@ -21,6 +21,10 @@ const ThoaThuanBaBen = require("./ThoaThuanBaBen");
 const PhieuDeXuatHanMuc = require("./PhieuDeXuatHanMuc");
 const ChinhSachHanMuc = require("./ChinhSachHanMuc");
 
+const KhuVucHoTroTraSau = require("./KhuVucHoTroTraSau");
+KhuVucHoTroTraSau.hasMany(HoSoKhachHang, { foreignKey: "id_khu_vuc" });
+HoSoKhachHang.belongsTo(KhuVucHoTroTraSau, { foreignKey: "id_khu_vuc" });
+
 /* =========================
    CHÍNH SÁCH HẠN MỨC
 ========================= */
@@ -313,15 +317,6 @@ GiaHanThanhToan.belongsTo(HoSoKhachHang, {
 });
 
 NguoiDung.hasMany(GiaHanThanhToan, {
-  foreignKey: "id_nguoi_gui",
-  as: "gia_han_da_gui",
-});
-GiaHanThanhToan.belongsTo(NguoiDung, {
-  foreignKey: "id_nguoi_gui",
-  as: "nguoi_gui",
-});
-
-NguoiDung.hasMany(GiaHanThanhToan, {
   foreignKey: "id_nguoi_duyet",
   as: "gia_han_da_duyet",
 });
@@ -387,4 +382,5 @@ module.exports = {
   ThoaThuanBaBen,
   PhieuDeXuatHanMuc,
   ChinhSachHanMuc,
+  KhuVucHoTroTraSau,
 };

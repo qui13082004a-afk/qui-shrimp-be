@@ -84,7 +84,47 @@ const getContractById = async (req, res) => {
     });
   }
 };
+const downloadTemplate = async (req, res) => {
+  try {
+    const contract = await hopDongService.getContractById(
+      req.user,
+      req.params.id
+    );
 
+    const fileUrl = contract?.file_hop_dong_mau;
+
+    if (!fileUrl) {
+      return res.status(404).json({
+        success: false,
+        message: "Hợp đồng chưa có file PDF mẫu",
+      });
+    }
+
+    const response = await fetch(fileUrl);
+
+    if (!response.ok) {
+      throw new Error("Không thể tải file hợp đồng từ Cloudinary");
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+
+    const filename = `HopDong-Mau-HD-${req.params.id}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`
+    );
+    res.setHeader("Content-Length", arrayBuffer.byteLength);
+
+    return res.send(Buffer.from(arrayBuffer));
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 const getContractByProfileId = async (req, res) => {
   try {
     const data = await hopDongService.getContractByProfileId(
@@ -240,4 +280,5 @@ module.exports = {
   confirmContract,
   cancelContract,
   restoreContract,
+  downloadTemplate
 };

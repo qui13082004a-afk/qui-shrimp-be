@@ -13,6 +13,9 @@ const phieuDeXuatHanMucService = require("./phieuDeXuatHanMuc.service");
 const hopDongService = require("./hopDong.service");
 const thuongLaiService = require("./thuongLai.service");
 const thoaThuanBaBenService = require("./thoaThuanBaBen.service");
+const khuVucHoTroTraSauService = require(
+  "./khuVucHoTroTraSau.service"
+);
 module.exports = {
   authService,
   categoryService,
@@ -24,5 +27,6 @@ module.exports = {
   paymentService,
   deliveryService,
   hopDongService,
-  debtExtensionService,chinhSachHanMucService,phieuDeXuatHanMucService,thuongLaiService,thoaThuanBaBenService
-};
+  debtExtensionService,chinhSachHanMucService,phieuDeXuatHanMucService,thuongLaiService,thoaThuanBaBenService,
+  khuVucHoTroTraSauService
+}

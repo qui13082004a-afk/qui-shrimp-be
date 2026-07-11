@@ -22,7 +22,13 @@ const phieuDeXuatHanMucRoute = require("./phieuDeXuatHanMuc.route");
 const hopDongRoute = require("./hopDong.route");
 const thuongLaiRoute = require("./thuongLai.route");
 const thoaThuanBaBenRoute = require("./thoaThuanBaBen.route");
-
+const khuVucHoTroTraSauRoute = require(
+  "./khuVucHoTroTraSau.route"
+);
+router.use(
+  "/khu-vuc-ho-tro-tra-sau",
+  khuVucHoTroTraSauRoute
+);
 router.use("/thoa-thuan-ba-ben", thoaThuanBaBenRoute);
 router.use("/thuong-lai", thuongLaiRoute);
 router.use("/hop-dong", hopDongRoute);

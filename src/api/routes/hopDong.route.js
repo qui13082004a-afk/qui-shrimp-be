@@ -40,7 +40,11 @@ router.post(
       return res.status(200).json({
         success: true,
         message: "Upload file hợp đồng mẫu thành công",
-        data: fileUrl,
+        data: {
+          url: fileUrl,
+          original_name: req.file.originalname || "hop-dong-mau.pdf",
+          mimetype: req.file.mimetype || "application/pdf",
+        },
       });
     } catch (error) {
       return res.status(500).json({
@@ -81,6 +85,17 @@ router.get(
   authMiddleware,
   hopDongController.getContractByProfileId
 );
+router.get(
+  "/:id/download-template",
+  authMiddleware,
+  hopDongController.downloadTemplate
+);
+router.put(
+  "/:id/upload-pdf",
+  authMiddleware,
+  uploadFile.single("file_hop_dong_da_ky"),
+  hopDongController.uploadSignedPdf
+);
 
 router.get(
   "/:id",
@@ -88,12 +103,6 @@ router.get(
   hopDongController.getContractById
 );
 
-router.put(
-  "/:id/upload-pdf",
-  authMiddleware,
-  uploadFile.single("file_hop_dong_da_ky"),
-  hopDongController.uploadSignedPdf
-);
 
 router.put(
   "/:id/upload-image",

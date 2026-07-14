@@ -68,6 +68,12 @@ const assignDelivery = async (user, data) => {
     throw new Error("Đơn hàng này đã được phân công giao hàng");
   }
 
+  const shipper = await deliveryRepository.findShipperById(data.id_nhan_vien_giao);
+
+  if (!shipper) {
+    throw new Error("Không tìm thấy nhân viên giao hàng");
+  }
+
   const delivery = await deliveryRepository.create({
     id_don_hang: data.id_don_hang,
     id_nhan_vien_giao: data.id_nhan_vien_giao,
@@ -85,6 +91,14 @@ const assignDelivery = async (user, data) => {
     noi_dung: `Đơn hàng #${order.id_don_hang} đã được phân công giao hàng.`,
     loai: "giao_hang",
     lien_ket: `/profile/orders/${order.id_don_hang}`,
+  });
+
+  await notificationService.createNotification({
+    id_nguoi_dung: shipper.id_nguoi_dung,
+    tieu_de: "Có đơn giao hàng mới",
+    noi_dung: `Bạn vừa được phân công giao đơn hàng #${order.id_don_hang}.`,
+    loai: "giao_hang",
+    lien_ket: `/delivery/orders/${delivery.id_giao_hang}`,
   });
 
   return delivery;
@@ -122,6 +136,16 @@ const successDelivery = async (user, id_giao_hang, data) => {
 
   if (delivery.trang_thai !== "dang_giao") {
     throw new Error("Chỉ đơn đang giao mới được xác nhận giao thành công");
+  }
+
+  const paymentMethod = delivery.DonHang?.hinh_thuc_thanh_toan;
+
+  if (!data.anh_bien_nhan) {
+    throw new Error("Vui lòng tải ảnh biên nhận giao hàng");
+  }
+
+  if (paymentMethod === "tra_sau" && !data.anh_hop_dong) {
+    throw new Error("Vui lòng tải giấy xác nhận trả sau");
   }
 
   await deliveryRepository.updateDelivery(delivery, {

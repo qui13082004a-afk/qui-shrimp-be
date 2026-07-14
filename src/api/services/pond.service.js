@@ -1,5 +1,39 @@
 const { pondRepository, cropSeasonRepository } = require("../repositories");
 
+const toNullableId = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+};
+
+const toNullableCoordinate = (value, fieldName, min, max) => {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < min || number > max) {
+    throw new Error(`${fieldName} khong hop le`);
+  }
+  return number;
+};
+
+const pickPondLocationFields = (data) => {
+  const locationData = {};
+
+  if (data.id_tinh_thanh !== undefined) {
+    locationData.id_tinh_thanh = toNullableId(data.id_tinh_thanh);
+  }
+  if (data.id_phuong_xa !== undefined) {
+    locationData.id_phuong_xa = toNullableId(data.id_phuong_xa);
+  }
+  if (data.vi_do !== undefined) {
+    locationData.vi_do = toNullableCoordinate(data.vi_do, "Vi do", -90, 90);
+  }
+  if (data.kinh_do !== undefined) {
+    locationData.kinh_do = toNullableCoordinate(data.kinh_do, "Kinh do", -180, 180);
+  }
+
+  return locationData;
+};
+
 /**
  * TẠO MỚI AO NUÔI MỚI
  */
@@ -20,6 +54,7 @@ const createPond = async (userId, data) => {
     loai_hinh_nuoi: data.loai_hinh_nuoi,
     trang_thai_ao: data.trang_thai_ao || "dang_hoat_dong",
     ghi_chu: data.ghi_chu,
+    ...pickPondLocationFields(data),
   });
 };
 
@@ -74,7 +109,10 @@ const updatePond = async (id_ao, userId, data) => {
     }
   }
 
-  return await pondRepository.update(id_ao, data);
+  return await pondRepository.update(id_ao, {
+    ...data,
+    ...pickPondLocationFields(data),
+  });
 };
 
 /**

@@ -19,6 +19,12 @@ const thoaThuanBaBenController = require("./thoaThuanBaBen.controller");
 const khuVucHoTroTraSauController = require(
   "./khuVucHoTroTraSau.controller"
 );
+const locationController = require("./location.controller");
+const businessAreaController = require("./businessArea.controller");
+const departurePointController = require("./departurePoint.controller");
+const shippingFeeController = require("./shippingFee.controller");
+const warehouseController = require("./warehouse.controller");
+const limitStaffAreaController = require("./limitStaffArea.controller");
 module.exports = {
   authController,
   uploadController,
@@ -36,5 +42,11 @@ module.exports = {
   phieuDeXuatHanMucController,
   hopDongController,
   thuongLaiController,thoaThuanBaBenController,
-  khuVucHoTroTraSauController
+  khuVucHoTroTraSauController,
+  locationController,
+  businessAreaController,
+  departurePointController,
+  shippingFeeController,
+  warehouseController,
+  limitStaffAreaController
 };

@@ -20,10 +20,127 @@ const ThuongLai = require("./ThuongLai");
 const ThoaThuanBaBen = require("./ThoaThuanBaBen");
 const PhieuDeXuatHanMuc = require("./PhieuDeXuatHanMuc");
 const ChinhSachHanMuc = require("./ChinhSachHanMuc");
+const TinhThanh = require("./TinhThanh");
+const PhuongXa = require("./PhuongXa");
+const KhuVucKinhDoanh = require("./KhuVucKinhDoanh");
+const CauHinhDiemXuatPhat = require("./CauHinhDiemXuatPhat");
+const MucPhiVanChuyen = require("./MucPhiVanChuyen");
+const KhoHang = require("./KhoHang");
+const TonKhoSanPham = require("./TonKhoSanPham");
+const NhanVienDinhMucKhuVuc = require("./NhanVienDinhMucKhuVuc");
+const DiaChiGiaoHang = require("./DiaChiGiaoHang");
 
 const KhuVucHoTroTraSau = require("./KhuVucHoTroTraSau");
 KhuVucHoTroTraSau.hasMany(HoSoKhachHang, { foreignKey: "id_khu_vuc" });
 HoSoKhachHang.belongsTo(KhuVucHoTroTraSau, { foreignKey: "id_khu_vuc" });
+
+/* =========================
+   KHU VUC / VI TRI / PHI VAN CHUYEN
+========================= */
+TinhThanh.hasMany(PhuongXa, {
+  foreignKey: "id_tinh_thanh",
+});
+PhuongXa.belongsTo(TinhThanh, {
+  foreignKey: "id_tinh_thanh",
+});
+
+TinhThanh.hasOne(KhuVucKinhDoanh, {
+  foreignKey: "id_tinh_thanh",
+});
+KhuVucKinhDoanh.belongsTo(TinhThanh, {
+  foreignKey: "id_tinh_thanh",
+});
+
+KhuVucKinhDoanh.hasMany(MucPhiVanChuyen, {
+  foreignKey: "id_khu_vuc",
+});
+MucPhiVanChuyen.belongsTo(KhuVucKinhDoanh, {
+  foreignKey: "id_khu_vuc",
+});
+
+CauHinhDiemXuatPhat.hasMany(KhoHang, {
+  foreignKey: "id_diem_xuat_phat",
+});
+KhoHang.belongsTo(CauHinhDiemXuatPhat, {
+  foreignKey: "id_diem_xuat_phat",
+});
+
+KhoHang.hasMany(TonKhoSanPham, {
+  foreignKey: "id_kho_hang",
+});
+TonKhoSanPham.belongsTo(KhoHang, {
+  foreignKey: "id_kho_hang",
+});
+
+SanPham.hasMany(TonKhoSanPham, {
+  foreignKey: "id_san_pham",
+});
+TonKhoSanPham.belongsTo(SanPham, {
+  foreignKey: "id_san_pham",
+});
+
+NguoiDung.hasMany(NhanVienDinhMucKhuVuc, {
+  foreignKey: "id_nguoi_dung",
+});
+NhanVienDinhMucKhuVuc.belongsTo(NguoiDung, {
+  foreignKey: "id_nguoi_dung",
+});
+
+KhuVucHoTroTraSau.hasMany(NhanVienDinhMucKhuVuc, {
+  foreignKey: "id_khu_vuc",
+});
+NhanVienDinhMucKhuVuc.belongsTo(KhuVucHoTroTraSau, {
+  foreignKey: "id_khu_vuc",
+});
+
+TinhThanh.hasMany(AoNuoi, {
+  foreignKey: "id_tinh_thanh",
+});
+AoNuoi.belongsTo(TinhThanh, {
+  foreignKey: "id_tinh_thanh",
+});
+
+PhuongXa.hasMany(AoNuoi, {
+  foreignKey: "id_phuong_xa",
+});
+AoNuoi.belongsTo(PhuongXa, {
+  foreignKey: "id_phuong_xa",
+});
+
+NguoiDung.hasMany(DiaChiGiaoHang, {
+  foreignKey: "id_nguoi_dung",
+});
+DiaChiGiaoHang.belongsTo(NguoiDung, {
+  foreignKey: "id_nguoi_dung",
+});
+
+TinhThanh.hasMany(DiaChiGiaoHang, {
+  foreignKey: "id_tinh_thanh",
+});
+DiaChiGiaoHang.belongsTo(TinhThanh, {
+  foreignKey: "id_tinh_thanh",
+});
+
+PhuongXa.hasMany(DiaChiGiaoHang, {
+  foreignKey: "id_phuong_xa",
+});
+DiaChiGiaoHang.belongsTo(PhuongXa, {
+  foreignKey: "id_phuong_xa",
+});
+
+KhuVucKinhDoanh.hasMany(DonHang, {
+  foreignKey: "id_khu_vuc_giao_hang",
+});
+DonHang.belongsTo(KhuVucKinhDoanh, {
+  foreignKey: "id_khu_vuc_giao_hang",
+});
+
+CauHinhDiemXuatPhat.hasMany(DonHang, {
+  foreignKey: "id_diem_xuat_phat",
+});
+DonHang.belongsTo(CauHinhDiemXuatPhat, {
+  foreignKey: "id_diem_xuat_phat",
+});
 
 /* =========================
    CHÍNH SÁCH HẠN MỨC
@@ -317,6 +434,15 @@ GiaHanThanhToan.belongsTo(HoSoKhachHang, {
 });
 
 NguoiDung.hasMany(GiaHanThanhToan, {
+  foreignKey: "id_nguoi_gui",
+  as: "gia_han_da_gui",
+});
+GiaHanThanhToan.belongsTo(NguoiDung, {
+  foreignKey: "id_nguoi_gui",
+  as: "nguoi_gui",
+});
+
+NguoiDung.hasMany(GiaHanThanhToan, {
   foreignKey: "id_nguoi_duyet",
   as: "gia_han_da_duyet",
 });
@@ -383,4 +509,13 @@ module.exports = {
   PhieuDeXuatHanMuc,
   ChinhSachHanMuc,
   KhuVucHoTroTraSau,
+  TinhThanh,
+  PhuongXa,
+  KhuVucKinhDoanh,
+  CauHinhDiemXuatPhat,
+  MucPhiVanChuyen,
+  KhoHang,
+  TonKhoSanPham,
+  NhanVienDinhMucKhuVuc,
+  DiaChiGiaoHang,
 };

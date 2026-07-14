@@ -68,7 +68,15 @@ const getDebtExtensionById = async (req, res) => {
       data: extension,
     });
   } catch (error) {
-    return res.status(404).json({
+    let statusCode = 500;
+
+    if (error.message.includes("Không tìm thấy")) {
+      statusCode = 404;
+    } else if (error.message.includes("không có quyền")) {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({
       success: false,
       message: error.message,
     });

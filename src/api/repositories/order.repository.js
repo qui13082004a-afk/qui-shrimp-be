@@ -7,6 +7,8 @@ const {
   HoSoKhachHang,
   ChiTietThanhToanCongNo,
   ThanhToanCongNo,
+  AoNuoi,
+  DiaChiGiaoHang,
 } = require("../models");
 
 const { Op } = require("sequelize");
@@ -23,6 +25,11 @@ const ORDER_ATTRIBUTES = [
   "trang_thai_don_hang",
   "dia_chi_giao_hang",
   "ghi_chu",
+  "id_khu_vuc_giao_hang",
+  "id_diem_xuat_phat",
+  "khoang_cach_giao_hang_km",
+  "vi_do_giao_hang",
+  "kinh_do_giao_hang",
   "ngay_dat",
   "ngay_duyet",
   "ngay_giao",
@@ -87,6 +94,38 @@ const findProductById = (id_san_pham, transaction) => {
     ],
     transaction,
     lock: transaction ? true : undefined,
+  });
+};
+
+const findPondForOrder = (id_ao, id_nguoi_dung, transaction) => {
+  return AoNuoi.findOne({
+    where: { id_ao, id_nguoi_dung },
+    attributes: [
+      "id_ao",
+      "id_nguoi_dung",
+      "dia_chi_ao",
+      "id_tinh_thanh",
+      "id_phuong_xa",
+      "vi_do",
+      "kinh_do",
+    ],
+    transaction,
+  });
+};
+
+const findDeliveryAddressForOrder = (id_dia_chi, id_nguoi_dung, transaction) => {
+  return DiaChiGiaoHang.findOne({
+    where: { id_dia_chi, id_nguoi_dung, dang_hoat_dong: true },
+    attributes: [
+      "id_dia_chi",
+      "id_nguoi_dung",
+      "dia_chi",
+      "id_tinh_thanh",
+      "id_phuong_xa",
+      "vi_do",
+      "kinh_do",
+    ],
+    transaction,
   });
 };
 
@@ -348,6 +387,8 @@ module.exports = {
   createOrder,
   createOrderDetails,
   findProductById,
+  findPondForOrder,
+  findDeliveryAddressForOrder,
   updateProductStock,
   createPayment,
   findById,

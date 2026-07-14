@@ -1,4 +1,27 @@
-const { GiaoHang, DonHang, NguoiDung, NhanVienGiaoHang, ThanhToan } = require("../models");
+const {
+  GiaoHang,
+  DonHang,
+  NguoiDung,
+  NhanVienGiaoHang,
+  ThanhToan,
+  ChiTietDonHang,
+  SanPham,
+  AoNuoi,
+  VuNuoi,
+} = require("../models");
+
+const deliveryOrderInclude = [
+  { model: NguoiDung },
+  { model: ThanhToan },
+  {
+    model: VuNuoi,
+    include: [{ model: AoNuoi }],
+  },
+  {
+    model: ChiTietDonHang,
+    include: [{ model: SanPham }],
+  },
+];
 
 const create = async (data) => {
   return await GiaoHang.create(data);
@@ -9,10 +32,7 @@ const findById = async (id_giao_hang) => {
     include: [
       {
         model: DonHang,
-        include: [
-          { model: NguoiDung },
-          { model: ThanhToan },
-        ],
+        include: deliveryOrderInclude,
       },
       { model: NhanVienGiaoHang },
     ],
@@ -25,7 +45,7 @@ const findByShipperId = async (id_nhan_vien_giao) => {
     include: [
       {
         model: DonHang,
-        include: [{ model: NguoiDung }],
+        include: deliveryOrderInclude,
       },
     ],
     order: [["id_giao_hang", "DESC"]],
@@ -37,7 +57,7 @@ const findAll = async () => {
     include: [
       {
         model: DonHang,
-        include: [{ model: NguoiDung }],
+        include: deliveryOrderInclude,
       },
       { model: NhanVienGiaoHang },
     ],
@@ -53,6 +73,10 @@ const findShipperByUserId = async (id_nguoi_dung) => {
   return await NhanVienGiaoHang.findOne({
     where: { id_nguoi_dung },
   });
+};
+
+const findShipperById = async (id_nhan_vien_giao_hang) => {
+  return await NhanVienGiaoHang.findByPk(id_nhan_vien_giao_hang);
 };
 
 const findDeliveryByOrderId = async (id_don_hang) => {
@@ -78,6 +102,7 @@ module.exports = {
   findAll,
   findOrderById,
   findShipperByUserId,
+  findShipperById,
   findDeliveryByOrderId,
   updateDelivery,
   updateOrder,

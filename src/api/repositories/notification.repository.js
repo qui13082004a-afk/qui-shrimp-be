@@ -1,4 +1,4 @@
-const { ThongBao } = require("../models");
+const { ThongBao, NguoiDung } = require("../models");
 
 const create = (data, options = {}) => {
   return ThongBao.create(data, options);
@@ -45,10 +45,21 @@ const markAllAsRead = (id_nguoi_dung) => {
   );
 };
 
+const findUsersByRole = (vai_tro) => {
+  return NguoiDung.findAll({
+    where: {
+      vai_tro,
+      trang_thai_tai_khoan: "hoat_dong",
+    },
+    attributes: ["id_nguoi_dung", "ho_ten", "email", "vai_tro"],
+  });
+};
+
 module.exports = {
   create,
   findByUserId,
   countUnread,
   markAsRead,
   markAllAsRead,
+  findUsersByRole,
 };

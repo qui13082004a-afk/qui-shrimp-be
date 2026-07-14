@@ -16,6 +16,12 @@ const thoaThuanBaBenService = require("./thoaThuanBaBen.service");
 const khuVucHoTroTraSauService = require(
   "./khuVucHoTroTraSau.service"
 );
+const locationService = require("./location.service");
+const businessAreaService = require("./businessArea.service");
+const departurePointService = require("./departurePoint.service");
+const shippingFeeService = require("./shippingFee.service");
+const warehouseService = require("./warehouse.service");
+const limitStaffAreaService = require("./limitStaffArea.service");
 module.exports = {
   authService,
   categoryService,
@@ -28,5 +34,11 @@ module.exports = {
   deliveryService,
   hopDongService,
   debtExtensionService,chinhSachHanMucService,phieuDeXuatHanMucService,thuongLaiService,thoaThuanBaBenService,
-  khuVucHoTroTraSauService
+  khuVucHoTroTraSauService,
+  locationService,
+  businessAreaService,
+  departurePointService,
+  shippingFeeService,
+  warehouseService,
+  limitStaffAreaService
 }

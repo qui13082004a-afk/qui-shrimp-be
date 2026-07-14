@@ -41,6 +41,39 @@ const findPolicyByFarmingDay = async (ngayNuoi) => {
   );
 };
 
+const validatePolicyUpgradeFlow = (profile, selectedPolicy) => {
+  if (!selectedPolicy) return;
+
+  const plainProfile = profile.toJSON ? profile.toJSON() : profile;
+  const currentPolicy = plainProfile.ChinhSachHanMuc;
+
+  if (!currentPolicy) return;
+
+  if (
+    String(selectedPolicy.ten_chinh_sach || "").trim() !==
+    String(currentPolicy.ten_chinh_sach || "").trim()
+  ) {
+    throw new Error(
+      "Chỉ được đề xuất nâng hạn mức trong cùng bộ chính sách hiện tại của hồ sơ"
+    );
+  }
+
+  if (Number(selectedPolicy.tu_ngay) <= Number(currentPolicy.tu_ngay)) {
+    throw new Error(
+      "Chính sách đề xuất phải là giai đoạn sau giai đoạn hiện tại"
+    );
+  }
+
+  if (
+    toNumber(selectedPolicy.han_muc_toi_da) <=
+    toNumber(currentPolicy.han_muc_toi_da)
+  ) {
+    throw new Error(
+      "Hạn mức của giai đoạn đề xuất phải cao hơn hạn mức hiện tại"
+    );
+  }
+};
+
 const getUploadedFileUrl = (file) => {
   return (
     file?.path ||
@@ -176,6 +209,8 @@ const createProposal = async (user, data, files = []) => {
     } else {
       policy = await findPolicyByFarmingDay(ngayNuoiLucKhaoSat);
     }
+
+    validatePolicyUpgradeFlow(profile, policy);
 
     if (
       policy &&

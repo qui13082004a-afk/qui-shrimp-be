@@ -25,6 +25,20 @@ const thoaThuanBaBenRoute = require("./thoaThuanBaBen.route");
 const khuVucHoTroTraSauRoute = require(
   "./khuVucHoTroTraSau.route"
 );
+const locationRoute = require("./location.route");
+const businessAreaRoute = require("./businessArea.route");
+const departurePointRoute = require("./departurePoint.route");
+const shippingFeeRoute = require("./shippingFee.route");
+const warehouseRoute = require("./warehouse.route");
+const limitStaffAreaRoute = require("./limitStaffArea.route");
+const deliveryAddressRoute = require("./deliveryAddress.route");
+router.use("/delivery-addresses", deliveryAddressRoute);
+router.use("/limit-staff-areas", limitStaffAreaRoute);
+router.use("/warehouses", warehouseRoute);
+router.use("/locations", locationRoute);
+router.use("/business-areas", businessAreaRoute);
+router.use("/departure-points", departurePointRoute);
+router.use("/shipping-fees", shippingFeeRoute);
 router.use(
   "/khu-vuc-ho-tro-tra-sau",
   khuVucHoTroTraSauRoute

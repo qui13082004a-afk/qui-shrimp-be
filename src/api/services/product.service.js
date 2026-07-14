@@ -62,6 +62,7 @@ const getActiveProducts = async (query = {}) => {
   const limit = Number(query.limit) || 9;
   const keyword = query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
   const id_danh_muc = query.id_danh_muc && query.id_danh_muc !== "" ? Number(query.id_danh_muc) : undefined;
+  const id_kho_hang = query.id_kho_hang && query.id_kho_hang !== "" ? Number(query.id_kho_hang) : undefined;
   const minPrice = query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
   const maxPrice = query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
   const sortBy = query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
@@ -70,6 +71,7 @@ const getActiveProducts = async (query = {}) => {
     limit,
     keyword,
     id_danh_muc,
+    id_kho_hang,
     minPrice,
     maxPrice,
     sortBy,
@@ -95,6 +97,11 @@ const getAllProducts = async (query = {}) => {
   
   // Chuyển sang undefined nếu rỗng để Sequelize tự động bỏ qua
   const id_danh_muc = query.id_danh_muc && query.id_danh_muc !== "" ? Number(query.id_danh_muc) : undefined;
+  const id_kho_hang = query.id_kho_hang && query.id_kho_hang !== "" ? Number(query.id_kho_hang) : undefined;
+  const trang_thai =
+    query.trang_thai && query.trang_thai !== "tat_ca" && query.trang_thai !== ""
+      ? query.trang_thai
+      : undefined;
 
   // Ép kiểu số an toàn cho khoảng giá để tránh lỗi Mismatch Data Type
   const minPrice = query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
@@ -108,6 +115,8 @@ const getAllProducts = async (query = {}) => {
     limit,
     keyword,
     id_danh_muc,
+    id_kho_hang,
+    trang_thai,
     minPrice,
     maxPrice,
     sortBy,

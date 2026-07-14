@@ -3,16 +3,29 @@ const {
   customerProfileRepository,
 } = require("../repositories");
 
+const { sequelize } = require("../../config/database");
 const notificationService = require("./notification.service");
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const ALLOW_BEFORE_DAYS = 7;
 const MAX_EXTENSION_TIMES = 2;
+const ADMIN_DEBT_EXTENSION_LINK = "/admin/gia-han-thanh-toan";
+const getCustomerDebtProfileLink = (id_ho_so) => `/debt/profile/${id_ho_so}`;
 
 const toStartOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
+};
+
+const parseValidDate = (value, message) => {
+  const date = new Date(value);
+
+  if (!value || Number.isNaN(date.getTime())) {
+    throw new Error(message);
+  }
+
+  return date;
 };
 
 const diffDays = (fromDate, toDate) => {
@@ -45,6 +58,14 @@ const safeCreateNotification = async (payload) => {
     await notificationService.createNotification(payload);
   } catch (error) {
     console.error("CREATE_NOTIFICATION_ERROR:", error.message);
+  }
+};
+
+const safeNotifyAdmins = async (payload) => {
+  try {
+    await notificationService.notifyAdmins(payload);
+  } catch (error) {
+    console.error("NOTIFY_ADMINS_ERROR:", error.message);
   }
 };
 
@@ -95,12 +116,14 @@ const createDebtExtension = async (user, data, files = []) => {
   }
 
   const today = new Date();
-  const currentDeadline = new Date(profile.han_thanh_toan);
-  const proposedDeadline = new Date(han_de_xuat);
-
-  if (Number.isNaN(proposedDeadline.getTime())) {
-    throw new Error("Hạn thanh toán đề xuất không hợp lệ");
-  }
+  const currentDeadline = parseValidDate(
+    profile.han_thanh_toan,
+    "Hạn thanh toán hiện tại của hồ sơ không hợp lệ"
+  );
+  const proposedDeadline = parseValidDate(
+    han_de_xuat,
+    "Hạn thanh toán đề xuất không hợp lệ"
+  );
 
   const daysUntilDeadline = diffDays(today, currentDeadline);
 
@@ -115,6 +138,8 @@ const createDebtExtension = async (user, data, files = []) => {
   if (extensionDays <= 0) {
     throw new Error("Hạn đề xuất phải lớn hơn hạn thanh toán hiện tại");
   }
+
+  // TODO: Chốt thêm nghiệp vụ số ngày gia hạn tối đa cho mỗi lần nếu cần giới hạn.
 
   const uploadedImages =
     normalizeUploadedImages(files) || data.hinh_anh_minh_chung || null;
@@ -140,7 +165,17 @@ const createDebtExtension = async (user, data, files = []) => {
     tieu_de: "Đã gửi yêu cầu gia hạn",
     noi_dung: `Yêu cầu gia hạn thêm ${extensionDays} ngày đã được gửi và đang chờ duyệt.`,
     loai: "thanh_toan",
-    lien_ket: `/debt/extensions/${extension.id_gia_han}`,
+    lien_ket: getCustomerDebtProfileLink(id_ho_so),
+  });
+
+  const customerName =
+    profile.ho_ten || profile.NguoiDung?.ho_ten || user.ho_ten || "Khách hàng";
+
+  await safeNotifyAdmins({
+    tieu_de: "Có yêu cầu gia hạn thanh toán mới",
+    noi_dung: `Khách hàng ${customerName} vừa gửi yêu cầu gia hạn thanh toán cho hồ sơ #${id_ho_so}.`,
+    loai: "thanh_toan",
+    lien_ket: ADMIN_DEBT_EXTENSION_LINK,
   });
 
   return await debtExtensionRepository.findById(extension.id_gia_han);
@@ -176,36 +211,67 @@ const approveDebtExtension = async (user, id_gia_han, data = {}) => {
     throw new Error("Chỉ admin mới có quyền duyệt đơn gia hạn");
   }
 
-  const extension = await debtExtensionRepository.findById(id_gia_han);
+  const transaction = await sequelize.transaction();
+  let committed = false;
 
-  if (!extension) {
-    throw new Error("Không tìm thấy đơn gia hạn");
+  try {
+    const extension = await debtExtensionRepository.findById(id_gia_han, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!extension) {
+      throw new Error("Không tìm thấy đơn gia hạn");
+    }
+
+    if (extension.trang_thai !== "cho_duyet") {
+      throw new Error("Đơn gia hạn này đã được xử lý");
+    }
+
+    await debtExtensionRepository.update(
+      id_gia_han,
+      {
+        id_nguoi_duyet: user.id_nguoi_dung,
+        trang_thai: "da_duyet",
+        ngay_duyet: new Date(),
+        ghi_chu: data.ghi_chu || null,
+      },
+      {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      }
+    );
+
+    const updatedProfile = await customerProfileRepository.update(
+      extension.id_ho_so,
+      {
+        han_thanh_toan: extension.han_de_xuat,
+      },
+      transaction
+    );
+
+    if (!updatedProfile) {
+      throw new Error("Không thể cập nhật hạn thanh toán của hồ sơ");
+    }
+
+    await transaction.commit();
+    committed = true;
+
+    await safeCreateNotification({
+      id_nguoi_dung: extension.id_nguoi_gui,
+      tieu_de: "Gia hạn được duyệt",
+      noi_dung: "Yêu cầu gia hạn thanh toán của bạn đã được duyệt.",
+      loai: "thanh_toan",
+      lien_ket: getCustomerDebtProfileLink(extension.id_ho_so),
+    });
+
+    return await debtExtensionRepository.findById(id_gia_han);
+  } catch (error) {
+    if (!committed) {
+      await transaction.rollback();
+    }
+    throw error;
   }
-
-  if (extension.trang_thai !== "cho_duyet") {
-    throw new Error("Đơn gia hạn này đã được xử lý");
-  }
-
-  await debtExtensionRepository.update(id_gia_han, {
-    id_nguoi_duyet: user.id_nguoi_dung,
-    trang_thai: "da_duyet",
-    ngay_duyet: new Date(),
-    ghi_chu: data.ghi_chu || null,
-  });
-
-  await customerProfileRepository.update(extension.id_ho_so, {
-    han_thanh_toan: extension.han_de_xuat,
-  });
-
-  await safeCreateNotification({
-    id_nguoi_dung: extension.id_nguoi_gui,
-    tieu_de: "Gia hạn được duyệt",
-    noi_dung: "Yêu cầu gia hạn thanh toán của bạn đã được duyệt.",
-    loai: "thanh_toan",
-    lien_ket: `/debt/extensions/${id_gia_han}`,
-  });
-
-  return await debtExtensionRepository.findById(id_gia_han);
 };
 
 const rejectDebtExtension = async (user, id_gia_han, data = {}) => {
@@ -242,7 +308,7 @@ const rejectDebtExtension = async (user, id_gia_han, data = {}) => {
     tieu_de: "Gia hạn bị từ chối",
     noi_dung: `Yêu cầu gia hạn thanh toán của bạn đã bị từ chối. Lý do: ${ly_do_tu_choi}`,
     loai: "thanh_toan",
-    lien_ket: `/debt/extensions/${id_gia_han}`,
+    lien_ket: getCustomerDebtProfileLink(extension.id_ho_so),
   });
 
   return await debtExtensionRepository.findById(id_gia_han);

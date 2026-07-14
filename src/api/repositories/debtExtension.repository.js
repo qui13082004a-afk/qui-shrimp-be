@@ -6,11 +6,13 @@ const {
   VuNuoi,
 } = require("../models");
 
-const create = async (data) => {
-  return await GiaHanThanhToan.create(data);
+const create = async (data, options = {}) => {
+  return await GiaHanThanhToan.create(data, options);
 };
 
-const findById = async (id_gia_han) => {
+const findById = async (id_gia_han, options = {}) => {
+  const { transaction = null, lock = null } = options;
+
   return await GiaHanThanhToan.findByPk(id_gia_han, {
     include: [
       {
@@ -32,6 +34,8 @@ const findById = async (id_gia_han) => {
         attributes: ["id_nguoi_dung", "ho_ten", "email"],
       },
     ],
+    transaction,
+    lock,
   });
 };
 
@@ -88,12 +92,18 @@ const findPendingByProfileId = async (id_ho_so) => {
   });
 };
 
-const update = async (id_gia_han, data) => {
-  const extension = await GiaHanThanhToan.findByPk(id_gia_han);
+const update = async (id_gia_han, data, options = {}) => {
+  const { transaction = null, lock = null } = options;
+  const extension = await GiaHanThanhToan.findByPk(id_gia_han, {
+    transaction,
+    lock,
+  });
 
   if (!extension) return null;
 
-  await extension.update(data);
+  await extension.update(data, {
+    transaction,
+  });
   return extension;
 };
 const findLatestApprovedByProfileId = async (id_ho_so) => {
@@ -105,6 +115,17 @@ const findLatestApprovedByProfileId = async (id_ho_so) => {
     order: [["ngay_duyet", "DESC"]],
   });
 };
+
+const findFirstApprovedByProfileId = async (id_ho_so) => {
+  return await GiaHanThanhToan.findOne({
+    where: {
+      id_ho_so,
+      trang_thai: "da_duyet",
+    },
+    order: [["ngay_duyet", "ASC"]],
+  });
+};
+
 const findByProfileId = async (id_ho_so) => {
   return await GiaHanThanhToan.findAll({
     where: { id_ho_so },
@@ -139,6 +160,7 @@ module.exports = {
   findPendingByProfileId,
   update,
   findLatestApprovedByProfileId,
+  findFirstApprovedByProfileId,
   findByProfileId,
   countApprovedByProfileId
 };

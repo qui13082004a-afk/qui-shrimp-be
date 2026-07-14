@@ -22,6 +22,22 @@ const AoNuoi = sequelize.define("AoNuoi", {
   dia_chi_ao: {
     type: DataTypes.TEXT,
   },
+  id_tinh_thanh: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+  },
+  id_phuong_xa: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+  },
+  vi_do: {
+    type: DataTypes.DECIMAL(10, 7),
+    allowNull: true,
+  },
+  kinh_do: {
+    type: DataTypes.DECIMAL(10, 7),
+    allowNull: true,
+  },
   loai_hinh_nuoi: {
     type: DataTypes.STRING(100),
   },

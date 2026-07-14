@@ -5,6 +5,7 @@ const {
   debtExtensionRepository,
   khuVucHoTroTraSauRepository,
 } = require("../repositories");
+const notificationService = require("./notification.service");
 
 const requiredTextFields = [
   ["ho_ten", "Họ tên"], ["ngay_sinh", "Ngày sinh"], ["so_cccd", "Số CCCD"],
@@ -71,7 +72,7 @@ const createCustomerProfile = async (userId, data) => {
     if (!data[imageField]) throw new Error(`Thiếu ảnh bắt buộc: ${imageField}`);
   }
 
-  return customerProfileRepository.create({
+  const profile = await customerProfileRepository.create({
     ...data,
     id_nguoi_dung: userId,
     id_khu_vuc: supportedArea.id_khu_vuc,
@@ -84,13 +85,43 @@ const createCustomerProfile = async (userId, data) => {
     trang_thai_ho_so: "cho_kiem_tra",
     trang_thai_xac_thuc: "chua_xac_thuc",
   });
+
+  await notificationService.notifyAdmins({
+    tieu_de: "Co ho so mua tra sau moi",
+    noi_dung: `Khach hang ${data.ho_ten} vua gui ho so mua tra sau #${profile.id_ho_so}.`,
+    loai: "ho_so",
+    lien_ket: `/admin/ho-so-cong-no`,
+  });
+
+  await notificationService.notifyLimitStaffByArea({
+    id_khu_vuc: supportedArea.id_khu_vuc,
+    tieu_de: "Ho so can tham dinh trong khu vuc phu trach",
+    noi_dung: `Ho so #${profile.id_ho_so} cua ${data.ho_ten} dang cho kiem tra tai khu vuc ${supportedArea.tinh_thanh}.`,
+    loai: "ho_so",
+    lien_ket: `/nhan-vien-dinh-muc/ho-so-tham-dinh`,
+  });
+
+  return profile;
 };
 
 const attachLatestExtensionDeadline = async (profile) => {
   if (!profile) return null;
   const plain = typeof profile.toJSON === "function" ? profile.toJSON() : profile;
-  const latest = await debtExtensionRepository.findLatestApprovedByProfileId(plain.id_ho_so);
-  return { ...plain, gia_han_moi_nhat: latest || null, han_thanh_toan_goc: plain.han_thanh_toan, han_thanh_toan_hien_tai: latest ? latest.han_de_xuat : plain.han_thanh_toan };
+  const [latest, firstApproved] = await Promise.all([
+    debtExtensionRepository.findLatestApprovedByProfileId(plain.id_ho_so),
+    debtExtensionRepository.findFirstApprovedByProfileId(plain.id_ho_so),
+  ]);
+
+  return {
+    ...plain,
+    gia_han_moi_nhat: latest || null,
+    han_thanh_toan_goc: firstApproved
+      ? firstApproved.han_cu
+      : plain.han_thanh_toan,
+    han_thanh_toan_hien_tai: latest
+      ? latest.han_de_xuat
+      : plain.han_thanh_toan,
+  };
 };
 
 const getMyCustomerProfiles = async (userId) => Promise.all((await customerProfileRepository.findByUserId(userId)).map(attachLatestExtensionDeadline));

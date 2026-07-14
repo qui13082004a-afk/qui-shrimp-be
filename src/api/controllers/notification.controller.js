@@ -55,8 +55,29 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
+const sendAdminNotification = async (req, res) => {
+  try {
+    const result = await notificationService.sendAdminNotification(
+      req.user,
+      req.body
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Gui thong bao thanh cong",
+      data: result,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getMyNotifications,
   markAsRead,
   markAllAsRead,
+  sendAdminNotification,
 };

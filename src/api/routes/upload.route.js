@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const upload = require("../middlewares/upload.middleware");
-const uploadFile = require("../middlewares/uploadFile.middleware"); // thêm import middleware đúng
+const uploadFile = require("../middlewares/uploadFile.middleware");
 const { uploadController } = require("../controllers");
 
 router.post(
@@ -19,7 +19,7 @@ router.post(
 
 router.post(
   "/file",
-  uploadFile.single("file"),   
+  uploadFile.single("file"),
   uploadController.uploadFile
 );
 

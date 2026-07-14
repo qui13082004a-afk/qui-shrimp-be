@@ -7,6 +7,7 @@ const HoSoKhachHang = sequelize.define(
     id_ho_so: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
     id_nguoi_dung: { type: DataTypes.BIGINT, allowNull: false },
     id_chinh_sach: { type: DataTypes.BIGINT, allowNull: true },
+    id_chinh_sach_da_nhac: { type: DataTypes.BIGINT, allowNull: true },
     id_ao: { type: DataTypes.BIGINT, allowNull: false },
     id_vu_nuoi: { type: DataTypes.BIGINT, allowNull: false, unique: true },
     id_khu_vuc: { type: DataTypes.BIGINT, allowNull: false },

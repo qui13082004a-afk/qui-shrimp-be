@@ -1,6 +1,7 @@
 const { sequelize } = require("../../config/database");
 const { orderRepository } = require("../repositories");
 const notificationService = require("./notification.service");
+const shippingFeeService = require("./shippingFee.service");
 
 const getOrderStatusText = (status) => {
   const map = {
@@ -17,11 +18,68 @@ const getOrderStatusText = (status) => {
   return map[status] || status;
 };
 
+const toNullableCoordinate = (value) => {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const resolveShippingForOrder = async (userId, data, transaction) => {
+  let viDo = toNullableCoordinate(data.vi_do_giao_hang);
+  let kinhDo = toNullableCoordinate(data.kinh_do_giao_hang);
+  let diaChiGiaoHang = data.dia_chi_giao_hang;
+
+  if (data.id_dia_chi_giao_hang) {
+    const deliveryAddress = await orderRepository.findDeliveryAddressForOrder(
+      data.id_dia_chi_giao_hang,
+      userId,
+      transaction
+    );
+
+    if (!deliveryAddress) {
+      throw new Error("Khong tim thay dia chi giao hang da chon");
+    }
+
+    diaChiGiaoHang = deliveryAddress.dia_chi;
+    viDo = toNullableCoordinate(deliveryAddress.vi_do);
+    kinhDo = toNullableCoordinate(deliveryAddress.kinh_do);
+  }
+
+  if (viDo === null || kinhDo === null) {
+    return {
+      phi_van_chuyen: Number(data.phi_van_chuyen || 0),
+      id_khu_vuc_giao_hang: null,
+      id_diem_xuat_phat: null,
+      khoang_cach_giao_hang_km: null,
+      dia_chi_giao_hang: diaChiGiaoHang,
+      vi_do_giao_hang: viDo,
+      kinh_do_giao_hang: kinhDo,
+    };
+  }
+
+  const shipping = await shippingFeeService.calculateShippingFee({
+    id_khu_vuc: data.id_khu_vuc_giao_hang,
+    vi_do: viDo,
+    kinh_do: kinhDo,
+  });
+
+  return {
+    phi_van_chuyen: Number(shipping.phi_van_chuyen || 0),
+    id_khu_vuc_giao_hang: shipping.id_khu_vuc || null,
+    id_diem_xuat_phat: shipping.id_diem_xuat_phat || null,
+    khoang_cach_giao_hang_km: shipping.khoang_cach_km || null,
+    dia_chi_giao_hang: diaChiGiaoHang,
+    vi_do_giao_hang: viDo,
+    kinh_do_giao_hang: kinhDo,
+  };
+};
+
 const createOrder = async (user, data) => {
+  const userId = user.id_nguoi_dung;
+  const shippingData = await resolveShippingForOrder(userId, data, null);
   const transaction = await sequelize.transaction();
 
   try {
-    const userId = user.id_nguoi_dung;
     let tong_tien = 0;
     const orderDetails = [];
 
@@ -66,7 +124,7 @@ const createOrder = async (user, data) => {
       await orderRepository.updateProductStock(product, newStock, transaction);
     }
 
-    const phi_van_chuyen = Number(data.phi_van_chuyen || 0);
+    const phi_van_chuyen = shippingData.phi_van_chuyen;
     const tong_thanh_toan = tong_tien + phi_van_chuyen;
 
     let trang_thai_don_hang = "cho_xu_ly";
@@ -132,8 +190,13 @@ const createOrder = async (user, data) => {
         tong_thanh_toan,
         hinh_thuc_thanh_toan: data.hinh_thuc_thanh_toan,
         trang_thai_don_hang,
-        dia_chi_giao_hang: data.dia_chi_giao_hang,
+        dia_chi_giao_hang: shippingData.dia_chi_giao_hang,
         ghi_chu: data.ghi_chu || null,
+        id_khu_vuc_giao_hang: shippingData.id_khu_vuc_giao_hang,
+        id_diem_xuat_phat: shippingData.id_diem_xuat_phat,
+        khoang_cach_giao_hang_km: shippingData.khoang_cach_giao_hang_km,
+        vi_do_giao_hang: shippingData.vi_do_giao_hang,
+        kinh_do_giao_hang: shippingData.kinh_do_giao_hang,
       },
       transaction
     );

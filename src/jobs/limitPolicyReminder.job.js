@@ -2,6 +2,8 @@ const cron = require("node-cron");
 const { sequelize } = require("../config/database");
 const notificationService = require("../api/services/notification.service");
 
+const REMINDER_DAYS_BEFORE_STAGE = 3;
+
 const getDayDiff = (fromDate, toDate) => {
   if (!fromDate || !toDate) return null;
 
@@ -20,7 +22,7 @@ const getDayDiff = (fromDate, toDate) => {
 
 const getPolicies = async () => {
   const [policies] = await sequelize.query(`
-    SELECT 
+    SELECT
       id_chinh_sach,
       ten_chinh_sach,
       giai_doan,
@@ -29,7 +31,7 @@ const getPolicies = async () => {
       han_muc_toi_da
     FROM chinh_sach_han_muc
     WHERE trang_thai = 'hoat_dong'
-    ORDER BY tu_ngay ASC
+    ORDER BY ten_chinh_sach ASC, tu_ngay ASC
   `);
 
   return policies;
@@ -37,21 +39,25 @@ const getPolicies = async () => {
 
 const getApprovedProfiles = async () => {
   const [profiles] = await sequelize.query(`
-    SELECT 
+    SELECT
       hs.id_ho_so,
       hs.id_nguoi_dung,
       hs.id_chinh_sach,
       hs.id_chinh_sach_da_nhac,
+      hs.id_khu_vuc,
       hs.dinh_muc_cong_no,
       hs.trang_thai_ho_so,
       hs.duoc_phep_tra_sau,
       hs.bi_khoa_tra_sau,
       nd.ho_ten,
+      cs.ten_chinh_sach AS ten_chinh_sach_hien_tai,
+      cs.tu_ngay AS tu_ngay_hien_tai,
       vn.ngay_tha_giong,
       vn.ten_vu_nuoi
     FROM ho_so_khach_hang hs
     INNER JOIN nguoi_dung nd ON nd.id_nguoi_dung = hs.id_nguoi_dung
     INNER JOIN vu_nuoi vn ON vn.id_vu_nuoi = hs.id_vu_nuoi
+    INNER JOIN chinh_sach_han_muc cs ON cs.id_chinh_sach = hs.id_chinh_sach
     WHERE hs.duoc_phep_tra_sau = 1
       AND hs.trang_thai_ho_so = 'da_duyet'
       AND hs.bi_khoa_tra_sau = 0
@@ -61,22 +67,22 @@ const getApprovedProfiles = async () => {
   return profiles;
 };
 
-const getLimitStaffUsers = async () => {
-  const [staffs] = await sequelize.query(`
-    SELECT id_nguoi_dung, ho_ten
-    FROM nguoi_dung
-    WHERE vai_tro = 'nhan_vien_dinh_muc'
-      AND trang_thai_tai_khoan = 'hoat_dong'
-  `);
+const findUpcomingPolicyInSameSet = (policies, profile, farmingDays) => {
+  if (!profile.ten_chinh_sach_hien_tai) return null;
 
-  return staffs;
-};
-
-const findTargetPolicyByFarmingDay = (policies, farmingDays) => {
   return (
     policies
-      .filter((policy) => farmingDays >= Number(policy.tu_ngay))
-      .sort((a, b) => Number(b.tu_ngay) - Number(a.tu_ngay))[0] || null
+      .filter((policy) => {
+        const daysUntilStart = Number(policy.tu_ngay) - farmingDays;
+
+        return (
+          policy.ten_chinh_sach === profile.ten_chinh_sach_hien_tai &&
+          Number(policy.tu_ngay) > Number(profile.tu_ngay_hien_tai || 0) &&
+          daysUntilStart >= 0 &&
+          daysUntilStart <= REMINDER_DAYS_BEFORE_STAGE
+        );
+      })
+      .sort((a, b) => Number(a.tu_ngay) - Number(b.tu_ngay))[0] || null
   );
 };
 
@@ -101,21 +107,14 @@ const runLimitPolicyReminder = async () => {
     const policies = await getPolicies();
 
     if (!policies.length) {
-      console.log("[LIMIT POLICY REMINDER] Không có chính sách hạn mức hoạt động");
+      console.log("[LIMIT POLICY REMINDER] Khong co chinh sach hoat dong");
       return;
     }
 
     const profiles = await getApprovedProfiles();
 
     if (!profiles.length) {
-      console.log("[LIMIT POLICY REMINDER] Không có hồ sơ cần kiểm tra");
-      return;
-    }
-
-    const staffs = await getLimitStaffUsers();
-
-    if (!staffs.length) {
-      console.log("[LIMIT POLICY REMINDER] Không có nhân viên định mức hoạt động");
+      console.log("[LIMIT POLICY REMINDER] Khong co ho so can kiem tra");
       return;
     }
 
@@ -127,7 +126,11 @@ const runLimitPolicyReminder = async () => {
 
       if (farmingDays === null) continue;
 
-      const targetPolicy = findTargetPolicyByFarmingDay(policies, farmingDays);
+      const targetPolicy = findUpcomingPolicyInSameSet(
+        policies,
+        profile,
+        farmingDays
+      );
 
       if (!targetPolicy) continue;
 
@@ -138,23 +141,29 @@ const runLimitPolicyReminder = async () => {
       if (targetPolicyId === currentPolicyId) continue;
       if (targetPolicyId === notifiedPolicyId) continue;
 
-      for (const staff of staffs) {
-        await notificationService.createNotification({
-          id_nguoi_dung: staff.id_nguoi_dung,
-          tieu_de: "Đến hạn kiểm định nâng hạn mức",
-          noi_dung: `Hồ sơ #${profile.id_ho_so} của khách hàng ${profile.ho_ten} đã đạt ${farmingDays} ngày nuôi, phù hợp chính sách ${targetPolicy.ten_chinh_sach}. Vui lòng khảo sát và lập phiếu đề xuất nâng hạn mức.`,
-          loai: "cong_no",
-          lien_ket: `/nhan-vien-dinh-muc/tao-phieu-de-xuat`,
-        });
+      const daysUntilStart = Math.max(
+        Number(targetPolicy.tu_ngay) - farmingDays,
+        0
+      );
 
-        createdCount += 1;
+      const notifications = await notificationService.notifyLimitStaffByArea({
+        id_khu_vuc: profile.id_khu_vuc,
+        tieu_de: "Sap den moc nang han muc",
+        noi_dung: `Ho so #${profile.id_ho_so} cua khach hang ${profile.ho_ten} dang o ${farmingDays} ngay nuoi, con ${daysUntilStart} ngay den ${targetPolicy.ten_chinh_sach} - ${targetPolicy.giai_doan}. Vui long khao sat va lap phieu de xuat nang han muc.`,
+        loai: "cong_no",
+        lien_ket: `/nhan-vien-dinh-muc/tao-phieu-de-xuat`,
+      });
+
+      const notifiedCount = notifications.length;
+
+      if (notifiedCount > 0) {
+        createdCount += notifiedCount;
+        await updateNotifiedPolicy(profile.id_ho_so, targetPolicyId);
       }
-
-      await updateNotifiedPolicy(profile.id_ho_so, targetPolicyId);
     }
 
     console.log(
-      `[LIMIT POLICY REMINDER] Đã tạo ${createdCount} thông báo kiểm định hạn mức`
+      `[LIMIT POLICY REMINDER] Da tao ${createdCount} thong bao kiem dinh han muc`
     );
   } catch (error) {
     console.error("[LIMIT POLICY REMINDER ERROR]", error.message);
@@ -163,8 +172,7 @@ const runLimitPolicyReminder = async () => {
 
 const startLimitPolicyReminderJob = () => {
   cron.schedule(
-"0 7 * * *",
-//"*/1 * * * *"
+    "* * * * *",
     async () => {
       await runLimitPolicyReminder();
     },
@@ -173,7 +181,7 @@ const startLimitPolicyReminderJob = () => {
     }
   );
 
-  console.log("[LIMIT POLICY REMINDER] Job đã được bật - chạy mỗi ngày 07:00");
+  console.log("[LIMIT POLICY REMINDER] Job da bat - chay moi 1 phut");
 };
 
 module.exports = {

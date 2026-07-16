@@ -99,12 +99,12 @@ const update = async (id_ao, data) => {
 /**
  * Xóa ao nuôi khỏi hệ thống.
  */
-const remove = async (id_ao) => {
-  const pond = await AoNuoi.findByPk(id_ao);
+const remove = async (id_ao, transaction = null) => {
+  const pond = await AoNuoi.findByPk(id_ao, { transaction });
 
   if (!pond) return null;
 
-  await pond.destroy();
+  await pond.destroy({ transaction });
 
   return pond;
 };

@@ -9,15 +9,12 @@ const ThanhToan = require("./ThanhToan");
 const GiaoHang = require("./GiaoHang");
 const HopDong = require("./HopDong");
 const HoSoKhachHang = require("./HoSoKhachHang");
-const BaiViet = require("./BaiViet");
-const BinhLuan = require("./BinhLuan");
 const NhanVienGiaoHang = require("./NhanVienGiaoHang");
 const GiaHanThanhToan = require("./GiaHanThanhToan");
 const ThanhToanCongNo = require("./ThanhToanCongNo");
 const ChiTietThanhToanCongNo = require("./ChiTietThanhToanCongNo");
 const ThongBao = require("./ThongBao");
 const ThuongLai = require("./ThuongLai");
-const ThoaThuanBaBen = require("./ThoaThuanBaBen");
 const PhieuDeXuatHanMuc = require("./PhieuDeXuatHanMuc");
 const ChinhSachHanMuc = require("./ChinhSachHanMuc");
 const TinhThanh = require("./TinhThanh");
@@ -142,6 +139,13 @@ DonHang.belongsTo(CauHinhDiemXuatPhat, {
   foreignKey: "id_diem_xuat_phat",
 });
 
+KhoHang.hasMany(DonHang, {
+  foreignKey: "id_kho_xuat",
+});
+DonHang.belongsTo(KhoHang, {
+  foreignKey: "id_kho_xuat",
+});
+
 /* =========================
    CHÍNH SÁCH HẠN MỨC
 ========================= */
@@ -195,59 +199,6 @@ PhieuDeXuatHanMuc.belongsTo(ChinhSachHanMuc, {
 ChinhSachHanMuc.hasMany(PhieuDeXuatHanMuc, {
   foreignKey: "id_chinh_sach",
 });
-/* =========================
-   THỎA THUẬN BA BÊN
-========================= */
-HoSoKhachHang.hasMany(ThoaThuanBaBen, {
-  foreignKey: "id_ho_so",
-});
-ThoaThuanBaBen.belongsTo(HoSoKhachHang, {
-  foreignKey: "id_ho_so",
-});
-
-ThuongLai.hasMany(ThoaThuanBaBen, {
-  foreignKey: "id_thuong_lai",
-});
-ThoaThuanBaBen.belongsTo(ThuongLai, {
-  foreignKey: "id_thuong_lai",
-});
-
-NguoiDung.hasMany(ThoaThuanBaBen, {
-  foreignKey: "id_admin_yeu_cau",
-  as: "yeu_cau_thoa_thuan_ba_ben",
-});
-ThoaThuanBaBen.belongsTo(NguoiDung, {
-  foreignKey: "id_admin_yeu_cau",
-  as: "admin_yeu_cau_thoa_thuan",
-});
-
-NguoiDung.hasMany(ThoaThuanBaBen, {
-  foreignKey: "id_nhan_vien_phu_trach",
-  as: "thoa_thuan_duoc_giao",
-});
-ThoaThuanBaBen.belongsTo(NguoiDung, {
-  foreignKey: "id_nhan_vien_phu_trach",
-  as: "nhan_vien_phu_trach_thoa_thuan",
-});
-
-NguoiDung.hasMany(ThoaThuanBaBen, {
-  foreignKey: "id_nhan_vien_upload",
-  as: "thoa_thuan_da_upload",
-});
-ThoaThuanBaBen.belongsTo(NguoiDung, {
-  foreignKey: "id_nhan_vien_upload",
-  as: "nhan_vien_upload_thoa_thuan",
-});
-
-NguoiDung.hasMany(ThoaThuanBaBen, {
-  foreignKey: "id_admin_xac_nhan",
-  as: "thoa_thuan_da_xac_nhan",
-});
-ThoaThuanBaBen.belongsTo(NguoiDung, {
-  foreignKey: "id_admin_xac_nhan",
-  as: "admin_xac_nhan_thoa_thuan",
-});
-
 /* =========================
    HỒ SƠ KHÁCH HÀNG
 ========================= */
@@ -348,6 +299,24 @@ ChiTietDonHang.belongsTo(SanPham, {
   foreignKey: "id_san_pham",
 });
 
+KhoHang.hasMany(ChiTietDonHang, {
+  foreignKey: "id_kho_khach_chon",
+  as: "chi_tiet_khach_chon_kho",
+});
+ChiTietDonHang.belongsTo(KhoHang, {
+  foreignKey: "id_kho_khach_chon",
+  as: "kho_khach_chon",
+});
+
+KhoHang.hasMany(ChiTietDonHang, {
+  foreignKey: "id_kho_xuat_thuc_te",
+  as: "chi_tiet_xuat_tu_kho",
+});
+ChiTietDonHang.belongsTo(KhoHang, {
+  foreignKey: "id_kho_xuat_thuc_te",
+  as: "kho_xuat_thuc_te",
+});
+
 /* =========================
    DANH MỤC / SẢN PHẨM
 ========================= */
@@ -390,6 +359,13 @@ NhanVienGiaoHang.hasMany(GiaoHang, {
 });
 GiaoHang.belongsTo(NhanVienGiaoHang, {
   foreignKey: "id_nhan_vien_giao",
+});
+
+KhoHang.hasMany(GiaoHang, {
+  foreignKey: "id_kho_xuat",
+});
+GiaoHang.belongsTo(KhoHang, {
+  foreignKey: "id_kho_xuat",
 });
 
 /* =========================
@@ -461,30 +437,6 @@ ThongBao.belongsTo(NguoiDung, {
   foreignKey: "id_nguoi_dung",
 });
 
-/* =========================
-   BÀI VIẾT / BÌNH LUẬN
-========================= */
-NguoiDung.hasMany(BaiViet, {
-  foreignKey: "id_nguoi_dung",
-});
-BaiViet.belongsTo(NguoiDung, {
-  foreignKey: "id_nguoi_dung",
-});
-
-BaiViet.hasMany(BinhLuan, {
-  foreignKey: "id_bai_viet",
-});
-BinhLuan.belongsTo(BaiViet, {
-  foreignKey: "id_bai_viet",
-});
-
-NguoiDung.hasMany(BinhLuan, {
-  foreignKey: "id_nguoi_dung",
-});
-BinhLuan.belongsTo(NguoiDung, {
-  foreignKey: "id_nguoi_dung",
-});
-
 module.exports = {
   NguoiDung,
   DanhMuc,
@@ -497,15 +449,12 @@ module.exports = {
   GiaoHang,
   HopDong,
   HoSoKhachHang,
-  BaiViet,
-  BinhLuan,
   NhanVienGiaoHang,
   GiaHanThanhToan,
   ThanhToanCongNo,
   ChiTietThanhToanCongNo,
   ThongBao,
   ThuongLai,
-  ThoaThuanBaBen,
   PhieuDeXuatHanMuc,
   ChinhSachHanMuc,
   KhuVucHoTroTraSau,

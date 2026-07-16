@@ -22,6 +22,16 @@ const TonKhoSanPham = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    so_luong_giu: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    ton_kho_toi_thieu: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     ghi_chu: {
       type: DataTypes.TEXT,
       allowNull: true,

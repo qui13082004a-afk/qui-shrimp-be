@@ -8,6 +8,7 @@ const {
 const notificationService = require("./notification.service");
 
 const toNumber = (value) => Number(value || 0);
+const MAX_DAYS_BEFORE_POLICY_STAGE = 3;
 
 const canCreateProposal = (role) => {
   return role === "nhan_vien_dinh_muc" || role === "admin";
@@ -41,6 +42,32 @@ const findPolicyByFarmingDay = async (ngayNuoi) => {
   );
 };
 
+const findNextPolicyForApprovedProfile = async (profile, farmingDays) => {
+  if (farmingDays === null || farmingDays === undefined) return null;
+
+  const plainProfile = profile.toJSON ? profile.toJSON() : profile;
+  const currentPolicy = plainProfile.ChinhSachHanMuc;
+
+  if (!currentPolicy) return null;
+
+  const activePolicies = await chinhSachHanMucRepository.findActive();
+
+  return (
+    activePolicies
+      .filter((policy) => {
+        const daysUntilStage = Number(policy.tu_ngay) - Number(farmingDays);
+
+        return (
+          String(policy.ten_chinh_sach || "").trim() ===
+            String(currentPolicy.ten_chinh_sach || "").trim() &&
+          Number(policy.tu_ngay) > Number(currentPolicy.tu_ngay) &&
+          daysUntilStage <= MAX_DAYS_BEFORE_POLICY_STAGE
+        );
+      })
+      .sort((a, b) => Number(a.tu_ngay) - Number(b.tu_ngay))[0] || null
+  );
+};
+
 const validatePolicyUpgradeFlow = (profile, selectedPolicy) => {
   if (!selectedPolicy) return;
 
@@ -70,6 +97,32 @@ const validatePolicyUpgradeFlow = (profile, selectedPolicy) => {
   ) {
     throw new Error(
       "Hạn mức của giai đoạn đề xuất phải cao hơn hạn mức hiện tại"
+    );
+  }
+};
+
+const validatePolicyTiming = (profile, selectedPolicy, farmingDays) => {
+  if (!selectedPolicy || farmingDays === null || farmingDays === undefined) {
+    return;
+  }
+
+  const plainProfile = profile.toJSON ? profile.toJSON() : profile;
+  const currentPolicy = plainProfile.ChinhSachHanMuc;
+
+  if (!currentPolicy) return;
+
+  const isNextStageInSameSet =
+    String(selectedPolicy.ten_chinh_sach || "").trim() ===
+      String(currentPolicy.ten_chinh_sach || "").trim() &&
+    Number(selectedPolicy.tu_ngay) > Number(currentPolicy.tu_ngay);
+
+  if (!isNextStageInSameSet) return;
+
+  const daysUntilStage = Number(selectedPolicy.tu_ngay) - Number(farmingDays);
+
+  if (daysUntilStage > MAX_DAYS_BEFORE_POLICY_STAGE) {
+    throw new Error(
+      `Chua den thoi diem lap phieu cho giai doan nay. Chi duoc lap som toi da ${MAX_DAYS_BEFORE_POLICY_STAGE} ngay truoc moc ${selectedPolicy.tu_ngay} ngay nuoi`
     );
   }
 };
@@ -207,10 +260,14 @@ const createProposal = async (user, data, files = []) => {
         throw new Error("Chính sách hạn mức đã tạm dừng");
       }
     } else {
-      policy = await findPolicyByFarmingDay(ngayNuoiLucKhaoSat);
+      policy =
+        (profile.duoc_phep_tra_sau && profile.trang_thai_ho_so === "da_duyet"
+          ? await findNextPolicyForApprovedProfile(profile, ngayNuoiLucKhaoSat)
+          : null) || (await findPolicyByFarmingDay(ngayNuoiLucKhaoSat));
     }
 
     validatePolicyUpgradeFlow(profile, policy);
+    validatePolicyTiming(profile, policy, ngayNuoiLucKhaoSat);
 
     if (
       policy &&

@@ -9,13 +9,10 @@ const orderController = require("./order.controller");
 const paymentController = require("./payment.controller");
 const deliveryController = require("./delivery.controller");
 const debtExtensionController=require("./debtExtension.controller");
-const blogController = require("./blog.controller");
-const commentController = require("./comment.controller");
 const chinhSachHanMucController = require("./chinhSachHanMuc.controller");
 const phieuDeXuatHanMucController = require("./phieuDeXuatHanMuc.controller");
 const hopDongController = require("./hopDong.controller");
 const thuongLaiController = require("./thuongLai.controller");
-const thoaThuanBaBenController = require("./thoaThuanBaBen.controller");
 const khuVucHoTroTraSauController = require(
   "./khuVucHoTroTraSau.controller"
 );
@@ -37,11 +34,10 @@ module.exports = {
   paymentController,
   deliveryController,
   debtExtensionController,
-  blogController,chinhSachHanMucController,
-  commentController,
+  chinhSachHanMucController,
   phieuDeXuatHanMucController,
   hopDongController,
-  thuongLaiController,thoaThuanBaBenController,
+  thuongLaiController,
   khuVucHoTroTraSauController,
   locationController,
   businessAreaController,

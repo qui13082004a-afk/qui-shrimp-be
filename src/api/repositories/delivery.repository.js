@@ -8,6 +8,7 @@ const {
   SanPham,
   AoNuoi,
   VuNuoi,
+  KhoHang,
 } = require("../models");
 
 const deliveryOrderInclude = [
@@ -23,11 +24,11 @@ const deliveryOrderInclude = [
   },
 ];
 
-const create = async (data) => {
-  return await GiaoHang.create(data);
+const create = async (data, transaction = null) => {
+  return await GiaoHang.create(data, { transaction });
 };
 
-const findById = async (id_giao_hang) => {
+const findById = async (id_giao_hang, transaction = null) => {
   return await GiaoHang.findByPk(id_giao_hang, {
     include: [
       {
@@ -35,7 +36,10 @@ const findById = async (id_giao_hang) => {
         include: deliveryOrderInclude,
       },
       { model: NhanVienGiaoHang },
+      { model: KhoHang },
     ],
+    transaction,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined,
   });
 };
 
@@ -85,13 +89,13 @@ const findDeliveryByOrderId = async (id_don_hang) => {
   });
 };
 
-const updateDelivery = async (delivery, data) => {
-  await delivery.update(data);
+const updateDelivery = async (delivery, data, transaction = null) => {
+  await delivery.update(data, { transaction });
   return delivery;
 };
 
-const updateOrder = async (order, data) => {
-  await order.update(data);
+const updateOrder = async (order, data, transaction = null) => {
+  await order.update(data, { transaction });
   return order;
 };
 

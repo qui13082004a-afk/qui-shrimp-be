@@ -29,6 +29,15 @@ const KhoHang = sequelize.define(
       type: DataTypes.DECIMAL(10, 7),
       allowNull: true,
     },
+    ban_kinh_phuc_vu: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
+    muc_do_uu_tien: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     ghi_chu: {
       type: DataTypes.TEXT,
       allowNull: true,

@@ -4,6 +4,7 @@ const {
   productRepository,
   departurePointRepository,
 } = require("../repositories");
+const notificationService = require("./notification.service");
 
 const validateAdmin = (user) => {
   if (!user || user.vai_tro !== "admin") {
@@ -53,6 +54,14 @@ const createWarehouse = async (user, data) => {
     dia_chi: departurePoint.dia_chi,
     vi_do: departurePoint.vi_do,
     kinh_do: departurePoint.kinh_do,
+    ban_kinh_phuc_vu: toNullableNumber(
+      data.ban_kinh_phuc_vu,
+      "Ban kinh phuc vu",
+      0,
+      10000
+    ),
+    muc_do_uu_tien:
+      toNullableNumber(data.muc_do_uu_tien, "Muc do uu tien", 0, 100000) || 0,
     ghi_chu: data.ghi_chu || null,
     trang_thai: data.trang_thai || "hoat_dong",
   });
@@ -80,6 +89,22 @@ const updateWarehouse = async (user, id_kho_hang, data) => {
     patch.kinh_do = departurePoint.kinh_do;
     if (data.ten_kho === undefined) patch.ten_kho = departurePoint.ten_diem;
   }
+  if (data.ban_kinh_phuc_vu !== undefined) {
+    patch.ban_kinh_phuc_vu = toNullableNumber(
+      data.ban_kinh_phuc_vu,
+      "Ban kinh phuc vu",
+      0,
+      10000
+    );
+  }
+  if (data.muc_do_uu_tien !== undefined) {
+    patch.muc_do_uu_tien = toNullableNumber(
+      data.muc_do_uu_tien,
+      "Muc do uu tien",
+      0,
+      100000
+    ) || 0;
+  }
   if (data.ghi_chu !== undefined) patch.ghi_chu = data.ghi_chu || null;
   if (data.trang_thai !== undefined) patch.trang_thai = data.trang_thai;
 
@@ -96,25 +121,36 @@ const upsertProductStock = async (user, data) => {
   const warehouse = await warehouseRepository.findWarehouseById(data.id_kho_hang);
   if (!warehouse) throw new Error("Khong tim thay kho hang");
 
+  const stockQuantity = toStockNumber(data.so_luong);
+  const minimumStock = toStockNumber(data.ton_kho_toi_thieu || 0);
+
   const transaction = await sequelize.transaction();
   try {
     const stock = await warehouseRepository.upsertStock(
       {
         id_san_pham: data.id_san_pham,
         id_kho_hang: data.id_kho_hang,
-        so_luong: toStockNumber(data.so_luong),
+        so_luong: stockQuantity,
+        ton_kho_toi_thieu: minimumStock,
         ghi_chu: data.ghi_chu || null,
       },
       transaction
     );
 
-    const totalStock = await warehouseRepository.sumStockByProductId(
-      data.id_san_pham,
-      transaction
-    );
-
-    await product.update({ ton_kho: totalStock }, { transaction });
     await transaction.commit();
+
+    if (minimumStock > 0 && stockQuantity <= minimumStock) {
+      try {
+        await notificationService.notifyAdmins({
+          tieu_de: "Canh bao ton kho thap",
+          noi_dung: `San pham "${product.ten_san_pham}" tai kho "${warehouse.ten_kho}" con ${stockQuantity}, bang hoac thap hon muc toi thieu ${minimumStock}.`,
+          loai: "he_thong",
+          lien_ket: "/admin/san-pham",
+        });
+      } catch (notificationError) {
+        console.error("Khong the gui thong bao ton kho thap:", notificationError.message);
+      }
+    }
 
     return stock;
   } catch (error) {

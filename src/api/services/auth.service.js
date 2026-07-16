@@ -25,8 +25,19 @@ const register = async (data) => {
   const { ho_ten, so_dien_thoai, dia_chi, email, mat_khau, tinh_thanh } = data;
 
   // Kiểm tra email duy nhất (Đây là logic nghiệp vụ tầng Database, vẫn phải giữ lại)
-  const existedUser = await authRepository.findByEmail(email);
+  const existedUser = await authRepository.findByEmailOrPhone(
+    email,
+    so_dien_thoai
+  );
   if (existedUser) {
+    if (existedUser.email === email) {
+      throw new Error("Email này đã được đăng ký trên hệ thống");
+    }
+
+    if (existedUser.so_dien_thoai === so_dien_thoai) {
+      throw new Error("Số điện thoại này đã được đăng ký trên hệ thống");
+    }
+
     throw new Error("Email này đã được đăng ký trên hệ thống");
   }
 

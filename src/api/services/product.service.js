@@ -1,12 +1,46 @@
 const { productRepository, categoryRepository } = require("../repositories");
 
+const toPlainProduct = (product) => {
+  const plain = product?.toJSON ? product.toJSON() : product;
+  if (!plain) return plain;
+
+  const stocks = Array.isArray(plain.TonKhoSanPhams)
+    ? plain.TonKhoSanPhams
+    : [];
+
+  const totalStock = stocks.reduce(
+    (sum, stock) => sum + Number(stock.so_luong || 0),
+    0
+  );
+  const totalMinimumStock = stocks.reduce(
+    (sum, stock) => sum + Number(stock.ton_kho_toi_thieu || 0),
+    0
+  );
+
+  return {
+    ...plain,
+    ton_kho: totalStock,
+    ton_kho_toi_thieu: totalMinimumStock,
+  };
+};
+
+const normalizeProductPayload = (data = {}) => {
+  const {
+    ton_kho,
+    ton_kho_toi_thieu,
+    id_kho_hang,
+    so_luong_kho,
+    ...productData
+  } = data;
+
+  return productData;
+};
+
 const createProduct = async (data) => {
   const {
     id_danh_muc,
     ten_san_pham,
     gia,
-    ton_kho,
-    ton_kho_toi_thieu,
     hinh_anh,
     mo_ta,
     cong_dung,
@@ -28,10 +62,6 @@ const createProduct = async (data) => {
     throw new Error("Giá bán phải lớn hơn 0");
   }
 
-  if (ton_kho === undefined || Number(ton_kho) < 0) {
-    throw new Error("Tồn kho không hợp lệ");
-  }
-
   const danhMuc = await categoryRepository.findById(id_danh_muc);
 
   if (!danhMuc) {
@@ -42,8 +72,6 @@ const createProduct = async (data) => {
     id_danh_muc,
     ten_san_pham,
     gia,
-    ton_kho,
-    ton_kho_toi_thieu: ton_kho_toi_thieu || 0,
     hinh_anh,
     mo_ta,
     cong_dung,
@@ -54,18 +82,29 @@ const createProduct = async (data) => {
     trang_thai: "dang_ban",
   });
 
-  return product;
+  return toPlainProduct(product);
 };
 
 const getActiveProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
-  const keyword = query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
-  const id_danh_muc = query.id_danh_muc && query.id_danh_muc !== "" ? Number(query.id_danh_muc) : undefined;
-  const id_kho_hang = query.id_kho_hang && query.id_kho_hang !== "" ? Number(query.id_kho_hang) : undefined;
-  const minPrice = query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
-  const maxPrice = query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
-  const sortBy = query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
+  const keyword =
+    query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
+  const id_danh_muc =
+    query.id_danh_muc && query.id_danh_muc !== ""
+      ? Number(query.id_danh_muc)
+      : undefined;
+  const id_kho_hang =
+    query.id_kho_hang && query.id_kho_hang !== ""
+      ? Number(query.id_kho_hang)
+      : undefined;
+  const minPrice =
+    query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
+  const maxPrice =
+    query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
+  const sortBy =
+    query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
+
   const result = await productRepository.findAllActive({
     page,
     limit,
@@ -78,7 +117,7 @@ const getActiveProducts = async (query = {}) => {
   });
 
   return {
-    products: result.rows,
+    products: result.rows.map(toPlainProduct),
     pagination: {
       page,
       limit,
@@ -91,24 +130,26 @@ const getActiveProducts = async (query = {}) => {
 const getAllProducts = async (query = {}) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 9;
-
-  // Lọc sạch các chuỗi rỗng gửi từ URL của Front-end
-  const keyword = query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
-  
-  // Chuyển sang undefined nếu rỗng để Sequelize tự động bỏ qua
-  const id_danh_muc = query.id_danh_muc && query.id_danh_muc !== "" ? Number(query.id_danh_muc) : undefined;
-  const id_kho_hang = query.id_kho_hang && query.id_kho_hang !== "" ? Number(query.id_kho_hang) : undefined;
+  const keyword =
+    query.keyword && query.keyword.trim() !== "" ? query.keyword.trim() : "";
+  const id_danh_muc =
+    query.id_danh_muc && query.id_danh_muc !== ""
+      ? Number(query.id_danh_muc)
+      : undefined;
+  const id_kho_hang =
+    query.id_kho_hang && query.id_kho_hang !== ""
+      ? Number(query.id_kho_hang)
+      : undefined;
   const trang_thai =
     query.trang_thai && query.trang_thai !== "tat_ca" && query.trang_thai !== ""
       ? query.trang_thai
       : undefined;
-
-  // Ép kiểu số an toàn cho khoảng giá để tránh lỗi Mismatch Data Type
-  const minPrice = query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
-  const maxPrice = query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
-
-  // Đảm bảo sortBy luôn có dữ liệu hợp lệ trước khi gửi xuống Repository
-  const sortBy = query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
+  const minPrice =
+    query.minPrice && query.minPrice !== "" ? Number(query.minPrice) : undefined;
+  const maxPrice =
+    query.maxPrice && query.maxPrice !== "" ? Number(query.maxPrice) : undefined;
+  const sortBy =
+    query.sortBy && query.sortBy.trim() !== "" ? query.sortBy.trim() : "newest";
 
   const result = await productRepository.findAll({
     page,
@@ -123,7 +164,7 @@ const getAllProducts = async (query = {}) => {
   });
 
   return {
-    products: result.rows,
+    products: result.rows.map(toPlainProduct),
     pagination: {
       page,
       limit,
@@ -140,17 +181,17 @@ const getProductById = async (id) => {
     throw new Error("Không tìm thấy sản phẩm");
   }
 
-  return product;
+  return toPlainProduct(product);
 };
 
 const updateProduct = async (id, data) => {
-  const product = await productRepository.update(id, data);
+  const product = await productRepository.update(id, normalizeProductPayload(data));
 
   if (!product) {
     throw new Error("Không tìm thấy sản phẩm");
   }
 
-  return product;
+  return getProductById(id);
 };
 
 const deleteProduct = async (id) => {

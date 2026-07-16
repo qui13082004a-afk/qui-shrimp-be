@@ -17,11 +17,6 @@ const KhuVucKinhDoanh = sequelize.define("KhuVucKinhDoanh", {
     allowNull: false,
     defaultValue: false,
   },
-  cho_phep_tra_sau: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-  },
   dang_hoat_dong: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
@@ -48,7 +43,6 @@ const KhuVucKinhDoanh = sequelize.define("KhuVucKinhDoanh", {
   indexes: [
     { unique: true, fields: ["id_tinh_thanh"] },
     { fields: ["dang_hoat_dong", "cho_phep_ban_hang"] },
-    { fields: ["dang_hoat_dong", "cho_phep_tra_sau"] },
   ],
 });
 

@@ -192,10 +192,80 @@ const calculateShippingFee = async (data) => {
   };
 };
 
+const calculateShippingFeeFromWarehouse = async ({ warehouse, ...data }) => {
+  const viDo = Number(data.vi_do);
+  const kinhDo = Number(data.kinh_do);
+
+  if (!warehouse) throw new Error("Chua xac dinh kho xuat hang");
+  if (!Number.isFinite(Number(warehouse.vi_do)) || !Number.isFinite(Number(warehouse.kinh_do))) {
+    throw new Error("Kho xuat hang chua co toa do hop le");
+  }
+  if (!Number.isFinite(viDo) || viDo < -90 || viDo > 90) {
+    throw new Error("Vi do khong hop le");
+  }
+  if (!Number.isFinite(kinhDo) || kinhDo < -180 || kinhDo > 180) {
+    throw new Error("Kinh do khong hop le");
+  }
+
+  const serviceArea = await resolveServiceArea({
+    ...data,
+    vi_do: viDo,
+    kinh_do: kinhDo,
+  });
+
+  if (!serviceArea.area) {
+    throw new Error("Dia diem giao hang chua nam trong khu vuc ho tro");
+  }
+
+  const area = serviceArea.area;
+  const distance = await distanceService.calculateDistanceKm(
+    { vi_do: warehouse.vi_do, kinh_do: warehouse.kinh_do },
+    { vi_do: viDo, kinh_do: kinhDo }
+  );
+
+  const provinceRadius = area.ban_kinh_toi_da_km === null ? null : Number(area.ban_kinh_toi_da_km);
+  const warehouseRadius =
+    warehouse.ban_kinh_phuc_vu === null || warehouse.ban_kinh_phuc_vu === undefined
+      ? null
+      : Number(warehouse.ban_kinh_phuc_vu);
+
+  if (serviceArea.can_check_radius && provinceRadius !== null && distance.distance_km > provinceRadius) {
+    throw new Error("Khoang cach vuot ban kinh toi da cua khu vuc");
+  }
+  if (serviceArea.can_check_radius && warehouseRadius !== null && distance.distance_km > warehouseRadius) {
+    throw new Error("Khoang cach vuot ban kinh phuc vu cua kho xuat hang");
+  }
+
+  const matchedFee = await shippingFeeRepository.findMatchedFee(area.id_khu_vuc, distance.distance_km);
+  const shippingFee = matchedFee
+    ? Number(matchedFee.phi_co_dinh)
+    : Number(area.phi_van_chuyen_mac_dinh || 0);
+
+  return {
+    id_khu_vuc: area.id_khu_vuc,
+    id_diem_xuat_phat: null,
+    khoang_cach_km: distance.distance_km,
+    distance_provider: distance.provider,
+    phi_van_chuyen: shippingFee,
+    muc_phi: matchedFee || null,
+    pham_vi_phuc_vu: serviceArea.pham_vi_phuc_vu,
+    thong_bao: serviceArea.thong_bao,
+    dia_gioi: serviceArea.boundary.dia_gioi,
+    kho_xuat: {
+      id_kho_hang: warehouse.id_kho_hang,
+      ten_kho: warehouse.ten_kho,
+      dia_chi: warehouse.dia_chi,
+      vi_do: warehouse.vi_do,
+      kinh_do: warehouse.kinh_do,
+    },
+  };
+};
+
 module.exports = {
   getAllFees,
   getFeeById,
   createFee,
   updateFee,
   calculateShippingFee,
+  calculateShippingFeeFromWarehouse,
 };

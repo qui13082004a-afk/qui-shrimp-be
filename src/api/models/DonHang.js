@@ -39,6 +39,14 @@ const DonHang = sequelize.define("DonHang", {
     type: DataTypes.BIGINT,
     allowNull: true,
   },
+  id_kho_xuat: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+  },
+  co_chuyen_kho: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
   khoang_cach_giao_hang_km: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,

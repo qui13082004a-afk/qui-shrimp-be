@@ -10,8 +10,6 @@ const PRODUCT_LIST_ATTRIBUTES = [
   "ten_san_pham",
   "gia",
   "don_vi_tinh",
-  "ton_kho",
-  "ton_kho_toi_thieu",
   "hinh_anh",
   "han_su_dung",
   "xuat_xu",
@@ -32,8 +30,6 @@ const PRODUCT_DETAIL_ATTRIBUTES = [
   "huong_dan_su_dung",
   "gia",
   "don_vi_tinh",
-  "ton_kho",
-  "ton_kho_toi_thieu",
   "hinh_anh",
   "han_su_dung",
   "xuat_xu",
@@ -63,6 +59,8 @@ const STOCK_INCLUDE = {
         "dia_chi",
         "vi_do",
         "kinh_do",
+        "ban_kinh_phuc_vu",
+        "muc_do_uu_tien",
         "ghi_chu",
         "trang_thai",
         "ngay_tao",
@@ -159,9 +157,6 @@ const buildProductOrder = (sortBy = "newest") => {
 
     case "nameDesc":
       return [["ten_san_pham", "DESC"]];
-
-    case "stockDesc":
-      return [["ton_kho", "DESC"]];
 
     case "oldest":
       return [["id_san_pham", "ASC"]];

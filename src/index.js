@@ -1,5 +1,5 @@
 const express = require("express");
-const { connectDB, sequelize } = require("./config/database");
+const { connectDB } = require("./config/database");
 const apiRoutes = require("./api/routes");
 const cors = require("cors");
 require("dotenv").config();
@@ -31,7 +31,6 @@ app.use("/api", apiRoutes);
 
 const startServer = async () => {
   await connectDB();
-  await sequelize.sync();
 
   startLimitPolicyReminderJob();
 

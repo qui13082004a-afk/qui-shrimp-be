@@ -11,8 +11,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@aws-sdk/client-rekognition": "^3.1075.0",
     "@aws-sdk/client-s3": "^3.1075.0",
+    "@aws-sdk/s3-request-presigner": "^3.1086.0",
     "@payos/node": "^2.0.5",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",

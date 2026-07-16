@@ -6,6 +6,8 @@ const WAREHOUSE_ATTRIBUTES = [
   "dia_chi",
   "vi_do",
   "kinh_do",
+  "ban_kinh_phuc_vu",
+  "muc_do_uu_tien",
   "ghi_chu",
   "trang_thai",
   "ngay_tao",
@@ -52,15 +54,18 @@ const findStock = (id_san_pham, id_kho_hang, transaction = null) => {
   });
 };
 
-const upsertStock = async ({ id_san_pham, id_kho_hang, so_luong, ghi_chu }, transaction = null) => {
+const upsertStock = async (
+  { id_san_pham, id_kho_hang, so_luong, ton_kho_toi_thieu = 0, ghi_chu },
+  transaction = null
+) => {
   const existed = await findStock(id_san_pham, id_kho_hang, transaction);
   if (existed) {
-    await existed.update({ so_luong, ghi_chu }, { transaction });
+    await existed.update({ so_luong, ton_kho_toi_thieu, ghi_chu }, { transaction });
     return existed;
   }
 
   return TonKhoSanPham.create(
-    { id_san_pham, id_kho_hang, so_luong, ghi_chu },
+    { id_san_pham, id_kho_hang, so_luong, ton_kho_toi_thieu, ghi_chu },
     { transaction }
   );
 };

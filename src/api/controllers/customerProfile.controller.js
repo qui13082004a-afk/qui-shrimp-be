@@ -1,11 +1,31 @@
 const { customerProfileService } = require("../services");
+const uploadToS3 = require("../../helpers/upLoadS3");
 
-const filePath = (req, field) => {
-  const file = req.files?.[field]?.[0];
-
+const uploadProfileFile = async (req, field, file) => {
   if (!file) return null;
 
+  if (file.buffer) {
+    return uploadToS3(file, `customer-profiles/${req.user.id_nguoi_dung}/${field}`);
+  }
+
   return file.path || file.secure_url || null;
+};
+
+const filePath = async (req, field) => {
+  const file = req.files?.[field]?.[0];
+  return uploadProfileFile(req, field, file);
+};
+
+const filePaths = async (req, field) => {
+  const files = req.files?.[field] || [];
+  if (!files.length) return null;
+
+  const uploadedPaths = await Promise.all(
+    files.map((file) => uploadProfileFile(req, field, file))
+  );
+  const validPaths = uploadedPaths.filter(Boolean);
+
+  return validPaths.length ? JSON.stringify(validPaths) : null;
 };
 
 const toBoolean = (value) => value === true || value === "true" || value === "1" || value === 1;
@@ -17,11 +37,10 @@ const createCustomerProfile = async (req, res) => {
       cam_ket_thong_tin: toBoolean(req.body.cam_ket_thong_tin),
       dong_y_xac_minh: toBoolean(req.body.dong_y_xac_minh),
       dong_y_dieu_khoan: toBoolean(req.body.dong_y_dieu_khoan),
-      anh_cccd_mat_truoc: filePath(req, "anh_cccd_mat_truoc"),
-      anh_cccd_mat_sau: filePath(req, "anh_cccd_mat_sau"),
-      anh_selfie: filePath(req, "anh_selfie"),
-      anh_bien_lai_tha_giong: filePath(req, "anh_bien_lai_tha_giong"),
-      anh_ao_nuoi: filePath(req, "anh_ao_nuoi"),
+      anh_cccd_mat_truoc: await filePath(req, "anh_cccd_mat_truoc"),
+      anh_cccd_mat_sau: await filePath(req, "anh_cccd_mat_sau"),
+      anh_bien_lai_tha_giong: await filePath(req, "anh_bien_lai_tha_giong"),
+      anh_ao_nuoi: await filePaths(req, "anh_ao_nuoi"),
     };
     const profile = await customerProfileService.createCustomerProfile(req.user.id_nguoi_dung, payload);
     return res.status(201).json({ success: true, message: "Gửi hồ sơ đăng ký mua trả sau thành công", data: profile });

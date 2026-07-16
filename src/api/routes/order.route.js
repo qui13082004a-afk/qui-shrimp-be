@@ -9,6 +9,13 @@ const {
   validateUpdateOrderStatus,
 } = require("../middlewares/validate");
 
+router.post(
+  "/preview",
+  authMiddleware,
+  validateCreateOrder,
+  orderController.previewOrder
+);
+
 router.post("/", authMiddleware, validateCreateOrder, orderController.createOrder);
 
 router.get("/my", authMiddleware, orderController.getMyOrders);

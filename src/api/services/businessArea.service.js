@@ -42,7 +42,6 @@ const createArea = async (user, data) => {
   return await businessAreaRepository.create({
     id_tinh_thanh: data.id_tinh_thanh,
     cho_phep_ban_hang: toBoolean(data.cho_phep_ban_hang, false),
-    cho_phep_tra_sau: toBoolean(data.cho_phep_tra_sau, false),
     dang_hoat_dong: toBoolean(data.dang_hoat_dong, true),
     ban_kinh_toi_da_km: toNullablePositiveNumber(data.ban_kinh_toi_da_km, "Ban kinh toi da"),
     phi_van_chuyen_mac_dinh: toNullablePositiveNumber(data.phi_van_chuyen_mac_dinh, "Phi van chuyen mac dinh") || 0,
@@ -59,9 +58,6 @@ const updateArea = async (user, id_khu_vuc, data) => {
   const updateData = {};
   if (data.cho_phep_ban_hang !== undefined) {
     updateData.cho_phep_ban_hang = toBoolean(data.cho_phep_ban_hang);
-  }
-  if (data.cho_phep_tra_sau !== undefined) {
-    updateData.cho_phep_tra_sau = toBoolean(data.cho_phep_tra_sau);
   }
   if (data.dang_hoat_dong !== undefined) {
     updateData.dang_hoat_dong = toBoolean(data.dang_hoat_dong);

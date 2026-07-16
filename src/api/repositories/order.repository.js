@@ -9,6 +9,7 @@ const {
   ThanhToanCongNo,
   AoNuoi,
   DiaChiGiaoHang,
+  KhoHang,
 } = require("../models");
 
 const { Op } = require("sequelize");
@@ -27,6 +28,8 @@ const ORDER_ATTRIBUTES = [
   "ghi_chu",
   "id_khu_vuc_giao_hang",
   "id_diem_xuat_phat",
+  "id_kho_xuat",
+  "co_chuyen_kho",
   "khoang_cach_giao_hang_km",
   "vi_do_giao_hang",
   "kinh_do_giao_hang",
@@ -51,6 +54,19 @@ const PRODUCT_ORDER_ATTRIBUTES = [
   "don_vi_tinh",
   "hinh_anh",
   "trang_thai",
+];
+
+const ORDER_DETAIL_ATTRIBUTES = [
+  "id_chi_tiet",
+  "id_don_hang",
+  "id_san_pham",
+  "id_kho_khach_chon",
+  "id_kho_xuat_thuc_te",
+  "gia_ban",
+  "so_luong_dat",
+  "thanh_tien",
+  "trang_thai_san_pham",
+  "trang_thai_phan_bo",
 ];
 
 const PAYMENT_ATTRIBUTES = [
@@ -89,7 +105,6 @@ const findProductById = (id_san_pham, transaction) => {
       "id_danh_muc",
       "ten_san_pham",
       "gia",
-      "ton_kho",
       "trang_thai",
     ],
     transaction,
@@ -129,16 +144,6 @@ const findDeliveryAddressForOrder = (id_dia_chi, id_nguoi_dung, transaction) => 
   });
 };
 
-const updateProductStock = async (product, newStock, transaction) => {
-  product.ton_kho = newStock;
-
-  if (newStock <= 0) {
-    product.trang_thai = "het_hang";
-  }
-
-  return product.save({ transaction });
-};
-
 const createPayment = (data, transaction) => {
   return ThanhToan.create(data, { transaction });
 };
@@ -148,18 +153,15 @@ const findById = (id_don_hang) => {
     attributes: ORDER_ATTRIBUTES,
     include: [
       { model: NguoiDung, attributes: USER_ATTRIBUTES },
+      { model: KhoHang, required: false },
       {
         model: ChiTietDonHang,
-        attributes: [
-          "id_chi_tiet",
-          "id_don_hang",
-          "id_san_pham",
-          "gia_ban",
-          "so_luong_dat",
-          "thanh_tien",
-          "trang_thai_san_pham",
+        attributes: ORDER_DETAIL_ATTRIBUTES,
+        include: [
+          { model: SanPham, attributes: PRODUCT_ORDER_ATTRIBUTES },
+          { model: KhoHang, as: "kho_khach_chon", required: false },
+          { model: KhoHang, as: "kho_xuat_thuc_te", required: false },
         ],
-        include: [{ model: SanPham, attributes: PRODUCT_ORDER_ATTRIBUTES }],
       },
       { model: ThanhToan, attributes: PAYMENT_ATTRIBUTES },
       {
@@ -185,17 +187,10 @@ const findByUserId = (id_nguoi_dung) => {
     where: { id_nguoi_dung },
     attributes: ORDER_ATTRIBUTES,
     include: [
+      { model: KhoHang, required: false },
       {
         model: ChiTietDonHang,
-        attributes: [
-          "id_chi_tiet",
-          "id_don_hang",
-          "id_san_pham",
-          "gia_ban",
-          "so_luong_dat",
-          "thanh_tien",
-          "trang_thai_san_pham",
-        ],
+        attributes: ORDER_DETAIL_ATTRIBUTES,
         include: [{ model: SanPham, attributes: PRODUCT_ORDER_ATTRIBUTES }],
       },
       { model: ThanhToan, attributes: PAYMENT_ATTRIBUTES },
@@ -214,17 +209,10 @@ const findAll = () => {
     attributes: ORDER_ATTRIBUTES,
     include: [
       { model: NguoiDung, attributes: USER_ATTRIBUTES },
+      { model: KhoHang, required: false },
       {
         model: ChiTietDonHang,
-        attributes: [
-          "id_chi_tiet",
-          "id_don_hang",
-          "id_san_pham",
-          "gia_ban",
-          "so_luong_dat",
-          "thanh_tien",
-          "trang_thai_san_pham",
-        ],
+        attributes: ORDER_DETAIL_ATTRIBUTES,
         include: [{ model: SanPham, attributes: PRODUCT_ORDER_ATTRIBUTES }],
       },
       { model: ThanhToan, attributes: PAYMENT_ATTRIBUTES },
@@ -256,6 +244,30 @@ const updateStatus = async (id_don_hang, trang_thai_don_hang) => {
   if (!affectedRows) return null;
 
   return DonHang.findByPk(id_don_hang, { attributes: ORDER_ATTRIBUTES });
+};
+
+const updateOrder = async (order, data, transaction = null) => {
+  await order.update(data, { transaction });
+  return order;
+};
+
+const findOrderWithDetailsForUpdate = (id_don_hang, transaction) => {
+  return DonHang.findByPk(id_don_hang, {
+    attributes: ORDER_ATTRIBUTES,
+    include: [
+      {
+        model: ChiTietDonHang,
+        attributes: ORDER_DETAIL_ATTRIBUTES,
+      },
+      {
+        model: ThanhToan,
+        required: false,
+        attributes: PAYMENT_ATTRIBUTES,
+      },
+    ],
+    transaction,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined,
+  });
 };
 
 const findApprovedPostpaidProfile = (id_nguoi_dung, id_vu_nuoi, transaction) => {
@@ -348,14 +360,7 @@ const cancelMyOrder = async (userId, orderId) => {
       {
         model: ChiTietDonHang,
         required: false,
-        attributes: [
-          "id_chi_tiet",
-          "id_don_hang",
-          "id_san_pham",
-          "gia_ban",
-          "so_luong_dat",
-          "thanh_tien",
-        ],
+        attributes: ORDER_DETAIL_ATTRIBUTES,
         include: [
           { model: SanPham, required: false, attributes: PRODUCT_ORDER_ATTRIBUTES },
         ],
@@ -389,12 +394,13 @@ module.exports = {
   findProductById,
   findPondForOrder,
   findDeliveryAddressForOrder,
-  updateProductStock,
   createPayment,
   findById,
   findByUserId,
   findAll,
   updateStatus,
+  updateOrder,
+  findOrderWithDetailsForUpdate,
   findApprovedPostpaidProfile,
   getUsedCreditByProfileId,
   cancelMyOrder,

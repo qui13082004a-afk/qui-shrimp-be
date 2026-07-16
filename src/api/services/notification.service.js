@@ -1,5 +1,6 @@
 const notificationRepository = require("../repositories/notification.repository");
 const limitStaffAreaRepository = require("../repositories/limitStaffArea.repository");
+const khuVucHoTroTraSauRepository = require("../repositories/khuVucHoTroTraSau.repository");
 
 const createNotification = async ({
   id_nguoi_dung,
@@ -78,9 +79,22 @@ const notifyLimitStaffByArea = async ({
 }) => {
   if (!id_khu_vuc) return [];
 
-  const assignments = await limitStaffAreaRepository.findActiveStaffByArea(
-    id_khu_vuc
-  );
+  const area = await khuVucHoTroTraSauRepository.findById(id_khu_vuc);
+  if (!area) return [];
+
+  const [exactAssignments, provinceAssignments] = await Promise.all([
+    limitStaffAreaRepository.findActiveStaffByArea(id_khu_vuc),
+    limitStaffAreaRepository.findActiveStaffByProvince(area.tinh_thanh),
+  ]);
+
+  const assignmentByUser = new Map();
+  [...exactAssignments, ...provinceAssignments].forEach((assignment) => {
+    if (assignment.id_nguoi_dung) {
+      assignmentByUser.set(Number(assignment.id_nguoi_dung), assignment);
+    }
+  });
+
+  const assignments = Array.from(assignmentByUser.values());
 
   return createManyNotifications(
     assignments.map((assignment) => ({

@@ -273,7 +273,9 @@ const handlePayOSWebhook = async (webhookBody) => {
     await debtPaymentRepository.findPendingDebtPaymentByOrderCode(orderCode);
 
   if (debtPayment) {
-    await debtPaymentRepository.allocateDebtPayment(debtPayment, amount);
+    await debtPaymentRepository.allocateDebtPayment(debtPayment, amount, {
+      onlyCompleted: true,
+    });
 
     await notificationService.createNotification({
       id_nguoi_dung: debtPayment.id_nguoi_dung,

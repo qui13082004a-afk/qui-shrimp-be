@@ -504,6 +504,22 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
   };
 };
 
+const getAdminDebtProfileDetail = async (id_ho_so) => {
+  const profile = await HoSoKhachHang.findOne({
+    where: {
+      id_ho_so,
+      duoc_phep_tra_sau: true,
+    },
+    attributes: ["id_ho_so", "id_nguoi_dung"],
+  });
+
+  if (!profile) {
+    throw new Error("Khong tim thay ho so cong no");
+  }
+
+  return getDebtProfileDetail(profile.id_nguoi_dung, id_ho_so);
+};
+
 const getDebtProfileTransactions = async (id_nguoi_dung, id_ho_so) => {
   const profile = await HoSoKhachHang.findOne({
     where: {
@@ -610,5 +626,6 @@ module.exports = {
   getMyDebtOrders,
   getMyDebtSummary,
   getDebtProfileDetail,
+  getAdminDebtProfileDetail,
   getDebtProfileTransactions,
 };

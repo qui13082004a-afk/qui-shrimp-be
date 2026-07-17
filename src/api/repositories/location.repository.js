@@ -18,6 +18,10 @@ const findProvinceByCode = async (ma_tinh, transaction = null) => {
   });
 };
 
+const findWardById = async (id_phuong_xa, transaction = null) => {
+  return await PhuongXa.findByPk(id_phuong_xa, { transaction });
+};
+
 const findProvincesByCodes = async (provinceCodes) => {
   return await TinhThanh.findAll({
     where: {
@@ -93,6 +97,7 @@ module.exports = {
   findAllProvinces,
   findProvinceById,
   findProvinceByCode,
+  findWardById,
   findProvincesByCodes,
   upsertProvince,
   bulkUpsertProvinces,

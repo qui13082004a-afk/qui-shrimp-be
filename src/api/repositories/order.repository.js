@@ -10,6 +10,8 @@ const {
   AoNuoi,
   DiaChiGiaoHang,
   KhoHang,
+  GiaoHang,
+  NhanVienGiaoHang,
 } = require("../models");
 
 const { Op } = require("sequelize");
@@ -77,6 +79,25 @@ const PAYMENT_ATTRIBUTES = [
   "ma_giao_dich",
   "trang_thai",
   "ngay_thanh_toan",
+];
+
+const DELIVERY_ATTRIBUTES = [
+  "id_giao_hang",
+  "id_don_hang",
+  "id_nhan_vien_giao",
+  "id_kho_xuat",
+  "trang_thai",
+  "anh_bien_nhan",
+  "anh_hop_dong",
+  "ghi_chu",
+  "thoi_gian_giao",
+];
+
+const DELIVERY_STAFF_ATTRIBUTES = [
+  "id_nhan_vien_giao_hang",
+  "id_nguoi_dung",
+  "khu_vuc_phu_trach",
+  "trang_thai",
 ];
 
 const ACTIVE_POSTPAID_ORDER_STATUS = [
@@ -164,6 +185,20 @@ const findById = (id_don_hang) => {
         ],
       },
       { model: ThanhToan, attributes: PAYMENT_ATTRIBUTES },
+      {
+        model: GiaoHang,
+        required: false,
+        attributes: DELIVERY_ATTRIBUTES,
+        include: [
+          {
+            model: NhanVienGiaoHang,
+            required: false,
+            attributes: DELIVERY_STAFF_ATTRIBUTES,
+            include: [{ model: NguoiDung, required: false, attributes: USER_ATTRIBUTES }],
+          },
+          { model: KhoHang, required: false },
+        ],
+      },
       {
         model: HoSoKhachHang,
         required: false,

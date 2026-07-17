@@ -1,5 +1,13 @@
 const { sequelize } = require("../../config/database");
-const { pondRepository, cropSeasonRepository } = require("../repositories");
+const {
+  pondRepository,
+  cropSeasonRepository,
+  locationRepository,
+} = require("../repositories");
+const {
+  normalizeText,
+  buildFullAddress,
+} = require("../utils/addressNormalizer");
 
 const toNullableId = (value) => {
   if (value === undefined || value === null || value === "") return null;
@@ -35,6 +43,60 @@ const pickPondLocationFields = (data) => {
   return locationData;
 };
 
+const normalizePondPayload = async (data, currentPond = null) => {
+  const nextProvinceId =
+    data.id_tinh_thanh !== undefined
+      ? toNullableId(data.id_tinh_thanh)
+      : currentPond?.id_tinh_thanh || null;
+  const nextWardId =
+    data.id_phuong_xa !== undefined
+      ? toNullableId(data.id_phuong_xa)
+      : currentPond?.id_phuong_xa || null;
+
+  const province = nextProvinceId
+    ? await locationRepository.findProvinceById(nextProvinceId)
+    : null;
+  if (nextProvinceId && !province) {
+    throw new Error("Tinh/thanh cua ao nuoi khong hop le");
+  }
+
+  const ward = nextWardId
+    ? await locationRepository.findWardById(nextWardId)
+    : null;
+  if (nextWardId && !ward) {
+    throw new Error("Xa/phuong cua ao nuoi khong hop le");
+  }
+  if (ward && province && Number(ward.id_tinh_thanh) !== Number(province.id_tinh_thanh)) {
+    throw new Error("Xa/phuong khong thuoc tinh/thanh da chon");
+  }
+
+  const rawAddress =
+    data.dia_chi_ao !== undefined ? data.dia_chi_ao : currentPond?.dia_chi_ao;
+  const normalizedAddress = normalizeText(rawAddress);
+  const shouldNormalizeAddress =
+    data.dia_chi_ao !== undefined ||
+    data.id_tinh_thanh !== undefined ||
+    data.id_phuong_xa !== undefined ||
+    !currentPond;
+  const normalizedData = {
+    ...data,
+    ...pickPondLocationFields(data),
+  };
+
+  if (shouldNormalizeAddress) {
+    normalizedData.dia_chi_ao =
+      province || ward
+        ? buildFullAddress({
+            detail: normalizedAddress,
+            ward,
+            province,
+          })
+        : normalizedAddress;
+  }
+
+  return normalizedData;
+};
+
 const createPond = async (userId, data) => {
   if (!data.ten_ao) {
     throw new Error("Ten ao khong duoc de trong");
@@ -44,15 +106,17 @@ const createPond = async (userId, data) => {
     throw new Error("Dien tich ao phai la so duong lon hon 0");
   }
 
+  const normalizedData = await normalizePondPayload(data);
+
   return await pondRepository.create({
     id_nguoi_dung: userId,
-    ten_ao: data.ten_ao,
+    ten_ao: normalizeText(data.ten_ao),
     dien_tich: data.dien_tich,
-    dia_chi_ao: data.dia_chi_ao,
-    loai_hinh_nuoi: data.loai_hinh_nuoi,
+    dia_chi_ao: normalizedData.dia_chi_ao,
+    loai_hinh_nuoi: normalizeText(data.loai_hinh_nuoi),
     trang_thai_ao: data.trang_thai_ao || "dang_hoat_dong",
-    ghi_chu: data.ghi_chu,
-    ...pickPondLocationFields(data),
+    ghi_chu: normalizeText(data.ghi_chu),
+    ...pickPondLocationFields(normalizedData),
   });
 };
 
@@ -97,10 +161,9 @@ const updatePond = async (id_ao, userId, data) => {
     }
   }
 
-  return await pondRepository.update(id_ao, {
-    ...data,
-    ...pickPondLocationFields(data),
-  });
+  const normalizedData = await normalizePondPayload(data, pond);
+
+  return await pondRepository.update(id_ao, normalizedData);
 };
 
 const deletePond = async (id_ao, userId) => {

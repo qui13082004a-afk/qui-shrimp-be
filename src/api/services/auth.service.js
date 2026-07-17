@@ -1,8 +1,12 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { authRepository } = require("../repositories");
+const { authRepository, locationRepository } = require("../repositories");
 const sendEmail = require("../../helpers/sendEmail");
 const { NhanVienGiaoHang } = require("../models");
+const {
+  normalizeText,
+  findProvinceByText,
+} = require("../utils/addressNormalizer");
 // Hàm tạo mã OTP 6 chữ số ngẫu nhiên
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -17,12 +21,34 @@ const safeSendEmail = async (to, subject, text) => {
   }
 };
 
+const normalizeAccountAddress = async (data) => {
+  const normalized = { ...data };
+
+  if (normalized.dia_chi !== undefined) {
+    normalized.dia_chi = normalizeText(normalized.dia_chi);
+  }
+
+  if (normalized.tinh_thanh !== undefined) {
+    const provinceText = normalizeText(normalized.tinh_thanh);
+    const provinces = await locationRepository.findAllProvinces();
+    const matchedProvince = findProvinceByText(provinceText, provinces);
+
+    normalized.tinh_thanh = matchedProvince
+      ? matchedProvince.ten_tinh
+      : provinceText;
+  }
+
+  return normalized;
+};
+
 /**
  * ĐĂNG KÝ TÀI KHOẢN MỚI
  */
 const register = async (data) => {
 
-  const { ho_ten, so_dien_thoai, dia_chi, email, mat_khau, tinh_thanh } = data;
+  const normalizedAccount = await normalizeAccountAddress(data);
+  const { ho_ten, so_dien_thoai, dia_chi, email, mat_khau, tinh_thanh } =
+    normalizedAccount;
 
   // Kiểm tra email duy nhất (Đây là logic nghiệp vụ tầng Database, vẫn phải giữ lại)
   const existedUser = await authRepository.findByEmailOrPhone(
@@ -287,10 +313,11 @@ const updateProfile = async (userId, updateData) => {
     }
   }
   const allowedFields = ["ho_ten", "so_dien_thoai", "dia_chi", "tinh_thanh", "anh_dai_dien"];
+  const normalizedUpdateData = await normalizeAccountAddress(updateData);
   
   allowedFields.forEach((field) => {
-    if (updateData[field] !== undefined) {
-      user[field] = updateData[field];
+    if (normalizedUpdateData[field] !== undefined) {
+      user[field] = normalizedUpdateData[field];
     }
   });
 

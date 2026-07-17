@@ -43,8 +43,14 @@ const findAll = async () => {
     include: [
       {
         model: HoSoKhachHang,
-        include: [{ model: NguoiDung }, { model: AoNuoi }, { model: VuNuoi }],
+        include: [
+          { model: NguoiDung },
+          { model: AoNuoi },
+          { model: VuNuoi },
+          { model: ChinhSachHanMuc },
+        ],
       },
+      { model: ChinhSachHanMuc },
       {
         model: NguoiDung,
         as: "nhan_vien_de_xuat",
@@ -64,6 +70,16 @@ const findByProfileId = async (id_ho_so) => {
   return await PhieuDeXuatHanMuc.findAll({
     where: { id_ho_so },
     include: [
+      {
+        model: HoSoKhachHang,
+        include: [
+          { model: NguoiDung },
+          { model: AoNuoi },
+          { model: VuNuoi },
+          { model: ChinhSachHanMuc },
+        ],
+      },
+      { model: ChinhSachHanMuc },
       {
         model: NguoiDung,
         as: "nhan_vien_de_xuat",

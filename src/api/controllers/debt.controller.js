@@ -53,6 +53,26 @@ const getDebtProfileDetail = async (req, res) => {
   }
 };
 
+const getAdminDebtProfileDetail = async (req, res) => {
+  try {
+    const data = await debtService.getAdminDebtProfileDetail(
+      req.user,
+      req.params.profileId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Lay chi tiet cong no khach hang thanh cong",
+      data,
+    });
+  } catch (error) {
+    return res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 const getDebtProfileTransactions = async (req, res) => {
   try {
     const data = await debtService.getDebtProfileTransactions(
@@ -82,6 +102,26 @@ const createPartialDebtPayment = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Tạo thanh toán công nợ thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const createAdminDirectDebtPayment = async (req, res) => {
+  try {
+    const data = await debtService.createAdminDirectDebtPayment(
+      req.user,
+      req.body
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Ghi nhan thanh toan cong no truc tiep thanh cong",
       data,
     });
   } catch (error) {
@@ -132,8 +172,10 @@ module.exports = {
   getMyDebtSummary,
   getMyDebtOrders,
   getDebtProfileDetail,
+  getAdminDebtProfileDetail,
   getDebtProfileTransactions,
   createPartialDebtPayment,
+createAdminDirectDebtPayment,
 getMyDebtPayments,
 getDebtPaymentDetail,
 };

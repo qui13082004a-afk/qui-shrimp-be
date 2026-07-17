@@ -3,6 +3,22 @@ const debtController = require("../controllers/debt.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
 const router = express.Router();
+const { authorizeAdmin } = authMiddleware;
+
+router.get(
+  "/admin/profile/:profileId",
+  authMiddleware,
+  authorizeAdmin,
+  debtController.getAdminDebtProfileDetail
+);
+
+router.post(
+  "/admin/direct-payment",
+  authMiddleware,
+  authorizeAdmin,
+  debtController.createAdminDirectDebtPayment
+);
+
 router.post(
   "/pay-partial",
   authMiddleware,

@@ -6,8 +6,8 @@ const hopDongController = require("../controllers/hopDong.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const { authorizeAdmin } = authMiddleware;
 
-const upload = require("../middlewares/upload.middleware");
 const uploadFile = require("../middlewares/uploadFile.middleware");
+const privateFileUpload = require("../middlewares/privateFileUpload.middleware");
 
 router.post(
   "/upload-file-mau",
@@ -93,7 +93,7 @@ router.get(
 router.put(
   "/:id/upload-pdf",
   authMiddleware,
-  uploadFile.single("file_hop_dong_da_ky"),
+  privateFileUpload.single("file_hop_dong_da_ky"),
   hopDongController.uploadSignedPdf
 );
 
@@ -107,7 +107,7 @@ router.get(
 router.put(
   "/:id/upload-image",
   authMiddleware,
-  upload.single("anh_hop_dong_da_ky"),
+  privateFileUpload.single("anh_hop_dong_da_ky"),
   hopDongController.uploadSignedImage
 );
 

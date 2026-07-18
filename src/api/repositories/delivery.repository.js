@@ -1,21 +1,45 @@
-const { GiaoHang, DonHang, NguoiDung, NhanVienGiaoHang, ThanhToan } = require("../models");
+const {
+  GiaoHang,
+  DonHang,
+  NguoiDung,
+  NhanVienGiaoHang,
+  ThanhToan,
+  ChiTietDonHang,
+  SanPham,
+  AoNuoi,
+  VuNuoi,
+  KhoHang,
+} = require("../models");
 
-const create = async (data) => {
-  return await GiaoHang.create(data);
+const deliveryOrderInclude = [
+  { model: NguoiDung },
+  { model: ThanhToan },
+  {
+    model: VuNuoi,
+    include: [{ model: AoNuoi }],
+  },
+  {
+    model: ChiTietDonHang,
+    include: [{ model: SanPham }],
+  },
+];
+
+const create = async (data, transaction = null) => {
+  return await GiaoHang.create(data, { transaction });
 };
 
-const findById = async (id_giao_hang) => {
+const findById = async (id_giao_hang, transaction = null) => {
   return await GiaoHang.findByPk(id_giao_hang, {
     include: [
       {
         model: DonHang,
-        include: [
-          { model: NguoiDung },
-          { model: ThanhToan },
-        ],
+        include: deliveryOrderInclude,
       },
       { model: NhanVienGiaoHang },
+      { model: KhoHang },
     ],
+    transaction,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined,
   });
 };
 
@@ -25,7 +49,7 @@ const findByShipperId = async (id_nhan_vien_giao) => {
     include: [
       {
         model: DonHang,
-        include: [{ model: NguoiDung }],
+        include: deliveryOrderInclude,
       },
     ],
     order: [["id_giao_hang", "DESC"]],
@@ -37,7 +61,7 @@ const findAll = async () => {
     include: [
       {
         model: DonHang,
-        include: [{ model: NguoiDung }],
+        include: deliveryOrderInclude,
       },
       { model: NhanVienGiaoHang },
     ],
@@ -55,19 +79,23 @@ const findShipperByUserId = async (id_nguoi_dung) => {
   });
 };
 
+const findShipperById = async (id_nhan_vien_giao_hang) => {
+  return await NhanVienGiaoHang.findByPk(id_nhan_vien_giao_hang);
+};
+
 const findDeliveryByOrderId = async (id_don_hang) => {
   return await GiaoHang.findOne({
     where: { id_don_hang },
   });
 };
 
-const updateDelivery = async (delivery, data) => {
-  await delivery.update(data);
+const updateDelivery = async (delivery, data, transaction = null) => {
+  await delivery.update(data, { transaction });
   return delivery;
 };
 
-const updateOrder = async (order, data) => {
-  await order.update(data);
+const updateOrder = async (order, data, transaction = null) => {
+  await order.update(data, { transaction });
   return order;
 };
 
@@ -78,6 +106,7 @@ module.exports = {
   findAll,
   findOrderById,
   findShipperByUserId,
+  findShipperById,
   findDeliveryByOrderId,
   updateDelivery,
   updateOrder,

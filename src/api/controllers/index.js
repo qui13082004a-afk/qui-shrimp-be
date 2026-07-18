@@ -9,16 +9,19 @@ const orderController = require("./order.controller");
 const paymentController = require("./payment.controller");
 const deliveryController = require("./delivery.controller");
 const debtExtensionController=require("./debtExtension.controller");
-const blogController = require("./blog.controller");
-const commentController = require("./comment.controller");
 const chinhSachHanMucController = require("./chinhSachHanMuc.controller");
 const phieuDeXuatHanMucController = require("./phieuDeXuatHanMuc.controller");
 const hopDongController = require("./hopDong.controller");
 const thuongLaiController = require("./thuongLai.controller");
-const thoaThuanBaBenController = require("./thoaThuanBaBen.controller");
 const khuVucHoTroTraSauController = require(
   "./khuVucHoTroTraSau.controller"
 );
+const locationController = require("./location.controller");
+const businessAreaController = require("./businessArea.controller");
+const departurePointController = require("./departurePoint.controller");
+const shippingFeeController = require("./shippingFee.controller");
+const warehouseController = require("./warehouse.controller");
+const limitStaffAreaController = require("./limitStaffArea.controller");
 module.exports = {
   authController,
   uploadController,
@@ -31,10 +34,15 @@ module.exports = {
   paymentController,
   deliveryController,
   debtExtensionController,
-  blogController,chinhSachHanMucController,
-  commentController,
+  chinhSachHanMucController,
   phieuDeXuatHanMucController,
   hopDongController,
-  thuongLaiController,thoaThuanBaBenController,
-  khuVucHoTroTraSauController
+  thuongLaiController,
+  khuVucHoTroTraSauController,
+  locationController,
+  businessAreaController,
+  departurePointController,
+  shippingFeeController,
+  warehouseController,
+  limitStaffAreaController
 };

@@ -1,4 +1,11 @@
-const { HopDong, HoSoKhachHang, NguoiDung, AoNuoi, VuNuoi } = require("../models");
+const {
+  HopDong,
+  HoSoKhachHang,
+  NguoiDung,
+  AoNuoi,
+  VuNuoi,
+  ChinhSachHanMuc,
+} = require("../models");
 
 const create = async (data, transaction = null) => {
   return await HopDong.create(data, { transaction });
@@ -13,6 +20,7 @@ const findById = async (id_hop_dong) => {
           { model: NguoiDung, attributes: ["id_nguoi_dung", "ho_ten", "email", "so_dien_thoai"] },
           { model: AoNuoi },
           { model: VuNuoi },
+          { model: ChinhSachHanMuc },
         ],
       },
     ],
@@ -22,7 +30,17 @@ const findById = async (id_hop_dong) => {
 const findByProfileId = async (id_ho_so) => {
   return await HopDong.findOne({
     where: { id_ho_so },
-    include: [{ model: HoSoKhachHang }],
+    include: [
+      {
+        model: HoSoKhachHang,
+        include: [
+          { model: NguoiDung, attributes: ["id_nguoi_dung", "ho_ten", "email", "so_dien_thoai"] },
+          { model: AoNuoi },
+          { model: VuNuoi },
+          { model: ChinhSachHanMuc },
+        ],
+      },
+    ],
   });
 };
 
@@ -35,6 +53,7 @@ const findAll = async () => {
           { model: NguoiDung, attributes: ["id_nguoi_dung", "ho_ten", "email", "so_dien_thoai"] },
           { model: AoNuoi },
           { model: VuNuoi },
+          { model: ChinhSachHanMuc },
         ],
       },
     ],
@@ -48,7 +67,7 @@ const findByUserId = async (id_nguoi_dung) => {
       {
         model: HoSoKhachHang,
         where: { id_nguoi_dung },
-        include: [{ model: AoNuoi }, { model: VuNuoi }],
+        include: [{ model: AoNuoi }, { model: VuNuoi }, { model: ChinhSachHanMuc }],
       },
     ],
     order: [["ngay_tao", "DESC"]],

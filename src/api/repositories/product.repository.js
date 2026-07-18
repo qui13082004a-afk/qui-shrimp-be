@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { SanPham, DanhMuc } = require("../models");
+const { SanPham, DanhMuc, TonKhoSanPham, KhoHang } = require("../models");
 
 /**
  * Các trường dùng khi hiển thị danh sách sản phẩm.
@@ -10,8 +10,6 @@ const PRODUCT_LIST_ATTRIBUTES = [
   "ten_san_pham",
   "gia",
   "don_vi_tinh",
-  "ton_kho",
-  "ton_kho_toi_thieu",
   "hinh_anh",
   "han_su_dung",
   "xuat_xu",
@@ -32,8 +30,6 @@ const PRODUCT_DETAIL_ATTRIBUTES = [
   "huong_dan_su_dung",
   "gia",
   "don_vi_tinh",
-  "ton_kho",
-  "ton_kho_toi_thieu",
   "hinh_anh",
   "han_su_dung",
   "xuat_xu",
@@ -50,6 +46,29 @@ const CATEGORY_ATTRIBUTES = [
   "ten_danh_muc",
   "anh_danh_muc",
 ];
+
+const STOCK_INCLUDE = {
+  model: TonKhoSanPham,
+  required: false,
+  include: [
+    {
+      model: KhoHang,
+      attributes: [
+        "id_kho_hang",
+        "ten_kho",
+        "dia_chi",
+        "vi_do",
+        "kinh_do",
+        "ban_kinh_phuc_vu",
+        "muc_do_uu_tien",
+        "ghi_chu",
+        "trang_thai",
+        "ngay_tao",
+        "ngay_cap_nhat",
+      ],
+    },
+  ],
+};
 
 /**
  * Chuẩn hóa page và limit.
@@ -73,6 +92,7 @@ const buildProductWhere = ({
   activeOnly = false,
   keyword = "",
   id_danh_muc,
+  trang_thai,
   minPrice,
   maxPrice,
 }) => {
@@ -86,6 +106,10 @@ const buildProductWhere = ({
   // Lọc theo danh mục
   if (id_danh_muc) {
     where.id_danh_muc = id_danh_muc;
+  }
+
+  if (!activeOnly && trang_thai) {
+    where.trang_thai = trang_thai;
   }
 
   // Tìm kiếm theo tên hoặc công dụng
@@ -134,9 +158,6 @@ const buildProductOrder = (sortBy = "newest") => {
     case "nameDesc":
       return [["ten_san_pham", "DESC"]];
 
-    case "stockDesc":
-      return [["ton_kho", "DESC"]];
-
     case "oldest":
       return [["id_san_pham", "ASC"]];
 
@@ -166,6 +187,11 @@ const countByCategoryId = (id_danh_muc) => {
  */
 const findAllActive = async (params = {}) => {
   const { limit, offset } = getSafePagination(params.page, params.limit);
+  const stockInclude = {
+    ...STOCK_INCLUDE,
+    required: Boolean(params.id_kho_hang),
+    where: params.id_kho_hang ? { id_kho_hang: params.id_kho_hang } : undefined,
+  };
 
   return SanPham.findAndCountAll({
     where: buildProductWhere({
@@ -179,6 +205,7 @@ const findAllActive = async (params = {}) => {
         attributes: CATEGORY_ATTRIBUTES,
         required: false,
       },
+      stockInclude,
     ],
     distinct: true,
     limit,
@@ -193,6 +220,11 @@ const findAllActive = async (params = {}) => {
  */
 const findAll = async (params = {}) => {
   const { limit, offset } = getSafePagination(params.page, params.limit);
+  const stockInclude = {
+    ...STOCK_INCLUDE,
+    required: Boolean(params.id_kho_hang),
+    where: params.id_kho_hang ? { id_kho_hang: params.id_kho_hang } : undefined,
+  };
 
   return SanPham.findAndCountAll({
     where: buildProductWhere(params),
@@ -203,6 +235,7 @@ const findAll = async (params = {}) => {
         attributes: CATEGORY_ATTRIBUTES,
         required: false,
       },
+      stockInclude,
     ],
     distinct: true,
     limit,
@@ -222,6 +255,7 @@ const findById = (id) => {
         model: DanhMuc,
         attributes: CATEGORY_ATTRIBUTES,
       },
+      STOCK_INCLUDE,
     ],
   });
 };

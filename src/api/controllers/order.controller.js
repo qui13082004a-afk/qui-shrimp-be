@@ -1,5 +1,22 @@
 const { orderService } = require("../services");
 
+const previewOrder = async (req, res) => {
+  try {
+    const preview = await orderService.previewOrder(req.user, req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "Tính thử đơn hàng thành công",
+      data: preview,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 const createOrder = async (req, res) => {
   try {
     const order = await orderService.createOrder(req.user, req.body);
@@ -108,6 +125,7 @@ const cancelMyOrder = async (req, res) => {
   }
 };
 module.exports = {
+  previewOrder,
   createOrder,
   getMyOrders,
   getAllOrders,

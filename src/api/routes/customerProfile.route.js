@@ -3,7 +3,7 @@ const router = express.Router();
 
 const { customerProfileController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
-const upload = require("../middlewares/upload.middleware");
+const privateFileUpload = require("../middlewares/privateFileUpload.middleware");
 
 const {
   authorizeAdmin,
@@ -11,6 +11,7 @@ const {
 } = authMiddleware;
 
 const {
+  validateCreateCustomerProfile,
   validateUpdateCustomerProfile,
   validateApprovePostpaid,
 } = require("../middlewares/validate");
@@ -19,17 +20,13 @@ const {
 router.post(
   "/",
   authMiddleware,
-  upload.fields([
+  privateFileUpload.fields([
     {
       name: "anh_cccd_mat_truoc",
       maxCount: 1,
     },
     {
       name: "anh_cccd_mat_sau",
-      maxCount: 1,
-    },
-    {
-      name: "anh_selfie",
       maxCount: 1,
     },
     {
@@ -41,6 +38,7 @@ router.post(
       maxCount: 5,
     },
   ]),
+  validateCreateCustomerProfile,
   customerProfileController.createCustomerProfile
 );
 

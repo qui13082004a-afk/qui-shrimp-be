@@ -1,4 +1,15 @@
 const hopDongService = require("../services/hopDong.service");
+const uploadToS3 = require("../../helpers/upLoadS3");
+
+const privateFileKey = async (req, field) => {
+  if (!req.file) return null;
+
+  if (req.file.buffer) {
+    return uploadToS3(req.file, `contracts/${req.params.id}/${field}`);
+  }
+
+  return req.file.path || req.file.secure_url || null;
+};
 
 const createContract = async (req, res) => {
   try {
@@ -154,8 +165,10 @@ const uploadSignedPdf = async (req, res) => {
       });
     }
 
+    const fileKey = await privateFileKey(req, "file_hop_dong_da_ky");
+
     const data = await hopDongService.uploadSignedPdf(req.user, req.params.id, {
-      file_hop_dong_da_ky: req.file.path,
+      file_hop_dong_da_ky: fileKey,
       ngay_ky: req.body.ngay_ky || null,
       ghi_chu: req.body.ghi_chu || null,
     });
@@ -182,11 +195,13 @@ const uploadSignedImage = async (req, res) => {
       });
     }
 
+    const fileKey = await privateFileKey(req, "anh_hop_dong_da_ky");
+
     const data = await hopDongService.uploadSignedImage(
       req.user,
       req.params.id,
       {
-        anh_hop_dong_da_ky: req.file.path,
+        anh_hop_dong_da_ky: fileKey,
         ngay_ky: req.body.ngay_ky || null,
         ghi_chu: req.body.ghi_chu || null,
       }

@@ -1,4 +1,4 @@
-const { AoNuoi, VuNuoi } = require("../models");
+const { AoNuoi, VuNuoi, TinhThanh, PhuongXa } = require("../models");
 
 const create = (data) => {
   return AoNuoi.create(data);
@@ -12,6 +12,23 @@ const findByUserId = async (id_nguoi_dung) => {
     where: { id_nguoi_dung },
 
     include: [
+      {
+        model: TinhThanh,
+        required: false,
+        attributes: ["id_tinh_thanh", "ma_tinh", "ten_tinh"],
+      },
+      {
+        model: PhuongXa,
+        required: false,
+        attributes: [
+          "id_phuong_xa",
+          "ma_xa",
+          "ten_xa",
+          "cap_xa",
+          "vi_do_trung_tam",
+          "kinh_do_trung_tam",
+        ],
+      },
       {
         model: VuNuoi,
         // required: false tương đương LEFT JOIN.
@@ -43,7 +60,27 @@ const findByUserId = async (id_nguoi_dung) => {
  * Tìm ao nuôi theo ID.
  */
 const findById = (id_ao) => {
-  return AoNuoi.findByPk(id_ao);
+  return AoNuoi.findByPk(id_ao, {
+    include: [
+      {
+        model: TinhThanh,
+        required: false,
+        attributes: ["id_tinh_thanh", "ma_tinh", "ten_tinh"],
+      },
+      {
+        model: PhuongXa,
+        required: false,
+        attributes: [
+          "id_phuong_xa",
+          "ma_xa",
+          "ten_xa",
+          "cap_xa",
+          "vi_do_trung_tam",
+          "kinh_do_trung_tam",
+        ],
+      },
+    ],
+  });
 };
 
 /**
@@ -62,12 +99,12 @@ const update = async (id_ao, data) => {
 /**
  * Xóa ao nuôi khỏi hệ thống.
  */
-const remove = async (id_ao) => {
-  const pond = await AoNuoi.findByPk(id_ao);
+const remove = async (id_ao, transaction = null) => {
+  const pond = await AoNuoi.findByPk(id_ao, { transaction });
 
   if (!pond) return null;
 
-  await pond.destroy();
+  await pond.destroy({ transaction });
 
   return pond;
 };

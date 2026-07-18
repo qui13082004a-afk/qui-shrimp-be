@@ -31,6 +31,9 @@ const ThongBao = sequelize.define(
         "thanh_toan",
         "giao_hang",
         "ao_nuoi",
+        "cong_no",
+        "ho_so",
+        "kho_hang",
         "he_thong"
       ),
       defaultValue: "he_thong",

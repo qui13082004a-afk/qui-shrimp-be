@@ -1,5 +1,11 @@
 const { Op } = require("sequelize");
-const { HoSoKhachHang, NguoiDung, AoNuoi, VuNuoi } = require("../models");
+const {
+  HoSoKhachHang,
+  NguoiDung,
+  AoNuoi,
+  VuNuoi,
+  ChinhSachHanMuc,
+} = require("../models");
 
 const create = async (data, transaction = null) => {
   return await HoSoKhachHang.create(data, { transaction });
@@ -7,7 +13,12 @@ const create = async (data, transaction = null) => {
 
 const findById = async (id_ho_so, transaction = null) => {
   return await HoSoKhachHang.findByPk(id_ho_so, {
-    include: [{ model: NguoiDung }, { model: AoNuoi }, { model: VuNuoi }],
+    include: [
+      { model: NguoiDung },
+      { model: AoNuoi },
+      { model: VuNuoi },
+      { model: ChinhSachHanMuc },
+    ],
     transaction,
   });
 };
@@ -15,14 +26,19 @@ const findById = async (id_ho_so, transaction = null) => {
 const findByUserId = async (id_nguoi_dung) => {
   return await HoSoKhachHang.findAll({
     where: { id_nguoi_dung },
-    include: [{ model: AoNuoi }, { model: VuNuoi }],
+    include: [{ model: AoNuoi }, { model: VuNuoi }, { model: ChinhSachHanMuc }],
     order: [["id_ho_so", "DESC"]],
   });
 };
 
 const findAll = async () => {
   return await HoSoKhachHang.findAll({
-    include: [{ model: NguoiDung }, { model: AoNuoi }, { model: VuNuoi }],
+    include: [
+      { model: NguoiDung },
+      { model: AoNuoi },
+      { model: VuNuoi },
+      { model: ChinhSachHanMuc },
+    ],
     order: [["id_ho_so", "DESC"]],
   });
 };

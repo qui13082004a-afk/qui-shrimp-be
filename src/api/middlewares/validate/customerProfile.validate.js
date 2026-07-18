@@ -5,9 +5,45 @@ const {
   validateDateString,
 } = require("./common");
 
+const parseDateOnly = (value, fieldName) => {
+  validateDateString(value, fieldName);
+
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${fieldName} không hợp lệ`);
+  }
+
+  return date;
+};
+
+const addYears = (date, years) => {
+  const next = new Date(date);
+  next.setFullYear(next.getFullYear() + years);
+  return next;
+};
+
+const validateBirthDateAge = (value) => {
+  const birthDate = parseDateOnly(value, "Ngày sinh");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (birthDate > today) {
+    throw new Error("Ngày sinh không được lớn hơn ngày hiện tại");
+  }
+
+  if (addYears(birthDate, 18) > today) {
+    throw new Error("Khách hàng phải từ 18 tuổi trở lên");
+  }
+
+  if (addYears(birthDate, 100) < today) {
+    throw new Error("Tuổi khách hàng không được quá 100 tuổi");
+  }
+};
+
 const validateCreateCustomerProfile = (req, res, next) => {
   try {
-    const { id_ao, id_vu_nuoi } = req.body;
+    const { id_ao, id_vu_nuoi, ngay_sinh } = req.body;
 
     if (!id_ao) {
       throw new Error("Vui lòng chọn ao nuôi");
@@ -15,6 +51,8 @@ const validateCreateCustomerProfile = (req, res, next) => {
     if (!id_vu_nuoi) {
       throw new Error("Vui lòng chọn vụ nuôi");
     }
+
+    validateBirthDateAge(ngay_sinh);
 
     return next();
   } catch (error) {

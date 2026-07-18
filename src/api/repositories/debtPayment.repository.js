@@ -23,7 +23,7 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
 
   const summary = await debtRepository.getMyDebtSummary(id_nguoi_dung);
 
-  let maxDebt = Number(summary.cong_no_hien_tai || 0) + Number(summary.dang_giu_han_muc || 0);
+  let maxDebt = Number(summary.cong_no_hien_tai || 0);
 
   if (id_ho_so) {
     const selectedProfile = summary.han_muc_theo_ho_so.find(
@@ -34,13 +34,11 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
       throw new Error("Không tìm thấy hồ sơ công nợ");
     }
 
-    maxDebt =
-      Number(selectedProfile.cong_no_hien_tai || 0) +
-      Number(selectedProfile.dang_giu_han_muc || 0);
+    maxDebt = Number(selectedProfile.cong_no_hien_tai || 0);
   }
 
   if (maxDebt <= 0) {
-    throw new Error("Không có công nợ cần thanh toán");
+    throw new Error("Không có công nợ hiện tại cần thanh toán");
   }
 
   if (amount > maxDebt) {
@@ -162,7 +160,7 @@ const findPendingDebtPaymentByOrderCode = (orderCode) => {
   });
 };
 
-const allocateDebtPayment = async (debtPayment, amount) => {
+const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
   const transaction = await sequelize.transaction();
 
   try {
@@ -190,7 +188,9 @@ const allocateDebtPayment = async (debtPayment, amount) => {
       where: {
         id_nguoi_dung: debtPayment.id_nguoi_dung,
         hinh_thuc_thanh_toan: "tra_sau",
-        trang_thai_don_hang: { [Op.notIn]: ["da_huy", "giao_that_bai"] },
+        trang_thai_don_hang: options.onlyCompleted
+          ? "hoan_tat"
+          : { [Op.notIn]: ["da_huy", "giao_that_bai"] },
       },
       attributes: ["id_don_hang", "tong_thanh_toan", "ngay_dat"],
       include: [
@@ -288,10 +288,48 @@ const allocateDebtPayment = async (debtPayment, amount) => {
   }
 };
 
+const createAdminDirectDebtPayment = async (data) => {
+  const id_ho_so = Number(data.id_ho_so || 0);
+  const amount = Math.round(Number(data.so_tien || 0));
+
+  if (!id_ho_so) {
+    throw new Error("Vui long chon ho so cong no");
+  }
+  if (!amount || amount <= 0) {
+    throw new Error("So tien thanh toan khong hop le");
+  }
+
+  const detail = await debtRepository.getAdminDebtProfileDetail(id_ho_so);
+  const maxDebt = Number(detail.cong_no_hien_tai || 0);
+
+  if (maxDebt <= 0) {
+    throw new Error("Khach hang khong co cong no hien tai can thanh toan");
+  }
+  if (amount > maxDebt) {
+    throw new Error("So tien thanh toan vuot qua cong no hien tai");
+  }
+
+  const debtPayment = await ThanhToanCongNo.create({
+    id_nguoi_dung: detail.id_nguoi_dung,
+    id_ho_so,
+    so_tien: amount,
+    ma_giao_dich: `ADMIN-DIRECT-${Date.now()}`,
+    trang_thai: "cho_thanh_toan",
+  });
+
+  await allocateDebtPayment(debtPayment, amount, { onlyCompleted: true });
+
+  return getDebtPaymentDetail(
+    detail.id_nguoi_dung,
+    debtPayment.id_thanh_toan_cong_no
+  );
+};
+
 module.exports = {
   createPartialDebtPayment,
   getMyDebtPayments,
   getDebtPaymentDetail,
   findPendingDebtPaymentByOrderCode,
   allocateDebtPayment,
+  createAdminDirectDebtPayment,
 };

@@ -7,6 +7,7 @@ const HoSoKhachHang = sequelize.define(
     id_ho_so: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
     id_nguoi_dung: { type: DataTypes.BIGINT, allowNull: false },
     id_chinh_sach: { type: DataTypes.BIGINT, allowNull: true },
+    id_chinh_sach_da_nhac: { type: DataTypes.BIGINT, allowNull: true },
     id_ao: { type: DataTypes.BIGINT, allowNull: false },
     id_vu_nuoi: { type: DataTypes.BIGINT, allowNull: false, unique: true },
     id_khu_vuc: { type: DataTypes.BIGINT, allowNull: false },
@@ -62,9 +63,8 @@ const HoSoKhachHang = sequelize.define(
 
     anh_cccd_mat_truoc: { type: DataTypes.STRING(500), allowNull: false },
     anh_cccd_mat_sau: { type: DataTypes.STRING(500), allowNull: false },
-    anh_selfie: { type: DataTypes.STRING(500), allowNull: false },
     anh_bien_lai_tha_giong: { type: DataTypes.STRING(500), allowNull: false },
-    anh_ao_nuoi: { type: DataTypes.STRING(500), allowNull: true },
+    anh_ao_nuoi: { type: DataTypes.TEXT, allowNull: true },
 
     dinh_muc_cong_no: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
     trang_thai_ho_so: {
@@ -78,13 +78,6 @@ const HoSoKhachHang = sequelize.define(
     han_thanh_toan: { type: DataTypes.DATE, allowNull: true },
     ngay_duyet: { type: DataTypes.DATE, allowNull: true },
     ghi_chu: { type: DataTypes.TEXT, allowNull: true },
-    do_tuong_dong: { type: DataTypes.DECIMAL(5, 2), allowNull: true },
-    trang_thai_xac_thuc: {
-      type: DataTypes.ENUM("chua_xac_thuc", "da_xac_thuc", "that_bai"),
-      defaultValue: "chua_xac_thuc",
-    },
-    ly_do_xac_thuc_that_bai: { type: DataTypes.TEXT, allowNull: true },
-    ngay_xac_thuc: { type: DataTypes.DATE, allowNull: true },
     ngay_tao: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
   { tableName: "ho_so_khach_hang", timestamps: false }

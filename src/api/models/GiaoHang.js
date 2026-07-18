@@ -15,6 +15,10 @@ const GiaoHang = sequelize.define("GiaoHang", {
     type: DataTypes.BIGINT,
     allowNull: true,
   },
+  id_kho_xuat: {
+    type: DataTypes.BIGINT,
+    allowNull: true,
+  },
   trang_thai: {
     type: DataTypes.ENUM("cho_giao", "dang_giao", "giao_thanh_cong", "giao_that_bai"),
     defaultValue: "cho_giao",

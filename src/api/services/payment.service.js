@@ -1,8 +1,9 @@
 const { sequelize } = require("../../config/database");
 const payOS = require("../../config/payos");
-const { paymentRepository } = require("../repositories");
+const { paymentRepository, orderRepository } = require("../repositories");
 const debtPaymentRepository = require("../repositories/debtPayment.repository");
 const notificationService = require("./notification.service");
+const inventoryService = require("./inventory.service");
 
 const getMyPayments = async (userId) => {
   return await paymentRepository.findByUserId(userId);
@@ -66,6 +67,11 @@ const confirmPayment = async (user, paymentId, data) => {
       throw new Error("Không tìm thấy thông tin đơn hàng liên kết với thanh toán này");
     }
 
+    const orderWithDetails = await orderRepository.findOrderWithDetailsForUpdate(
+      order.id_don_hang,
+      transaction
+    );
+
     if (payment.phuong_thuc === "cod" && !data.anh_bien_nhan) {
       throw new Error("Giao hàng COD thành công bắt buộc phải tải ảnh biên nhận");
     }
@@ -92,10 +98,18 @@ const confirmPayment = async (user, paymentId, data) => {
       newOrderStatus = "hoan_tat";
       notificationContent = `Đơn hàng #${order.id_don_hang} đã giao thành công và thu đủ tiền COD.`;
 
+      if (order.trang_thai_don_hang !== "hoan_tat") {
+        await inventoryService.confirmInventory({
+          order: orderWithDetails,
+          transaction,
+        });
+      }
+
       await paymentRepository.updateDeliveryByOrderId(
         order.id_don_hang,
         {
           trang_thai: "giao_thanh_cong",
+          id_kho_xuat: order.id_kho_xuat || null,
           anh_bien_nhan: data.anh_bien_nhan,
           ghi_chu: data.ghi_chu || "Đã giao hàng thành công và thu đủ tiền COD",
           thoi_gian_giao: new Date(),
@@ -114,10 +128,18 @@ const confirmPayment = async (user, paymentId, data) => {
       notificationTitle = "Hoàn tất đơn trả sau";
       notificationContent = `Đơn hàng #${order.id_don_hang} đã giao thành công và hợp đồng đã được ký.`;
 
+      if (order.trang_thai_don_hang !== "hoan_tat") {
+        await inventoryService.confirmInventory({
+          order: orderWithDetails,
+          transaction,
+        });
+      }
+
       await paymentRepository.updateDeliveryByOrderId(
         order.id_don_hang,
         {
           trang_thai: "giao_thanh_cong",
+          id_kho_xuat: order.id_kho_xuat || null,
           anh_hop_dong: data.anh_hop_dong,
           ghi_chu: data.ghi_chu || "Đã giao hàng thành công và khách đã ký hợp đồng",
           thoi_gian_giao: new Date(),
@@ -251,7 +273,9 @@ const handlePayOSWebhook = async (webhookBody) => {
     await debtPaymentRepository.findPendingDebtPaymentByOrderCode(orderCode);
 
   if (debtPayment) {
-    await debtPaymentRepository.allocateDebtPayment(debtPayment, amount);
+    await debtPaymentRepository.allocateDebtPayment(debtPayment, amount, {
+      onlyCompleted: true,
+    });
 
     await notificationService.createNotification({
       id_nguoi_dung: debtPayment.id_nguoi_dung,
@@ -370,12 +394,27 @@ const failPayment = async (user, paymentId, data) => {
     );
 
     const order = payment.DonHang;
+    if (!order) {
+      throw new Error("Không tìm thấy đơn hàng liên kết với thanh toán này");
+    }
+
+    const orderWithDetails = await orderRepository.findOrderWithDetailsForUpdate(
+      order.id_don_hang,
+      transaction
+    );
+
+    if (!["da_huy", "hoan_tat"].includes(order.trang_thai_don_hang)) {
+      await inventoryService.releaseInventory({
+        order: orderWithDetails,
+        transaction,
+      });
+    }
 
     if (payment.phuong_thuc === "chuyen_khoan") {
       await paymentRepository.updateOrder(
         order,
         {
-          trang_thai_don_hang: "cho_thanh_toan",
+          trang_thai_don_hang: "da_huy",
         },
         transaction
       );

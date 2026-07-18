@@ -1,6 +1,4 @@
-const {
-  khuVucHoTroTraSauRepository,
-} = require("../repositories");
+const { khuVucHoTroTraSauRepository } = require("../repositories");
 
 const normalizeText = (value) => {
   return String(value || "")
@@ -10,9 +8,7 @@ const normalizeText = (value) => {
 
 const validateAdmin = (user) => {
   if (!user || user.vai_tro !== "admin") {
-    throw new Error(
-      "Chỉ Admin mới có quyền quản lý khu vực hỗ trợ trả sau"
-    );
+    throw new Error("Chi Admin moi co quyen quan ly khu vuc ho tro tra sau");
   }
 };
 
@@ -21,15 +17,10 @@ const getAllAreas = async () => {
 };
 
 const getAreaById = async (id_khu_vuc) => {
-  const area =
-    await khuVucHoTroTraSauRepository.findById(
-      id_khu_vuc
-    );
+  const area = await khuVucHoTroTraSauRepository.findById(id_khu_vuc);
 
   if (!area) {
-    throw new Error(
-      "Không tìm thấy khu vực hỗ trợ trả sau"
-    );
+    throw new Error("Khong tim thay khu vuc ho tro tra sau");
   }
 
   return area;
@@ -38,55 +29,30 @@ const getAreaById = async (id_khu_vuc) => {
 const createArea = async (user, data) => {
   validateAdmin(user);
 
-  const tinhThanh = normalizeText(
-    data.tinh_thanh
-  );
-
-  const quanHuyen = normalizeText(
-    data.quan_huyen
-  );
-
-  const phuongXa = normalizeText(
-    data.phuong_xa
-  );
+  const tinhThanh = normalizeText(data.tinh_thanh);
+  const quanHuyen =
+    normalizeText(data.quan_huyen) || "Theo don vi hanh chinh 34 tinh";
+  const phuongXa = normalizeText(data.phuong_xa);
 
   if (!tinhThanh) {
-    throw new Error(
-      "Vui lòng nhập tỉnh hoặc thành phố"
-    );
+    throw new Error("Vui long nhap tinh hoac thanh pho");
   }
 
-  if (!quanHuyen) {
-    throw new Error(
-      "Vui lòng nhập quận hoặc huyện"
-    );
-  }
-
-  const validStatuses = [
-    "hoat_dong",
-    "tam_ngung",
-  ];
-
-  const trangThai =
-    data.trang_thai || "hoat_dong";
+  const validStatuses = ["hoat_dong", "tam_ngung"];
+  const trangThai = data.trang_thai || "hoat_dong";
 
   if (!validStatuses.includes(trangThai)) {
-    throw new Error(
-      "Trạng thái khu vực không hợp lệ"
-    );
+    throw new Error("Trang thai khu vuc khong hop le");
   }
 
-  const existedArea =
-    await khuVucHoTroTraSauRepository.findExactArea({
-      tinh_thanh: tinhThanh,
-      quan_huyen: quanHuyen,
-      phuong_xa: phuongXa,
-    });
+  const existedArea = await khuVucHoTroTraSauRepository.findExactArea({
+    tinh_thanh: tinhThanh,
+    quan_huyen: quanHuyen,
+    phuong_xa: phuongXa,
+  });
 
   if (existedArea) {
-    throw new Error(
-      "Khu vực này đã tồn tại trên hệ thống"
-    );
+    throw new Error("Khu vuc nay da ton tai tren he thong");
   }
 
   return await khuVucHoTroTraSauRepository.create({
@@ -94,150 +60,96 @@ const createArea = async (user, data) => {
     quan_huyen: quanHuyen,
     phuong_xa: phuongXa || null,
     trang_thai: trangThai,
-    ghi_chu:
-      normalizeText(data.ghi_chu) || null,
+    ghi_chu: normalizeText(data.ghi_chu) || null,
   });
 };
 
-const updateArea = async (
-  user,
-  id_khu_vuc,
-  data
-) => {
+const updateArea = async (user, id_khu_vuc, data) => {
   validateAdmin(user);
 
-  const currentArea =
-    await khuVucHoTroTraSauRepository.findById(
-      id_khu_vuc
-    );
+  const currentArea = await khuVucHoTroTraSauRepository.findById(id_khu_vuc);
 
   if (!currentArea) {
-    throw new Error(
-      "Không tìm thấy khu vực cần cập nhật"
-    );
+    throw new Error("Khong tim thay khu vuc can cap nhat");
   }
 
   const updateData = {};
 
   if (data.tinh_thanh !== undefined) {
-    const tinhThanh = normalizeText(
-      data.tinh_thanh
-    );
+    const tinhThanh = normalizeText(data.tinh_thanh);
 
     if (!tinhThanh) {
-      throw new Error(
-        "Tỉnh hoặc thành phố không được để trống"
-      );
+      throw new Error("Tinh hoac thanh pho khong duoc de trong");
     }
 
     updateData.tinh_thanh = tinhThanh;
   }
 
   if (data.quan_huyen !== undefined) {
-    const quanHuyen = normalizeText(
-      data.quan_huyen
-    );
-
-    if (!quanHuyen) {
-      throw new Error(
-        "Quận hoặc huyện không được để trống"
-      );
-    }
-
-    updateData.quan_huyen = quanHuyen;
+    updateData.quan_huyen =
+      normalizeText(data.quan_huyen) || "Theo don vi hanh chinh 34 tinh";
   }
 
   if (data.phuong_xa !== undefined) {
-    updateData.phuong_xa =
-      normalizeText(data.phuong_xa) || null;
+    updateData.phuong_xa = normalizeText(data.phuong_xa) || null;
   }
 
   if (data.trang_thai !== undefined) {
-    const validStatuses = [
-      "hoat_dong",
-      "tam_ngung",
-    ];
+    const validStatuses = ["hoat_dong", "tam_ngung"];
 
-    if (
-      !validStatuses.includes(
-        data.trang_thai
-      )
-    ) {
-      throw new Error(
-        "Trạng thái khu vực không hợp lệ"
-      );
+    if (!validStatuses.includes(data.trang_thai)) {
+      throw new Error("Trang thai khu vuc khong hop le");
     }
 
-    updateData.trang_thai =
-      data.trang_thai;
+    updateData.trang_thai = data.trang_thai;
   }
 
   if (data.ghi_chu !== undefined) {
-    updateData.ghi_chu =
-      normalizeText(data.ghi_chu) || null;
+    updateData.ghi_chu = normalizeText(data.ghi_chu) || null;
   }
 
-  return await khuVucHoTroTraSauRepository.update(
-    id_khu_vuc,
-    updateData
-  );
+  return await khuVucHoTroTraSauRepository.update(id_khu_vuc, updateData);
 };
 
-const deleteArea = async (
-  user,
-  id_khu_vuc
-) => {
+const deleteArea = async (user, id_khu_vuc) => {
   validateAdmin(user);
 
-  const deleted =
-    await khuVucHoTroTraSauRepository.remove(
-      id_khu_vuc
-    );
+  const deleted = await khuVucHoTroTraSauRepository.remove(id_khu_vuc);
 
   if (!deleted) {
-    throw new Error(
-      "Không tìm thấy khu vực cần xóa"
-    );
+    throw new Error("Khong tim thay khu vuc can xoa");
   }
 
   return true;
 };
 
 const checkSupportedArea = async (data) => {
-  const tinhThanh = normalizeText(
-    data.tinh_thanh
-  );
-
-  const quanHuyen = normalizeText(
-    data.quan_huyen
-  );
-
-  const phuongXa = normalizeText(
-    data.phuong_xa
-  );
+  const tinhThanh = normalizeText(data.tinh_thanh);
+  const quanHuyen = normalizeText(data.quan_huyen);
+  const phuongXa = normalizeText(data.phuong_xa);
 
   if (!tinhThanh) {
-    throw new Error(
-      "Vui lòng nhập tỉnh hoặc thành phố của ao nuôi"
-    );
+    throw new Error("Vui long nhap tinh hoac thanh pho cua ao nuoi");
   }
 
-  if (!quanHuyen) {
-    throw new Error(
-      "Vui lòng nhập quận hoặc huyện của ao nuôi"
-    );
-  }
+  const legacyArea = await khuVucHoTroTraSauRepository.findSupportedArea({
+    tinh_thanh: tinhThanh,
+    quan_huyen: quanHuyen,
+    phuong_xa: phuongXa,
+  });
 
-  const area =
-    await khuVucHoTroTraSauRepository.findSupportedArea({
-      tinh_thanh: tinhThanh,
-      quan_huyen: quanHuyen,
-      phuong_xa: phuongXa,
-    });
+  if (legacyArea) {
+    return {
+      duoc_ho_tro: true,
+      khu_vuc: legacyArea,
+      nguon_kiem_tra: "khu_vuc_ho_tro_tra_sau",
+    };
+  }
 
   return {
-    duoc_ho_tro: Boolean(area),
-    khu_vuc: area || null,
+    duoc_ho_tro: false,
+    khu_vuc: null,
+    nguon_kiem_tra: "khu_vuc_ho_tro_tra_sau",
   };
 };
 

@@ -13,8 +13,14 @@ const chinhSachHanMucRepository = require("./chinhSachHanMuc.repository");
 const phieuDeXuatHanMucRepository = require("./phieuDeXuatHanMuc.repository");
 const hopDongRepository = require("./hopDong.repository");
 const thuongLaiRepository = require("./thuongLai.repository");
-const thoaThuanBaBenRepository = require("./thoaThuanBaBen.repository");
 const khuVucHoTroTraSauRepository = require("./khuVucHoTroTraSau.repository");
+const locationRepository = require("./location.repository");
+const businessAreaRepository = require("./businessArea.repository");
+const departurePointRepository = require("./departurePoint.repository");
+const shippingFeeRepository = require("./shippingFee.repository");
+const warehouseRepository = require("./warehouse.repository");
+const inventoryRepository = require("./inventory.repository");
+const limitStaffAreaRepository = require("./limitStaffArea.repository");
 module.exports = {
   authRepository,
   categoryRepository,
@@ -28,6 +34,13 @@ module.exports = {
   debtExtensionRepository,
   notificationRepository,
   chinhSachHanMucRepository,phieuDeXuatHanMucRepository,
-  hopDongRepository,thuongLaiRepository,thoaThuanBaBenRepository,khuVucHoTroTraSauRepository
+  hopDongRepository,thuongLaiRepository,khuVucHoTroTraSauRepository,
+  locationRepository,
+  businessAreaRepository,
+  departurePointRepository,
+  shippingFeeRepository,
+  warehouseRepository,
+  inventoryRepository,
+  limitStaffAreaRepository
 };
   

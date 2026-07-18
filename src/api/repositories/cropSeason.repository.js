@@ -5,6 +5,7 @@ const {
   ChiTietDonHang,
   SanPham,
 } = require("../models");
+const { Op } = require("sequelize");
 const create = async (data) => {
   return await VuNuoi.create(data);
 };
@@ -15,10 +16,34 @@ const findById = async (id_vu_nuoi) => {
   });
 };
 
-const findByPondId = async (id_ao) => {
+const findByPondId = async (id_ao, transaction = null) => {
   return await VuNuoi.findAll({
     where: { id_ao },
+    transaction,
     order: [["id_vu_nuoi", "DESC"]],
+  });
+};
+
+const countOrdersByPondId = async (id_ao, transaction = null) => {
+  const cropSeasons = await findByPondId(id_ao, transaction);
+  const cropSeasonIds = cropSeasons.map((season) => season.id_vu_nuoi);
+
+  if (!cropSeasonIds.length) return 0;
+
+  return await DonHang.count({
+    where: {
+      id_vu_nuoi: {
+        [Op.in]: cropSeasonIds,
+      },
+    },
+    transaction,
+  });
+};
+
+const removeByPondId = async (id_ao, transaction = null) => {
+  return await VuNuoi.destroy({
+    where: { id_ao },
+    transaction,
   });
 };
 
@@ -104,6 +129,8 @@ module.exports = {
   create,
   findById,
   findByPondId,
+  countOrdersByPondId,
+  removeByPondId,
   findActiveByPondId,
   update,
   remove,

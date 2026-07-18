@@ -5,14 +5,49 @@ let boundaryCache = null;
 
 const normalizeCode = (value) => String(value || "").replace(/^0+/, "") || "0";
 
-const resolveBoundaryPath = () => {
+const resolveBoundaryPathCandidates = () => {
+  const candidates = [];
+
   if (process.env.WARD_BOUNDARY_GEOJSON_PATH) {
-    return path.isAbsolute(process.env.WARD_BOUNDARY_GEOJSON_PATH)
-      ? process.env.WARD_BOUNDARY_GEOJSON_PATH
-      : path.resolve(process.cwd(), process.env.WARD_BOUNDARY_GEOJSON_PATH);
+    candidates.push(
+      path.isAbsolute(process.env.WARD_BOUNDARY_GEOJSON_PATH)
+        ? process.env.WARD_BOUNDARY_GEOJSON_PATH
+        : path.resolve(process.cwd(), process.env.WARD_BOUNDARY_GEOJSON_PATH)
+    );
   }
 
-  return path.resolve(process.cwd(), "..", "ward_boundary_full_34.geojson");
+  candidates.push(
+    path.resolve(process.cwd(), "data", "ward_boundary_full_34.geojson"),
+    path.resolve(process.cwd(), "src", "data", "ward_boundary_full_34.geojson"),
+    path.resolve(process.cwd(), "ward_boundary_full_34.geojson"),
+    path.resolve(process.cwd(), "..", "ward_boundary_full_34.geojson")
+  );
+
+  return candidates;
+};
+
+const loadBoundaryGeoJson = async () => {
+  for (const filePath of resolveBoundaryPathCandidates()) {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    }
+  }
+
+  if (process.env.WARD_BOUNDARY_GEOJSON_URL) {
+    const response = await fetch(process.env.WARD_BOUNDARY_GEOJSON_URL);
+
+    if (!response.ok) {
+      throw new Error(
+        `Khong tai duoc file ward_boundary_full_34.geojson tu WARD_BOUNDARY_GEOJSON_URL (${response.status})`
+      );
+    }
+
+    return await response.json();
+  }
+
+  throw new Error(
+    "Chua tim thay file ward_boundary_full_34.geojson. Hay dat file trong BE/data hoac cau hinh WARD_BOUNDARY_GEOJSON_URL tren server deploy."
+  );
 };
 
 const walkCoordinatePairs = (coordinates, callback) => {
@@ -94,15 +129,10 @@ const isPointInGeometry = (lon, lat, geometry) => {
   return false;
 };
 
-const loadBoundaryCache = () => {
+const loadBoundaryCache = async () => {
   if (boundaryCache) return boundaryCache;
 
-  const filePath = resolveBoundaryPath();
-  if (!fs.existsSync(filePath)) {
-    throw new Error("Chua tim thay file ward_boundary_full_34.geojson");
-  }
-
-  const geojson = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  const geojson = await loadBoundaryGeoJson();
   boundaryCache = geojson.features.map((feature) => ({
     properties: feature.properties,
     geometry: feature.geometry,
@@ -112,7 +142,7 @@ const loadBoundaryCache = () => {
   return boundaryCache;
 };
 
-const resolveCoordinate = ({ vi_do, kinh_do }) => {
+const resolveCoordinate = async ({ vi_do, kinh_do }) => {
   const lat = Number(vi_do);
   const lon = Number(kinh_do);
 
@@ -123,7 +153,7 @@ const resolveCoordinate = ({ vi_do, kinh_do }) => {
     throw new Error("Kinh do khong hop le");
   }
 
-  const boundaries = loadBoundaryCache();
+  const boundaries = await loadBoundaryCache();
   const matched = boundaries.find((item) => {
     return isPointInBbox(lon, lat, item.bbox) && isPointInGeometry(lon, lat, item.geometry);
   });

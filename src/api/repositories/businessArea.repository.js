@@ -1,4 +1,5 @@
 const { KhuVucKinhDoanh, TinhThanh } = require("../models");
+const { Op } = require("sequelize");
 
 const findAll = async () => {
   return await KhuVucKinhDoanh.findAll({
@@ -23,11 +24,42 @@ const findByProvinceId = async (id_tinh_thanh, transaction = null) => {
 };
 
 const findByProvinceCode = async (ma_tinh, transaction = null) => {
+  const normalizedCode = String(ma_tinh || "").replace(/^0+/, "") || "0";
+  const paddedCode = normalizedCode.padStart(2, "0");
+
   return await KhuVucKinhDoanh.findOne({
     include: [
       {
         model: TinhThanh,
-        where: { ma_tinh: String(ma_tinh) },
+        where: {
+          ma_tinh: {
+            [Op.in]: [
+              String(ma_tinh),
+              normalizedCode,
+              paddedCode,
+              normalizedCode.padStart(3, "0"),
+            ],
+          },
+        },
+      },
+    ],
+    transaction,
+  });
+};
+
+const findByProvinceName = async (ten_tinh, transaction = null) => {
+  const provinceName = String(ten_tinh || "").trim();
+  if (!provinceName) return null;
+
+  return await KhuVucKinhDoanh.findOne({
+    include: [
+      {
+        model: TinhThanh,
+        where: {
+          ten_tinh: {
+            [Op.like]: provinceName,
+          },
+        },
       },
     ],
     transaction,
@@ -50,6 +82,7 @@ module.exports = {
   findById,
   findByProvinceId,
   findByProvinceCode,
+  findByProvinceName,
   create,
   update,
 };

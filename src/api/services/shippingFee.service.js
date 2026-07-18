@@ -95,9 +95,13 @@ const resolveServiceArea = async (data) => {
   });
 
   if (boundary.tim_thay && boundary.dia_gioi?.ma_tinh) {
-    const provinceArea = await businessAreaRepository.findByProvinceCode(
-      boundary.dia_gioi.ma_tinh
-    );
+    const provinceArea =
+      (await businessAreaRepository.findByProvinceCode(
+        boundary.dia_gioi.ma_tinh
+      )) ||
+      (await businessAreaRepository.findByProvinceName(
+        boundary.dia_gioi.ten_tinh
+      ));
 
     if (provinceArea && provinceArea.dang_hoat_dong && provinceArea.cho_phep_ban_hang) {
       return {

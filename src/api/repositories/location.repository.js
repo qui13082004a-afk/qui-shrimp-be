@@ -12,8 +12,18 @@ const findProvinceById = async (id_tinh_thanh, transaction = null) => {
 };
 
 const findProvinceByCode = async (ma_tinh, transaction = null) => {
+  const normalizedCode = String(ma_tinh || "").replace(/^0+/, "") || "0";
   return await TinhThanh.findOne({
-    where: { ma_tinh },
+    where: {
+      ma_tinh: {
+        [Op.in]: [
+          String(ma_tinh),
+          normalizedCode,
+          normalizedCode.padStart(2, "0"),
+          normalizedCode.padStart(3, "0"),
+        ],
+      },
+    },
     transaction,
   });
 };
@@ -55,8 +65,18 @@ const findWardsByProvinceId = async (id_tinh_thanh) => {
 };
 
 const findWardByCode = async (ma_xa, transaction = null) => {
+  const normalizedCode = String(ma_xa || "").replace(/^0+/, "") || "0";
   return await PhuongXa.findOne({
-    where: { ma_xa },
+    where: {
+      ma_xa: {
+        [Op.in]: [
+          String(ma_xa),
+          normalizedCode,
+          normalizedCode.padStart(4, "0"),
+          normalizedCode.padStart(5, "0"),
+        ],
+      },
+    },
     transaction,
   });
 };

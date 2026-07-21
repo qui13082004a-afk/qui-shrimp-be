@@ -49,6 +49,15 @@ const findById = async (id_thanh_toan) => {
   });
 };
 
+const findByTransactionCode = async (ma_giao_dich, options = {}) => {
+  return await ThanhToan.findOne({
+    where: { ma_giao_dich: String(ma_giao_dich) },
+    include: [{ model: DonHang, include: [{ model: NguoiDung }] }],
+    transaction: options.transaction,
+    lock: options.lock,
+  });
+};
+
 /**
  * Cập nhật trạng thái giao dịch thanh toán trong Database
  */
@@ -101,6 +110,7 @@ module.exports = {
   findAll,
   findByOrderId,
   findById,
+  findByTransactionCode,
   updatePayment,
   updateOrder,
   updateDeliveryByOrderId,

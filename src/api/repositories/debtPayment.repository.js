@@ -160,6 +160,12 @@ const findPendingDebtPaymentByOrderCode = (orderCode) => {
   });
 };
 
+const findDebtPaymentByOrderCode = (orderCode) => {
+  return ThanhToanCongNo.findOne({
+    where: { ma_giao_dich: String(orderCode) },
+  });
+};
+
 const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
   const transaction = await sequelize.transaction();
 
@@ -168,25 +174,37 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       throw new Error("Không tìm thấy giao dịch công nợ cần phân bổ");
     }
 
-    if (debtPayment.trang_thai === "thanh_cong") {
-      await transaction.rollback();
-      return debtPayment;
+    const lockedDebtPayment = await ThanhToanCongNo.findByPk(
+      debtPayment.id_thanh_toan_cong_no,
+      {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      }
+    );
+
+    if (!lockedDebtPayment) {
+      throw new Error("Khong tim thay giao dich cong no can phan bo");
+    }
+
+    if (lockedDebtPayment.trang_thai === "thanh_cong") {
+      await transaction.commit();
+      return lockedDebtPayment;
     }
 
     const paidAmount = Math.round(Number(amount || 0));
-    const expectedAmount = Math.round(Number(debtPayment.so_tien || 0));
+    const expectedAmount = Math.round(Number(lockedDebtPayment.so_tien || 0));
 
     if (paidAmount !== expectedAmount) {
       throw new Error("Số tiền PayOS gửi về không khớp với phiếu công nợ");
     }
 
-    const profileWhere = debtPayment.id_ho_so
-      ? { id_ho_so: debtPayment.id_ho_so }
+    const profileWhere = lockedDebtPayment.id_ho_so
+      ? { id_ho_so: lockedDebtPayment.id_ho_so }
       : undefined;
 
     const orders = await DonHang.findAll({
       where: {
-        id_nguoi_dung: debtPayment.id_nguoi_dung,
+        id_nguoi_dung: lockedDebtPayment.id_nguoi_dung,
         hinh_thuc_thanh_toan: "tra_sau",
         trang_thai_don_hang: options.onlyCompleted
           ? "hoan_tat"
@@ -255,7 +273,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       const allocateAmount = Math.min(remaining, conLai);
 
       allocationRows.push({
-        id_thanh_toan_cong_no: debtPayment.id_thanh_toan_cong_no,
+        id_thanh_toan_cong_no: lockedDebtPayment.id_thanh_toan_cong_no,
         id_don_hang: order.id_don_hang,
         so_tien_phan_bo: allocateAmount,
         ngay_phan_bo: new Date(),
@@ -270,7 +288,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
 
     await ChiTietThanhToanCongNo.bulkCreate(allocationRows, { transaction });
 
-    await debtPayment.update(
+    await lockedDebtPayment.update(
       {
         trang_thai: "thanh_cong",
         ngay_thanh_toan: new Date(),
@@ -280,7 +298,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
 
     await transaction.commit();
 
-    return debtPayment;
+    return lockedDebtPayment;
   } catch (error) {
     await transaction.rollback();
     console.error("ALLOCATE DEBT PAYMENT ERROR:", error.message);
@@ -330,6 +348,7 @@ module.exports = {
   getMyDebtPayments,
   getDebtPaymentDetail,
   findPendingDebtPaymentByOrderCode,
+  findDebtPaymentByOrderCode,
   allocateDebtPayment,
   createAdminDirectDebtPayment,
 };

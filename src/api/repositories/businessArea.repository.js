@@ -25,24 +25,28 @@ const findByProvinceId = async (id_tinh_thanh, transaction = null) => {
 
 const findByProvinceCode = async (ma_tinh, transaction = null) => {
   const normalizedCode = String(ma_tinh || "").replace(/^0+/, "") || "0";
-  const paddedCode = normalizedCode.padStart(2, "0");
+  const provinceCodes = [
+    String(ma_tinh),
+    normalizedCode,
+    normalizedCode.padStart(2, "0"),
+    normalizedCode.padStart(3, "0"),
+  ];
+
+  const province = await TinhThanh.findOne({
+    where: { ma_tinh: { [Op.in]: provinceCodes } },
+    transaction,
+  });
+
+  const provinceIds = [
+    province?.id_tinh_thanh,
+    Number(normalizedCode),
+  ].filter((value) => Number.isFinite(Number(value)));
+
+  if (provinceIds.length === 0) return null;
 
   return await KhuVucKinhDoanh.findOne({
-    include: [
-      {
-        model: TinhThanh,
-        where: {
-          ma_tinh: {
-            [Op.in]: [
-              String(ma_tinh),
-              normalizedCode,
-              paddedCode,
-              normalizedCode.padStart(3, "0"),
-            ],
-          },
-        },
-      },
-    ],
+    where: { id_tinh_thanh: { [Op.in]: provinceIds } },
+    include: [{ model: TinhThanh, required: false }],
     transaction,
   });
 };
@@ -51,17 +55,24 @@ const findByProvinceName = async (ten_tinh, transaction = null) => {
   const provinceName = String(ten_tinh || "").trim();
   if (!provinceName) return null;
 
-  return await KhuVucKinhDoanh.findOne({
-    include: [
-      {
-        model: TinhThanh,
-        where: {
-          ten_tinh: {
-            [Op.like]: provinceName,
-          },
-        },
+  const provinces = await TinhThanh.findAll({
+    where: {
+      ten_tinh: {
+        [Op.like]: `%${provinceName}%`,
       },
-    ],
+    },
+    transaction,
+  });
+
+  const provinceIds = provinces
+    .map((province) => province.id_tinh_thanh)
+    .filter((value) => Number.isFinite(Number(value)));
+
+  if (provinceIds.length === 0) return null;
+
+  return await KhuVucKinhDoanh.findOne({
+    where: { id_tinh_thanh: { [Op.in]: provinceIds } },
+    include: [{ model: TinhThanh, required: false }],
     transaction,
   });
 };

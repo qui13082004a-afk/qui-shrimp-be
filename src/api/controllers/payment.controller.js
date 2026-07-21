@@ -118,6 +118,28 @@ const createPayOSPayment = async (req, res) => {
   }
 };
 
+const confirmPayOSReturn = async (req, res) => {
+  try {
+    const result = await paymentService.confirmPayOSReturn(
+      req.user,
+      req.body.orderCode
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: result.confirmed
+        ? "Da xac minh giao dich voi PayOS"
+        : result.message,
+      data: result,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 const handlePayOSWebhook = async (req, res) => {
   try {
     const result = await paymentService.handlePayOSWebhook(req.body);
@@ -140,5 +162,6 @@ module.exports = {
   confirmPayment,
   failPayment,
   createPayOSPayment,
+  confirmPayOSReturn,
   handlePayOSWebhook,
 };

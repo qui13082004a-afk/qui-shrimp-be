@@ -242,6 +242,134 @@ const createPayOSPayment = async (user, paymentId) => {
   };
 };
 
+const confirmPayOSReturn = async (user, rawOrderCode) => {
+  const orderCode = Number(rawOrderCode);
+
+  if (!Number.isSafeInteger(orderCode) || orderCode <= 0) {
+    throw new Error("Ma giao dich PayOS khong hop le");
+  }
+
+  const debtPayment = await debtPaymentRepository.findDebtPaymentByOrderCode(orderCode);
+  const orderPayment = debtPayment
+    ? null
+    : await paymentRepository.findByTransactionCode(orderCode);
+
+  if (!debtPayment && !orderPayment) {
+    throw new Error("Khong tim thay giao dich PayOS trong he thong");
+  }
+
+  const ownerId = debtPayment
+    ? debtPayment.id_nguoi_dung
+    : orderPayment?.DonHang?.id_nguoi_dung;
+
+  if (user.vai_tro !== "admin" && Number(ownerId) !== Number(user.id_nguoi_dung)) {
+    throw new Error("Ban khong co quyen xac nhan giao dich nay");
+  }
+
+  const expectedAmount = Math.round(
+    Number(debtPayment?.so_tien || orderPayment?.so_tien || 0)
+  );
+  const paymentLink = await payOS.paymentRequests.get(orderCode);
+  const payOSStatus = String(paymentLink.status || "").toUpperCase();
+
+  if (payOSStatus !== "PAID") {
+    return {
+      confirmed: false,
+      terminal: ["CANCELLED", "EXPIRED", "FAILED", "UNDERPAID"].includes(payOSStatus),
+      status: payOSStatus || "PENDING",
+      message: "PayOS chua xac nhan giao dich thanh cong.",
+    };
+  }
+
+  if (
+    Math.round(Number(paymentLink.amount)) !== expectedAmount ||
+    Math.round(Number(paymentLink.amountPaid)) !== expectedAmount
+  ) {
+    throw new Error("So tien PayOS xac nhan khong khop voi giao dich");
+  }
+
+  if (debtPayment) {
+    const alreadyProcessed = debtPayment.trang_thai === "thanh_cong";
+    const completedDebtPayment = await debtPaymentRepository.allocateDebtPayment(
+      debtPayment,
+      expectedAmount,
+      { onlyCompleted: true }
+    );
+
+    if (!alreadyProcessed) {
+      await notificationService.createNotification({
+        id_nguoi_dung: completedDebtPayment.id_nguoi_dung,
+        tieu_de: "Thanh toan cong no thanh cong",
+        noi_dung: `Ban da thanh toan cong no thanh cong voi so tien ${expectedAmount.toLocaleString("vi-VN")}d.`,
+        loai: "thanh_toan",
+        lien_ket: "/debt",
+      });
+    }
+
+    return {
+      confirmed: true,
+      type: "debt",
+      alreadyProcessed,
+      status: payOSStatus,
+    };
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const payment = await paymentRepository.findByTransactionCode(orderCode, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!payment || !payment.DonHang) {
+      throw new Error("Khong tim thay don hang lien ket voi giao dich PayOS");
+    }
+
+    const alreadyProcessed = payment.trang_thai === "thanh_cong";
+
+    if (!alreadyProcessed) {
+      await paymentRepository.updatePayment(
+        payment,
+        {
+          trang_thai: "thanh_cong",
+          ma_giao_dich: String(orderCode),
+          ngay_thanh_toan: new Date(),
+        },
+        transaction
+      );
+
+      await paymentRepository.updateOrder(
+        payment.DonHang,
+        { trang_thai_don_hang: "cho_giao" },
+        transaction
+      );
+
+      await notificationService.createNotification({
+        id_nguoi_dung: payment.DonHang.id_nguoi_dung,
+        tieu_de: "Thanh toan thanh cong",
+        noi_dung: `Don hang #${payment.DonHang.id_don_hang} da thanh toan thanh cong va dang cho giao hang.`,
+        loai: "thanh_toan",
+        lien_ket: `/profile/orders/${payment.DonHang.id_don_hang}`,
+        transaction,
+      });
+    }
+
+    await transaction.commit();
+
+    return {
+      confirmed: true,
+      type: "order",
+      alreadyProcessed,
+      status: payOSStatus,
+      orderId: payment.DonHang.id_don_hang,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
 const handlePayOSWebhook = async (webhookBody) => {
   let verifiedData;
 
@@ -454,6 +582,7 @@ module.exports = {
   getPaymentsByOrder,
   confirmPayment,
   createPayOSPayment,
+  confirmPayOSReturn,
   handlePayOSWebhook,
   failPayment,
 };

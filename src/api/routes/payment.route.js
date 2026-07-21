@@ -16,6 +16,12 @@ router.post(
 );
 
 router.post(
+  "/payos/confirm-return",
+  authMiddleware,
+  paymentController.confirmPayOSReturn
+);
+
+router.post(
   "/payos-webhook",
   paymentController.handlePayOSWebhook
 );

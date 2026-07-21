@@ -60,6 +60,7 @@ const resolveShippingForOrder = async (userId, data, transaction) => {
   let viDo = toNullableCoordinate(data.vi_do_giao_hang);
   let kinhDo = toNullableCoordinate(data.kinh_do_giao_hang);
   let diaChiGiaoHang = data.dia_chi_giao_hang;
+  let idTinhThanhGiaoHang = data.id_tinh_thanh_giao_hang || null;
 
   if (data.id_dia_chi_giao_hang) {
     const deliveryAddress = await orderRepository.findDeliveryAddressForOrder(
@@ -73,6 +74,7 @@ const resolveShippingForOrder = async (userId, data, transaction) => {
     }
 
     diaChiGiaoHang = deliveryAddress.dia_chi;
+    idTinhThanhGiaoHang = deliveryAddress.id_tinh_thanh || idTinhThanhGiaoHang;
     viDo = toNullableCoordinate(deliveryAddress.vi_do);
     kinhDo = toNullableCoordinate(deliveryAddress.kinh_do);
   }
@@ -91,6 +93,7 @@ const resolveShippingForOrder = async (userId, data, transaction) => {
 
   const shipping = await shippingFeeService.calculateShippingFee({
     id_khu_vuc: data.id_khu_vuc_giao_hang,
+    id_tinh_thanh: idTinhThanhGiaoHang,
     vi_do: viDo,
     kinh_do: kinhDo,
   });
@@ -101,6 +104,7 @@ const resolveShippingForOrder = async (userId, data, transaction) => {
     id_diem_xuat_phat: shipping.id_diem_xuat_phat || null,
     khoang_cach_giao_hang_km: shipping.khoang_cach_km || null,
     dia_chi_giao_hang: diaChiGiaoHang,
+    id_tinh_thanh_giao_hang: idTinhThanhGiaoHang,
     vi_do_giao_hang: viDo,
     kinh_do_giao_hang: kinhDo,
   };
@@ -226,6 +230,7 @@ const createOrder = async (user, data) => {
     ) {
       const warehouseShipping = await shippingFeeService.calculateShippingFeeFromWarehouse({
         id_khu_vuc: shippingData.id_khu_vuc_giao_hang || data.id_khu_vuc_giao_hang,
+        id_tinh_thanh: shippingData.id_tinh_thanh_giao_hang || data.id_tinh_thanh_giao_hang,
         vi_do: shippingData.vi_do_giao_hang,
         kinh_do: shippingData.kinh_do_giao_hang,
         warehouse: selectedWarehouse,
@@ -445,6 +450,7 @@ const previewOrder = async (user, data) => {
   ) {
     const warehouseShipping = await shippingFeeService.calculateShippingFeeFromWarehouse({
       id_khu_vuc: shippingData.id_khu_vuc_giao_hang || data.id_khu_vuc_giao_hang,
+      id_tinh_thanh: shippingData.id_tinh_thanh_giao_hang || data.id_tinh_thanh_giao_hang,
       vi_do: shippingData.vi_do_giao_hang,
       kinh_do: shippingData.kinh_do_giao_hang,
       warehouse: selectedWarehouse,

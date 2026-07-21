@@ -89,6 +89,35 @@ const validateActiveArea = (area) => {
 };
 
 const resolveServiceArea = async (data) => {
+  if (data.id_tinh_thanh) {
+    const selectedProvinceArea = await businessAreaRepository.findByProvinceId(
+      data.id_tinh_thanh
+    );
+
+    if (selectedProvinceArea) {
+      validateActiveArea(selectedProvinceArea);
+
+      return {
+        area: selectedProvinceArea,
+        boundary: {
+          tim_thay: true,
+          vi_do: data.vi_do,
+          kinh_do: data.kinh_do,
+          dia_gioi: selectedProvinceArea.TinhThanh
+            ? {
+                ma_tinh: selectedProvinceArea.TinhThanh.ma_tinh,
+                ten_tinh: selectedProvinceArea.TinhThanh.ten_tinh,
+              }
+            : null,
+        },
+        pham_vi_phuc_vu: "theo_dia_chi_da_luu",
+        can_check_radius: false,
+        thong_bao:
+          "Dia chi giao hang da gan voi tinh/thanh dang phuc vu.",
+      };
+    }
+  }
+
   const boundary = await boundaryLookupService.resolveCoordinate({
     vi_do: data.vi_do,
     kinh_do: data.kinh_do,

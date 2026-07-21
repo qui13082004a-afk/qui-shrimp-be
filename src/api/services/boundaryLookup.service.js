@@ -17,7 +17,9 @@ const resolveBoundaryPathCandidates = () => {
   }
 
   candidates.push(
+    path.resolve(process.cwd(), "data", "ward_boundary_mien_nam_34.geojson"),
     path.resolve(process.cwd(), "data", "ward_boundary_full_34.geojson"),
+    path.resolve(process.cwd(), "src", "data", "ward_boundary_mien_nam_34.geojson"),
     path.resolve(process.cwd(), "src", "data", "ward_boundary_full_34.geojson"),
     path.resolve(process.cwd(), "ward_boundary_full_34.geojson"),
     path.resolve(process.cwd(), "..", "ward_boundary_full_34.geojson")

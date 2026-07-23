@@ -24,7 +24,6 @@ otp_expires: {
   },
   so_dien_thoai: {
     type: DataTypes.STRING(20),
-    unique: true,
   },
   mat_khau: {
     type: DataTypes.STRING(255),

@@ -17,7 +17,7 @@ const findByPk = async (id, options = {}) => {
 const createUser = async (data) => {
   return await NguoiDung.create(data);
 };
-const updateUnverifiedUser = async (id, data) => {
+const updateUnverifiedUser = async (id_nguoi_dung, data) => {
   return await NguoiDung.update(
     {
       ho_ten: data.ho_ten,

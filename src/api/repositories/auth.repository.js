@@ -32,7 +32,7 @@ const updateUnverifiedUser = async (id, data) => {
     },
     {
       where: {
-        id,
+        id_nguoi_dung,
       },
     }
   );

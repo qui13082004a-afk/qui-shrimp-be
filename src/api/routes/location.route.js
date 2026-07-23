@@ -9,7 +9,6 @@ router.get("/provinces", authMiddleware, locationController.getAllProvinces);
 
 router.get(
   "/provinces/:id_tinh_thanh/wards",
-  authMiddleware,
   locationController.getWardsByProvinceId
 );
 

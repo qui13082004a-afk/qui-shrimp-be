@@ -5,10 +5,9 @@ const { locationController } = require("../controllers");
 const authMiddleware = require("../middlewares/auth.middleware");
 const { authorizeAdmin } = authMiddleware;
 
-router.get("/provinces", authMiddleware, locationController.getAllProvinces);
-
+router.get("/provinces", locationController.getAllProvinces);
 router.get(
-  "/provinces/:id_tinh_thanh/wards",
+  "/provinces/:id_tinh_thanh/wards",  authMiddleware,
   locationController.getWardsByProvinceId
 );
 

@@ -59,12 +59,6 @@ const register = async (data) => {
     if (existedUser.email === email) {
       throw new Error("Email này đã được đăng ký trên hệ thống");
     }
-
-    if (existedUser.so_dien_thoai === so_dien_thoai) {
-      throw new Error("Số điện thoại này đã được đăng ký trên hệ thống");
-    }
-
-    throw new Error("Email này đã được đăng ký trên hệ thống");
   }
 
   // Mã hóa mật khẩu

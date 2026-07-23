@@ -80,16 +80,19 @@ const register = async (data) => {
     existedUser &&
     existedUser.trang_thai_tai_khoan === "chua_xac_thuc"
   ) {
-    user = await authRepository.updateUnverifiedUser(existedUser.id, {
-      ho_ten,
-      so_dien_thoai,
-      dia_chi,
-      email,
-      mat_khau: hashedPassword,
-      tinh_thanh,
-      otp_code: otp,
-      otp_expires: otpExpires,
-    });
+    user = await authRepository.updateUnverifiedUser(
+      existedUser.id_nguoi_dung,
+      {
+        ho_ten,
+        so_dien_thoai,
+        dia_chi,
+        email,
+        mat_khau: hashedPassword,
+        tinh_thanh,
+        otp_code: otp,
+        otp_expires: otpExpires,
+      }
+    );
   } else {
     // Email chưa tồn tại thì tạo tài khoản mới
     user = await authRepository.createUser({
@@ -332,7 +335,7 @@ const updateProfile = async (userId, updateData) => {
   }
   const allowedFields = ["ho_ten", "so_dien_thoai", "dia_chi", "tinh_thanh", "anh_dai_dien"];
   const normalizedUpdateData = await normalizeAccountAddress(updateData);
-  
+
   allowedFields.forEach((field) => {
     if (normalizedUpdateData[field] !== undefined) {
       user[field] = normalizedUpdateData[field];

@@ -15,6 +15,8 @@ const defaultAllowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://qui-shrimp-fe.vercel.app",
+  "https://nhanong.store",
+  "https://www.nhanong.store",
 ];
 
 const envAllowedOrigins = String(process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "")
@@ -31,7 +33,7 @@ const isAllowedVercelPreview = (origin = "") => {
     const url = new URL(origin);
     return (
       url.protocol === "https:" &&
-      url.hostname.endsWith(".vercel.app") &&
+      url.hostname.endsWith(".vercel.app") &&  
       url.hostname.startsWith("qui-shrimp")
     );
   } catch {

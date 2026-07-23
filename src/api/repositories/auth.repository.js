@@ -17,12 +17,9 @@ const findByPk = async (id, options = {}) => {
 const createUser = async (data) => {
   return await NguoiDung.create(data);
 };
-const updateUnverifiedUser = async (userId, data) => {
-  return prisma.users.update({
-    where: {
-      id: userId,
-    },
-    data: {
+const updateUnverifiedUser = async (id, data) => {
+  return await NguoiDung.update(
+    {
       ho_ten: data.ho_ten,
       so_dien_thoai: data.so_dien_thoai,
       dia_chi: data.dia_chi,
@@ -33,7 +30,12 @@ const updateUnverifiedUser = async (userId, data) => {
       otp_expires: data.otp_expires,
       trang_thai_tai_khoan: "chua_xac_thuc",
     },
-  });
+    {
+      where: {
+        id,
+      },
+    }
+  );
 };
 const findByEmail = async (email) => {
   return await NguoiDung.findOne({ where: { email } });

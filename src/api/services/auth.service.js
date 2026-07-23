@@ -45,43 +45,67 @@ const normalizeAccountAddress = async (data) => {
  * ĐĂNG KÝ TÀI KHOẢN MỚI
  */
 const register = async (data) => {
-
   const normalizedAccount = await normalizeAccountAddress(data);
-  const { ho_ten, so_dien_thoai, dia_chi, email, mat_khau, tinh_thanh } =
-    normalizedAccount;
 
-  // Kiểm tra email duy nhất (Đây là logic nghiệp vụ tầng Database, vẫn phải giữ lại)
-  const existedUser = await authRepository.findByEmailOrPhone(
-    email,
-    so_dien_thoai
-  );
-  if (existedUser) {
-    if (existedUser.email === email) {
-      throw new Error("Email này đã được đăng ký trên hệ thống");
-    }
-  }
-
-  // Mã hóa mật khẩu
-  const hashedPassword = await bcrypt.hash(mat_khau, 10);
-
-  // Khởi tạo OTP xác thực tài khoản
-  const otp = generateOTP();
-  const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // Hiệu lực 5 phút
-
-  const user = await authRepository.createUser({
+  const {
     ho_ten,
     so_dien_thoai,
     dia_chi,
     email,
-    mat_khau: hashedPassword,
+    mat_khau,
     tinh_thanh,
-    vai_tro: "khach_hang",
-    trang_thai_tai_khoan: "chua_xac_thuc",
-    otp_code: otp,
-    otp_expires: otpExpires,
-  });
+  } = normalizedAccount;
 
-  // Gửi mail OTP kích hoạt tài khoản
+  // Chỉ kiểm tra email, số điện thoại được phép trùng
+  const existedUser = await authRepository.findByEmail(email);
+
+  // Nếu email đã tồn tại và tài khoản đã kích hoạt
+  if (
+    existedUser &&
+    existedUser.trang_thai_tai_khoan !== "chua_xac_thuc"
+  ) {
+    throw new Error("Email này đã được đăng ký trên hệ thống");
+  }
+
+  const hashedPassword = await bcrypt.hash(mat_khau, 10);
+
+  const otp = generateOTP();
+  const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+  let user;
+
+  // Email tồn tại nhưng tài khoản chưa xác thực
+  // Cập nhật lại tài khoản cũ thay vì tạo bản ghi mới
+  if (
+    existedUser &&
+    existedUser.trang_thai_tai_khoan === "chua_xac_thuc"
+  ) {
+    user = await authRepository.updateUnverifiedUser(existedUser.id, {
+      ho_ten,
+      so_dien_thoai,
+      dia_chi,
+      email,
+      mat_khau: hashedPassword,
+      tinh_thanh,
+      otp_code: otp,
+      otp_expires: otpExpires,
+    });
+  } else {
+    // Email chưa tồn tại thì tạo tài khoản mới
+    user = await authRepository.createUser({
+      ho_ten,
+      so_dien_thoai,
+      dia_chi,
+      email,
+      mat_khau: hashedPassword,
+      tinh_thanh,
+      vai_tro: "khach_hang",
+      trang_thai_tai_khoan: "chua_xac_thuc",
+      otp_code: otp,
+      otp_expires: otpExpires,
+    });
+  }
+
   await safeSendEmail(
     email,
     "Mã xác thực tài khoản Đất Tôm",

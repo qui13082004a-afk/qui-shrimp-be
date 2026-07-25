@@ -83,6 +83,21 @@ const findShipperById = async (id_nhan_vien_giao_hang) => {
   return await NhanVienGiaoHang.findByPk(id_nhan_vien_giao_hang);
 };
 
+const findActiveShippers = async () => {
+  return await NhanVienGiaoHang.findAll({
+    where: { trang_thai: "dang_lam" },
+    include: [{ model: NguoiDung }],
+    order: [["id_nhan_vien_giao_hang", "DESC"]],
+  });
+};
+
+const findAllShippers = async () => {
+  return await NhanVienGiaoHang.findAll({
+    include: [{ model: NguoiDung }],
+    order: [["id_nhan_vien_giao_hang", "DESC"]],
+  });
+};
+
 const findDeliveryByOrderId = async (id_don_hang) => {
   return await GiaoHang.findOne({
     where: { id_don_hang },
@@ -99,6 +114,11 @@ const updateOrder = async (order, data, transaction = null) => {
   return order;
 };
 
+const updateShipper = async (shipper, data, transaction = null) => {
+  await shipper.update(data, { transaction });
+  return shipper;
+};
+
 module.exports = {
   create,
   findById,
@@ -107,7 +127,10 @@ module.exports = {
   findOrderById,
   findShipperByUserId,
   findShipperById,
+  findActiveShippers,
+  findAllShippers,
   findDeliveryByOrderId,
   updateDelivery,
   updateOrder,
+  updateShipper,
 };

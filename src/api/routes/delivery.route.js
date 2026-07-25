@@ -21,6 +21,27 @@ router.get(
   deliveryController.getAllDeliveries
 );
 
+router.get(
+  "/staff-options",
+  authMiddleware,
+  authorizeAdmin,
+  deliveryController.getActiveDeliveryStaffs
+);
+
+router.get(
+  "/staff",
+  authMiddleware,
+  authorizeAdmin,
+  deliveryController.getAllDeliveryStaffs
+);
+
+router.patch(
+  "/staff/:id/area",
+  authMiddleware,
+  authorizeAdmin,
+  deliveryController.updateDeliveryStaffArea
+);
+
 // Admin hoặc nhân viên giao hàng xem chi tiết một phiếu giao hàng
 router.get("/:id", authMiddleware, deliveryController.getDeliveryById);
 

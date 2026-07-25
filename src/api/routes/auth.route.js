@@ -70,4 +70,11 @@ router.patch(
   authController.updateUserStatus
 );
 
+router.post(
+  "/users/staff",
+  authMiddleware,
+  authorizeAdmin,
+  authController.createStaffAccount
+);
+
 module.exports = router;

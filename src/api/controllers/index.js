@@ -12,7 +12,6 @@ const debtExtensionController=require("./debtExtension.controller");
 const chinhSachHanMucController = require("./chinhSachHanMuc.controller");
 const phieuDeXuatHanMucController = require("./phieuDeXuatHanMuc.controller");
 const hopDongController = require("./hopDong.controller");
-const thuongLaiController = require("./thuongLai.controller");
 const khuVucHoTroTraSauController = require(
   "./khuVucHoTroTraSau.controller"
 );
@@ -37,7 +36,6 @@ module.exports = {
   chinhSachHanMucController,
   phieuDeXuatHanMucController,
   hopDongController,
-  thuongLaiController,
   khuVucHoTroTraSauController,
   locationController,
   businessAreaController,

@@ -12,7 +12,6 @@ const notificationRepository = require( "./notification.repository")
 const chinhSachHanMucRepository = require("./chinhSachHanMuc.repository");
 const phieuDeXuatHanMucRepository = require("./phieuDeXuatHanMuc.repository");
 const hopDongRepository = require("./hopDong.repository");
-const thuongLaiRepository = require("./thuongLai.repository");
 const khuVucHoTroTraSauRepository = require("./khuVucHoTroTraSau.repository");
 const locationRepository = require("./location.repository");
 const businessAreaRepository = require("./businessArea.repository");
@@ -34,7 +33,7 @@ module.exports = {
   debtExtensionRepository,
   notificationRepository,
   chinhSachHanMucRepository,phieuDeXuatHanMucRepository,
-  hopDongRepository,thuongLaiRepository,khuVucHoTroTraSauRepository,
+  hopDongRepository,khuVucHoTroTraSauRepository,
   locationRepository,
   businessAreaRepository,
   departurePointRepository,

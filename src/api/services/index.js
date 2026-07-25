@@ -11,7 +11,6 @@ const debtExtensionService=require("./debtExtension.service")
 const chinhSachHanMucService = require("./chinhSachHanMuc.service");
 const phieuDeXuatHanMucService = require("./phieuDeXuatHanMuc.service");
 const hopDongService = require("./hopDong.service");
-const thuongLaiService = require("./thuongLai.service");
 const khuVucHoTroTraSauService = require(
   "./khuVucHoTroTraSau.service"
 );
@@ -32,7 +31,7 @@ module.exports = {
   paymentService,
   deliveryService,
   hopDongService,
-  debtExtensionService,chinhSachHanMucService,phieuDeXuatHanMucService,thuongLaiService,
+  debtExtensionService,chinhSachHanMucService,phieuDeXuatHanMucService,
   khuVucHoTroTraSauService,
   locationService,
   businessAreaService,

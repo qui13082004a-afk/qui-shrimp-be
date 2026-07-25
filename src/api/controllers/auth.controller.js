@@ -252,6 +252,26 @@ const updateUserStatus = async (req, res) => {
     });
   }
 };
+
+const createStaffAccount = async (req, res) => {
+  try {
+    const data = await authService.createStaffAccount(
+      req.user.id_nguoi_dung,
+      req.body
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Tạo tài khoản nhân viên thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   register,
   verifyEmail,
@@ -265,5 +285,6 @@ module.exports = {
   updateUserRole,
   getAllUsers,
   getUserById,
-  updateUserStatus
+  updateUserStatus,
+  createStaffAccount,
 };

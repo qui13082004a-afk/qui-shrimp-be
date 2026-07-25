@@ -1,4 +1,8 @@
-const { deliveryRepository, paymentRepository } = require("../repositories");
+const {
+  deliveryRepository,
+  paymentRepository,
+  locationRepository,
+} = require("../repositories");
 const notificationService = require("./notification.service");
 const inventoryService = require("./inventory.service");
 const { sequelize } = require("../../config/database");
@@ -23,6 +27,66 @@ const getAllDeliveries = async (user) => {
   }
 
   return await deliveryRepository.findAll();
+};
+
+const getActiveDeliveryStaffs = async (user) => {
+  if (user.vai_tro !== "admin") {
+    throw new Error("Chỉ admin mới có quyền xem nhân viên giao hàng");
+  }
+
+  return await deliveryRepository.findActiveShippers();
+};
+
+const getAllDeliveryStaffs = async (user) => {
+  if (user.vai_tro !== "admin") {
+    throw new Error("Chá»‰ admin má»›i cÃ³ quyá»n xem nhÃ¢n viÃªn giao hÃ ng");
+  }
+
+  return await deliveryRepository.findAllShippers();
+};
+
+const updateDeliveryStaffArea = async (user, id_nhan_vien_giao_hang, data) => {
+  if (user.vai_tro !== "admin") {
+    throw new Error("Chá»‰ admin má»›i cÃ³ quyá»n cáº­p nháº­t khu vá»±c phá»¥ tráº¡ch");
+  }
+
+  if (!data.id_tinh_thanh || !data.id_phuong_xa) {
+    throw new Error("Vui lÃ²ng chá»n tá»‰nh/thÃ nh vÃ  phÆ°á»ng/xÃ£ phá»¥ tráº¡ch");
+  }
+
+  const shipper = await deliveryRepository.findShipperById(id_nhan_vien_giao_hang);
+
+  if (!shipper) {
+    throw new Error("KhÃ´ng tÃ¬m tháº¥y nhÃ¢n viÃªn giao hÃ ng");
+  }
+
+  const province = await locationRepository.findProvinceById(data.id_tinh_thanh);
+  if (!province) {
+    throw new Error("Tá»‰nh/thÃ nh khÃ´ng tá»“n táº¡i");
+  }
+
+  const ward = await locationRepository.findWardById(data.id_phuong_xa);
+  if (!ward) {
+    throw new Error("PhÆ°á»ng/xÃ£ khÃ´ng tá»“n táº¡i");
+  }
+
+  if (Number(ward.id_tinh_thanh) !== Number(province.id_tinh_thanh)) {
+    throw new Error("PhÆ°á»ng/xÃ£ khÃ´ng thuá»™c tá»‰nh/thÃ nh Ä‘Ã£ chá»n");
+  }
+
+  const khuVucPhuTrach = [
+    (data.mo_ta_khu_vuc || "").trim(),
+    ward.ten_xa,
+    province.ten_tinh,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  await deliveryRepository.updateShipper(shipper, {
+    khu_vuc_phu_trach: khuVucPhuTrach,
+  });
+
+  return await deliveryRepository.findShipperById(id_nhan_vien_giao_hang);
 };
 
 const getDeliveryById = async (user, id_giao_hang) => {
@@ -59,58 +123,65 @@ const assignDelivery = async (user, data) => {
   const transaction = await sequelize.transaction();
 
   try {
-  const order = await deliveryRepository.findOrderById(data.id_don_hang);
+    const order = await deliveryRepository.findOrderById(data.id_don_hang);
 
-  if (!order) throw new Error("Không tìm thấy đơn hàng");
+    if (!order) throw new Error("Không tìm thấy đơn hàng");
 
-  if (!["cho_giao", "da_thanh_toan"].includes(order.trang_thai_don_hang)) {
-    throw new Error("Đơn hàng chưa sẵn sàng để giao");
-  }
+    if (!["cho_giao", "da_thanh_toan"].includes(order.trang_thai_don_hang)) {
+      throw new Error("Đơn hàng chưa sẵn sàng để giao");
+    }
 
-  const existedDelivery = await deliveryRepository.findDeliveryByOrderId(data.id_don_hang);
+    const existedDelivery = await deliveryRepository.findDeliveryByOrderId(data.id_don_hang);
 
-  if (existedDelivery) {
-    throw new Error("Đơn hàng này đã được phân công giao hàng");
-  }
+    if (existedDelivery) {
+      throw new Error("Đơn hàng này đã được phân công giao hàng");
+    }
 
-  const shipper = await deliveryRepository.findShipperById(data.id_nhan_vien_giao);
+    const shipper = await deliveryRepository.findShipperById(data.id_nhan_vien_giao);
 
-  if (!shipper) {
-    throw new Error("Không tìm thấy nhân viên giao hàng");
-  }
+    if (!shipper) {
+      throw new Error("Không tìm thấy nhân viên giao hàng");
+    }
 
-  const delivery = await deliveryRepository.create({
-    id_don_hang: data.id_don_hang,
-    id_nhan_vien_giao: data.id_nhan_vien_giao,
-    id_kho_xuat: order.id_kho_xuat || null,
-    trang_thai: "cho_giao",
-    ghi_chu: data.ghi_chu,
-  }, transaction);
+    const delivery = await deliveryRepository.create(
+      {
+        id_don_hang: data.id_don_hang,
+        id_nhan_vien_giao: data.id_nhan_vien_giao,
+        id_kho_xuat: order.id_kho_xuat || null,
+        trang_thai: "cho_giao",
+        ghi_chu: data.ghi_chu,
+      },
+      transaction
+    );
 
-  await deliveryRepository.updateOrder(order, {
-    trang_thai_don_hang: "cho_giao",
-  }, transaction);
+    await deliveryRepository.updateOrder(
+      order,
+      {
+        trang_thai_don_hang: "cho_giao",
+      },
+      transaction
+    );
 
-  await notificationService.createNotification({
-    id_nguoi_dung: order.id_nguoi_dung,
-    tieu_de: "Đơn hàng chuẩn bị giao",
-    noi_dung: `Đơn hàng #${order.id_don_hang} đã được phân công giao hàng.`,
-    loai: "giao_hang",
-    lien_ket: `/profile/orders/${order.id_don_hang}`,
-    transaction,
-  });
+    await notificationService.createNotification({
+      id_nguoi_dung: order.id_nguoi_dung,
+      tieu_de: "Đơn hàng chuẩn bị giao",
+      noi_dung: `Đơn hàng #${order.id_don_hang} đã được phân công giao hàng.`,
+      loai: "giao_hang",
+      lien_ket: `/profile/orders/${order.id_don_hang}`,
+      transaction,
+    });
 
-  await notificationService.createNotification({
-    id_nguoi_dung: shipper.id_nguoi_dung,
-    tieu_de: "Có đơn giao hàng mới",
-    noi_dung: `Bạn vừa được phân công giao đơn hàng #${order.id_don_hang}.`,
-    loai: "giao_hang",
-    lien_ket: `/delivery/orders/${delivery.id_giao_hang}`,
-    transaction,
-  });
+    await notificationService.createNotification({
+      id_nguoi_dung: shipper.id_nguoi_dung,
+      tieu_de: "Có đơn giao hàng mới",
+      noi_dung: `Bạn vừa được phân công giao đơn hàng #${order.id_don_hang}.`,
+      loai: "giao_hang",
+      lien_ket: `/delivery/orders/${delivery.id_giao_hang}`,
+      transaction,
+    });
 
-  await transaction.commit();
-  return delivery;
+    await transaction.commit();
+    return delivery;
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -189,10 +260,7 @@ const successDelivery = async (user, id_giao_hang, data) => {
       throw new Error("Khong tim thay giao dich thanh toan cua don hang");
     }
 
-    if (
-      paymentMethod === "chuyen_khoan" &&
-      payment.trang_thai !== "thanh_cong"
-    ) {
+    if (paymentMethod === "chuyen_khoan" && payment.trang_thai !== "thanh_cong") {
       throw new Error(
         "Don chuyen khoan chi duoc giao thanh cong sau khi thanh toan da duoc xac minh"
       );
@@ -322,6 +390,9 @@ const failDelivery = async (user, id_giao_hang, data) => {
 module.exports = {
   getMyDeliveries,
   getAllDeliveries,
+  getActiveDeliveryStaffs,
+  getAllDeliveryStaffs,
+  updateDeliveryStaffArea,
   getDeliveryById,
   assignDelivery,
   startDelivery,

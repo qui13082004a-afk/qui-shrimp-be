@@ -14,7 +14,6 @@ const GiaHanThanhToan = require("./GiaHanThanhToan");
 const ThanhToanCongNo = require("./ThanhToanCongNo");
 const ChiTietThanhToanCongNo = require("./ChiTietThanhToanCongNo");
 const ThongBao = require("./ThongBao");
-const ThuongLai = require("./ThuongLai");
 const PhieuDeXuatHanMuc = require("./PhieuDeXuatHanMuc");
 const ChinhSachHanMuc = require("./ChinhSachHanMuc");
 const TinhThanh = require("./TinhThanh");
@@ -454,7 +453,6 @@ module.exports = {
   ThanhToanCongNo,
   ChiTietThanhToanCongNo,
   ThongBao,
-  ThuongLai,
   PhieuDeXuatHanMuc,
   ChinhSachHanMuc,
   KhuVucHoTroTraSau,

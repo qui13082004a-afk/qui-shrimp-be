@@ -503,6 +503,72 @@ const updateUserStatus = async (adminId, id_nguoi_dung, trang_thai_tai_khoan) =>
 
   return await authRepository.updateStatus(id_nguoi_dung, trang_thai_tai_khoan);
 };
+
+const createStaffAccount = async (adminId, data) => {
+  const {
+    ho_ten,
+    email,
+    so_dien_thoai,
+    mat_khau,
+    vai_tro,
+    dia_chi,
+    tinh_thanh,
+  } = await normalizeAccountAddress(data);
+
+  const validRoles = ["nhan_vien_giao_hang", "nhan_vien_dinh_muc"];
+
+  if (!validRoles.includes(vai_tro)) {
+    throw new Error("Chỉ được tạo tài khoản nhân viên giao hàng hoặc nhân viên định mức");
+  }
+
+  if (!ho_ten || !email || !mat_khau) {
+    throw new Error("Vui lòng nhập đầy đủ họ tên, email và mật khẩu");
+  }
+
+  const existedUser = await authRepository.findByEmailOrPhone(
+    email,
+    so_dien_thoai || null
+  );
+
+  if (existedUser) {
+    if (existedUser.email === email) {
+      throw new Error("Email này đã được đăng ký trên hệ thống");
+    }
+
+    if (so_dien_thoai && existedUser.so_dien_thoai === so_dien_thoai) {
+      throw new Error("Số điện thoại này đã được sử dụng trên hệ thống");
+    }
+  }
+
+  const hashedPassword = await bcrypt.hash(mat_khau, 10);
+
+  const createdUser = await authRepository.createUser({
+    ho_ten,
+    email,
+    so_dien_thoai: so_dien_thoai || null,
+    mat_khau: hashedPassword,
+    vai_tro,
+    dia_chi: dia_chi || null,
+    tinh_thanh: tinh_thanh || null,
+    trang_thai_tai_khoan: "hoat_dong",
+    otp_code: null,
+    otp_expires: null,
+  });
+
+  if (vai_tro === "nhan_vien_giao_hang") {
+    await NhanVienGiaoHang.create({
+      id_nguoi_dung: createdUser.id_nguoi_dung,
+      khu_vuc_phu_trach: dia_chi || null,
+      ngay_bat_dau: new Date(),
+      trang_thai: "dang_lam",
+      ngay_lam_viec: null,
+      ghi_chu: `Tạo bởi Admin #${adminId}`,
+    });
+  }
+
+  return await authRepository.findUserSafeById(createdUser.id_nguoi_dung);
+};
+
 module.exports = {
   register,
   verifyEmail,
@@ -516,5 +582,6 @@ module.exports = {
   updateUserRole,
   getAllUsers,
   getUserById,
-  updateUserStatus
+  updateUserStatus,
+  createStaffAccount,
 };

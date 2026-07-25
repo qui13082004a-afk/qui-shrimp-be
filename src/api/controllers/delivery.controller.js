@@ -28,6 +28,52 @@ const getAllDeliveries = async (req, res) => {
   }
 };
 
+const getActiveDeliveryStaffs = async (req, res) => {
+  try {
+    const staffs = await deliveryService.getActiveDeliveryStaffs(req.user);
+
+    return res.status(200).json({
+      success: true,
+      message: "Lấy danh sách nhân viên giao hàng thành công",
+      data: staffs,
+    });
+  } catch (error) {
+    return res.status(403).json({ success: false, message: error.message });
+  }
+};
+
+const getAllDeliveryStaffs = async (req, res) => {
+  try {
+    const staffs = await deliveryService.getAllDeliveryStaffs(req.user);
+
+    return res.status(200).json({
+      success: true,
+      message: "Láº¥y toÃ n bá»™ nhÃ¢n viÃªn giao hÃ ng thÃ nh cÃ´ng",
+      data: staffs,
+    });
+  } catch (error) {
+    return res.status(403).json({ success: false, message: error.message });
+  }
+};
+
+const updateDeliveryStaffArea = async (req, res) => {
+  try {
+    const staff = await deliveryService.updateDeliveryStaffArea(
+      req.user,
+      req.params.id,
+      req.body
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Cáº­p nháº­t khu vá»±c phá»¥ tráº¡ch thÃ nh cÃ´ng",
+      data: staff,
+    });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 const getDeliveryById = async (req, res) => {
   try {
     const delivery = await deliveryService.getDeliveryById(req.user, req.params.id);
@@ -109,6 +155,9 @@ const failDelivery = async (req, res) => {
 module.exports = {
   getMyDeliveries,
   getAllDeliveries,
+  getActiveDeliveryStaffs,
+  getAllDeliveryStaffs,
+  updateDeliveryStaffArea,
   getDeliveryById,
   assignDelivery,
   startDelivery,

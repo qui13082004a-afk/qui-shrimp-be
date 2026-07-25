@@ -5,7 +5,7 @@ const warehouseController = require("../controllers/warehouse.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const { authorizeAdmin } = authMiddleware;
 
-router.get("/", authMiddleware, warehouseController.getWarehouses);
+router.get("/", warehouseController.getWarehouses);
 router.get(
   "/products/:productId/stocks",
   authMiddleware,

@@ -17,7 +17,6 @@ const notificationRoute = require("./notification.route");
 const chinhSachHanMucRoute = require("./chinhSachHanMuc.route");
 const phieuDeXuatHanMucRoute = require("./phieuDeXuatHanMuc.route");
 const hopDongRoute = require("./hopDong.route");
-const thuongLaiRoute = require("./thuongLai.route");
 const khuVucHoTroTraSauRoute = require(
   "./khuVucHoTroTraSau.route"
 );
@@ -39,7 +38,6 @@ router.use(
   "/khu-vuc-ho-tro-tra-sau",
   khuVucHoTroTraSauRoute
 );
-router.use("/thuong-lai", thuongLaiRoute);
 router.use("/hop-dong", hopDongRoute);
 router.use("/phieu-de-xuat-han-muc", phieuDeXuatHanMucRoute);
 router.use("/chinh-sach-han-muc", chinhSachHanMucRoute);

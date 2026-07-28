@@ -6,12 +6,14 @@ const {
 } = require("../repositories");
 const notificationService = require("./notification.service");
 
+// Kiem tra quyen admin truoc khi cho phep thao tac quan ly kho.
 const validateAdmin = (user) => {
   if (!user || user.vai_tro !== "admin") {
     throw new Error("Chi Admin moi co quyen quan ly kho hang");
   }
 };
 
+// Chuyen doi gia tri so co the bo trong, dung cho cac truong cau hinh kho.
 const toNullableNumber = (value, fieldName, min, max) => {
   if (value === undefined || value === null || value === "") return null;
   const number = Number(value);
@@ -21,6 +23,7 @@ const toNullableNumber = (value, fieldName, min, max) => {
   return number;
 };
 
+// Chuan hoa so luong ton kho, chi chap nhan so nguyen khong am.
 const toStockNumber = (value) => {
   const number = Number(value);
   if (!Number.isInteger(number) || number < 0) {
@@ -29,6 +32,7 @@ const toStockNumber = (value) => {
   return number;
 };
 
+// Lay danh sach kho, co the loc chi cac kho dang hoat dong.
 const getWarehouses = async (query = {}) => {
   if (query.activeOnly === "true") {
     return warehouseRepository.findActiveWarehouses();
@@ -36,6 +40,7 @@ const getWarehouses = async (query = {}) => {
   return warehouseRepository.findAllWarehouses();
 };
 
+// Tao kho hang moi dua tren mot diem xuat phat/chi nhanh kinh doanh.
 const createWarehouse = async (user, data) => {
   validateAdmin(user);
 
@@ -67,6 +72,7 @@ const createWarehouse = async (user, data) => {
   });
 };
 
+// Cap nhat thong tin kho hang va dong bo lai dia chi/toa do neu doi diem xuat phat.
 const updateWarehouse = async (user, id_kho_hang, data) => {
   validateAdmin(user);
 
@@ -113,6 +119,7 @@ const updateWarehouse = async (user, id_kho_hang, data) => {
   return updated;
 };
 
+// Cap nhat ton kho cua mot san pham trong kho va gui canh bao neu cham muc toi thieu.
 const upsertProductStock = async (user, data) => {
   validateAdmin(user);
   const product = await productRepository.findById(data.id_san_pham);
@@ -159,10 +166,12 @@ const upsertProductStock = async (user, data) => {
   }
 };
 
+// Lay ton kho cua mot san pham tren tat ca cac kho.
 const getProductStocks = async (id_san_pham) => {
   return warehouseRepository.findStocksByProductId(id_san_pham);
 };
 
+// Lay danh sach ton kho cua tat ca san pham trong mot kho.
 const getWarehouseStocks = async (id_kho_hang) => {
   return warehouseRepository.findStocksByWarehouseId(id_kho_hang);
 };

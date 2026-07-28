@@ -20,18 +20,21 @@ const getOrderStatusText = (status) => {
   return map[status] || status;
 };
 
+// Chuyen toa do dau vao ve number hop le, neu khong co thi tra ve null.
 const toNullableCoordinate = (value) => {
   if (value === undefined || value === null || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 };
 
+// Tao loi 403 dung cho cac truong hop sai phan quyen.
 const createForbiddenError = (message) => {
   const error = new Error(message);
   error.statusCode = 403;
   return error;
 };
 
+// Dam bao nhan vien giao hang chi duoc cap nhat don da duoc phan cong cho chinh minh.
 const ensureDeliveryStaffAssignedToOrder = async (user, id_don_hang) => {
   const shipper = await deliveryRepository.findShipperByUserId(
     user.id_nguoi_dung
@@ -56,6 +59,10 @@ const ensureDeliveryStaffAssignedToOrder = async (user, id_don_hang) => {
   return delivery;
 };
 
+// Chuan hoa thong tin giao hang cho don:
+// - uu tien lay dia chi da luu neu nguoi dung da chon
+// - neu co toa do thi tinh khu vuc/phi ship theo he thong
+// - neu thieu toa do thi tam tra ve phi ship dau vao hoac mac dinh = 0
 const resolveShippingForOrder = async (userId, data, transaction) => {
   let viDo = toNullableCoordinate(data.vi_do_giao_hang);
   let kinhDo = toNullableCoordinate(data.kinh_do_giao_hang);
@@ -110,6 +117,8 @@ const resolveShippingForOrder = async (userId, data, transaction) => {
   };
 };
 
+// Tao moi don hang, dong thoi kiem tra san pham, ton kho,
+// tinh phi ship, chon kho xuat, tao payment va gui thong bao.
 const createOrder = async (user, data) => {
   const userId = user.id_nguoi_dung;
   let shippingData = await resolveShippingForOrder(userId, data, null);
@@ -157,6 +166,7 @@ const createOrder = async (user, data) => {
       });
     }
 
+    // Xac dinh trang thai don ban dau va kiem tra dieu kien neu la don tra sau.
     let phi_van_chuyen = shippingData.phi_van_chuyen;
     let tong_thanh_toan = tong_tien + phi_van_chuyen;
 
@@ -213,6 +223,7 @@ const createOrder = async (user, data) => {
       trang_thai_don_hang = "cho_xu_ly";
     }
 
+    // Chon kho co the dap ung toan bo don va toi uu theo khoang cach/uu tien.
     const allocation = await warehouseSelectionService.chooseBestWarehouse({
       items: orderDetails,
       destination: {
@@ -228,6 +239,7 @@ const createOrder = async (user, data) => {
       shippingData.vi_do_giao_hang !== null &&
       shippingData.kinh_do_giao_hang !== null
     ) {
+      // Sau khi da biet kho xuat thuc te, tinh lai phi ship theo kho nay.
       const warehouseShipping = await shippingFeeService.calculateShippingFeeFromWarehouse({
         id_khu_vuc: shippingData.id_khu_vuc_giao_hang || data.id_khu_vuc_giao_hang,
         id_tinh_thanh: shippingData.id_tinh_thanh_giao_hang || data.id_tinh_thanh_giao_hang,
@@ -270,6 +282,7 @@ const createOrder = async (user, data) => {
       }
     }
 
+    // Danh dau neu kho xuat thuc te khac kho ma nguoi dung mong muon.
     const co_chuyen_kho = orderDetails.some(
       (detail) =>
         detail.id_kho_khach_chon &&
@@ -282,6 +295,7 @@ const createOrder = async (user, data) => {
       transaction,
     });
 
+    // Tao don hang va luu thong tin kho xuat/giao hang thuc te.
     const order = await orderRepository.createOrder(
       {
         id_nguoi_dung: userId,
@@ -318,6 +332,7 @@ const createOrder = async (user, data) => {
 
     await orderRepository.createOrderDetails(detailsWithOrderId, transaction);
 
+    // Chot ton kho thuc te va phat hien cac mat hang sap xuong muc canh bao.
     const confirmedStocks = await inventoryService.confirmInventory({
       order: {
         ChiTietDonHangs: detailsWithOrderId,
@@ -361,6 +376,7 @@ const createOrder = async (user, data) => {
       transaction
     );
 
+    // Gui thong bao cho khach hang va admin sau khi tao don thanh cong.
     await notificationService.createNotification({
       id_nguoi_dung: userId,
       tieu_de: "Đặt hàng thành công",
@@ -397,6 +413,10 @@ const createOrder = async (user, data) => {
   }
 };
 
+// Xem truoc don hang truoc khi tao that:
+// - tinh tong tien
+// - du kien kho xuat
+// - du kien phi van chuyen va tong thanh toan
 const previewOrder = async (user, data) => {
   const userId = user.id_nguoi_dung;
   let shippingData = await resolveShippingForOrder(userId, data, null);
@@ -495,10 +515,12 @@ const previewOrder = async (user, data) => {
   };
 };
 
+// Lay danh sach don hang cua chinh nguoi dung hien tai.
 const getMyOrders = async (userId) => {
   return await orderRepository.findByUserId(userId);
 };
 
+// Admin lay toan bo don hang trong he thong.
 const getAllOrders = async (user) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Bạn không có quyền truy cập toàn bộ đơn hàng");
@@ -507,6 +529,7 @@ const getAllOrders = async (user) => {
   return await orderRepository.findAll();
 };
 
+// Lay chi tiet mot don hang, co kiem tra quyen truy cap.
 const getOrderById = async (user, id_don_hang) => {
   const order = await orderRepository.findById(id_don_hang);
 
@@ -524,6 +547,7 @@ const getOrderById = async (user, id_don_hang) => {
   return order;
 };
 
+// Cap nhat trang thai don hang, kem xu ly dong bo ton kho, giao hang va thong bao.
 const updateOrderStatus = async (user, id_don_hang, data) => {
   const targetStatus = data.trang_thai_don_hang;
 
@@ -582,6 +606,7 @@ const updateOrderStatus = async (user, id_don_hang, data) => {
       transaction
     );
 
+    // Neu don bi huy hoac giao that bai thi tra lai ton kho da giu.
     if (["da_huy", "giao_that_bai"].includes(targetStatus)) {
       await inventoryService.releaseInventory({
         order: orderForInventory,
@@ -589,6 +614,7 @@ const updateOrderStatus = async (user, id_don_hang, data) => {
       });
     }
 
+    // Neu don hoan tat thi chot ton kho xuat thuc te.
     if (targetStatus === "hoan_tat" && currentStatus !== "hoan_tat") {
       await inventoryService.confirmInventory({
         order: orderForInventory,
@@ -643,6 +669,7 @@ const updateOrderStatus = async (user, id_don_hang, data) => {
   }
 };
 
+// Khach hang tu huy don cua minh khi don con o trang thai cho xu ly/cho thanh toan.
 const cancelMyOrder = async (userId, orderId) => {
   const transaction = await sequelize.transaction();
 

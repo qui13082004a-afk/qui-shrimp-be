@@ -8,6 +8,7 @@ const toNumber = (value, fieldName) => {
 
 const toRadians = (degree) => degree * Math.PI / 180;
 
+// Tinh khoang cach duong chim bay giua hai diem bang cong thuc Haversine.
 const calculateHaversineKm = (from, to) => {
   const fromLat = toNumber(from.vi_do, "Vi do diem xuat phat");
   const fromLon = toNumber(from.kinh_do, "Kinh do diem xuat phat");
@@ -34,6 +35,8 @@ const calculateHaversineKm = (from, to) => {
   return Number((earthRadiusKm * c).toFixed(2));
 };
 
+// Hien tai he thong luon tinh bang Haversine.
+// Truong provider duoc tra ve de du phong mo rong sang API ban do sau nay.
 const calculateDistanceKm = async (from, to) => {
   return {
     distance_km: calculateHaversineKm(from, to),

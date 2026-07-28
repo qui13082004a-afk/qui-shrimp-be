@@ -3,6 +3,7 @@ const distanceService = require("./distance.service");
 
 const toNumber = (value) => Number(value || 0);
 
+// Kiem tra kho va diem giao hang da co du toa do de tinh khoang cach hay chua.
 const hasCoordinates = (warehouse, destination) => {
   return (
     warehouse &&
@@ -18,6 +19,7 @@ const hasCoordinates = (warehouse, destination) => {
   );
 };
 
+// Tinh khoang cach tu kho den diem giao, neu thieu toa do thi tra ve unknown.
 const calculateWarehouseDistance = async (warehouse, destination) => {
   if (!hasCoordinates(warehouse, destination)) {
     return {
@@ -38,6 +40,7 @@ const calculateWarehouseDistance = async (warehouse, destination) => {
   );
 };
 
+// Gom ton kho theo tung kho de de kiem tra kha nang dap ung don hang.
 const groupStocksByWarehouse = (stocks) => {
   const grouped = new Map();
 
@@ -56,10 +59,12 @@ const groupStocksByWarehouse = (stocks) => {
   return Array.from(grouped.values());
 };
 
+// So luong kha dung = ton kho hien tai - so luong dang giu cho don khac.
 const getAvailableQuantity = (stock) => {
   return Math.max(toNumber(stock.so_luong) - toNumber(stock.so_luong_giu), 0);
 };
 
+// Kiem tra mot kho co du tat ca san pham trong don hang hay khong.
 const canWarehouseFulfillAllItems = (warehouseGroup, items) => {
   return items.every((item) => {
     const stock = warehouseGroup.stocksByProduct.get(Number(item.id_san_pham));
@@ -67,17 +72,19 @@ const canWarehouseFulfillAllItems = (warehouseGroup, items) => {
   });
 };
 
+// Lay danh sach kho ma nguoi dung da chi dinh/uu tien tren tung mat hang.
 const getRequestedWarehouseIds = (items) => {
   return [
     ...new Set(
       items
         .map((item) => item.id_kho_hang || item.id_kho_khach_chon)
         .filter((id) => id !== null && id !== undefined && id !== "")
-        .map((id) => Number(id))
+      .map((id) => Number(id))
     ),
   ];
 };
 
+// Tinh diem uu tien theo so luong mat hang muon lay tu mot kho cu the.
 const getRequestedWarehouseScore = (warehouseId, items) => {
   return items.reduce((score, item) => {
     const requestedWarehouseId = item.id_kho_hang || item.id_kho_khach_chon;
@@ -86,6 +93,7 @@ const getRequestedWarehouseScore = (warehouseId, items) => {
   }, 0);
 };
 
+// Kiem tra kho co nam trong ban kinh phuc vu cho phep hay khong.
 const isWarehouseInsideRadius = (warehouse, distanceKm) => {
   const radius = warehouse.ban_kinh_phuc_vu;
   if (radius === null || radius === undefined || radius === "") return true;
@@ -93,6 +101,13 @@ const isWarehouseInsideRadius = (warehouse, distanceKm) => {
   return Number(distanceKm) <= Number(radius);
 };
 
+// Chon kho phu hop nhat co the dap ung toan bo don hang.
+// Thu tu uu tien:
+// 1. Kho du tat ca san pham va con ton kha dung
+// 2. Kho nam trong ban kinh phuc vu
+// 3. Kho gan diem giao hon
+// 4. Kho duoc nguoi dung uu tien nhieu hon
+// 5. Kho co muc_do_uu_tien cao hon
 const chooseBestWarehouse = async ({ items, destination, transaction }) => {
   const productIds = [...new Set(items.map((item) => Number(item.id_san_pham)))];
   const requestedWarehouseIds = getRequestedWarehouseIds(items);
@@ -140,6 +155,7 @@ const chooseBestWarehouse = async ({ items, destination, transaction }) => {
   }
 
   candidates.sort((a, b) => {
+    // Neu khong tinh duoc khoang cach thi day xuong cuoi danh sach.
     const distanceA = a.distance_km === null ? Number.MAX_SAFE_INTEGER : Number(a.distance_km);
     const distanceB = b.distance_km === null ? Number.MAX_SAFE_INTEGER : Number(b.distance_km);
 

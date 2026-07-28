@@ -3,10 +3,12 @@ const {
   customerProfileRepository,
 } = require("../repositories");
 
+// Kiem tra quyen upload hop dong da ky cho nhan vien dinh muc hoac admin.
 const canUploadContract = (user) => {
   return user.vai_tro === "nhan_vien_dinh_muc" || user.vai_tro === "admin";
 };
 
+// Xac dinh trang thai tiep theo sau khi upload file/anh hop dong da ky.
 const getNextStatusAfterUpload = (contract, newData = {}) => {
   const hasSignedImage =
     Boolean(newData.anh_hop_dong_da_ky) ||
@@ -19,6 +21,7 @@ const getNextStatusAfterUpload = (contract, newData = {}) => {
   return contract.trang_thai || "cho_ky";
 };
 
+// Admin tao hop dong cho ho so mua tra sau da duoc duyet.
 const createContract = async (user, data) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ Admin mới có quyền tạo hợp đồng");
@@ -59,6 +62,7 @@ const createContract = async (user, data) => {
   });
 };
 
+// Admin lay danh sach tat ca hop dong trong he thong.
 const getAllContracts = async (user) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Bạn không có quyền xem toàn bộ hợp đồng");
@@ -79,10 +83,12 @@ const getStaffContracts = async (user) => {
   return await hopDongRepository.findAll();
 };
 
+// Khach hang lay danh sach hop dong thuoc cac ho so cua minh.
 const getMyContracts = async (user) => {
   return await hopDongRepository.findByUserId(user.id_nguoi_dung);
 };
 
+// Lay chi tiet hop dong va kiem tra quyen xem theo vai tro/chu ho so.
 const getContractById = async (user, id_hop_dong) => {
   const contract = await hopDongRepository.findById(id_hop_dong);
 
@@ -102,6 +108,7 @@ const getContractById = async (user, id_hop_dong) => {
   return contract;
 };
 
+// Lay hop dong theo ho so mua tra sau va kiem tra quyen truy cap ho so.
 const getContractByProfileId = async (user, id_ho_so) => {
   const profile = await customerProfileRepository.findById(id_ho_so);
 
@@ -126,6 +133,7 @@ const getContractByProfileId = async (user, id_ho_so) => {
   return contract;
 };
 
+// Nhan vien dinh muc hoac admin upload file PDF hop dong da ky.
 const uploadSignedPdf = async (user, id_hop_dong, data) => {
   if (!canUploadContract(user)) {
     throw new Error("Chỉ nhân viên định mức hoặc Admin mới được upload hợp đồng");
@@ -159,6 +167,7 @@ const uploadSignedPdf = async (user, id_hop_dong, data) => {
   });
 };
 
+// Nhan vien dinh muc hoac admin upload anh hop dong da ky de cho admin xac nhan.
 const uploadSignedImage = async (user, id_hop_dong, data) => {
   if (!canUploadContract(user)) {
     throw new Error("Chỉ nhân viên định mức hoặc Admin mới được upload hợp đồng");
@@ -196,6 +205,7 @@ const uploadSignedImage = async (user, id_hop_dong, data) => {
   });
 };
 
+// Admin xac nhan hop dong da co anh ky va chuyen trang thai sang da ky.
 const confirmContract = async (user, id_hop_dong, data = {}) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ Admin mới có quyền xác nhận hợp đồng");
@@ -223,6 +233,7 @@ const confirmContract = async (user, id_hop_dong, data = {}) => {
   });
 };
 
+// Admin huy hop dong khi hop dong chua bi huy truoc do.
 const cancelContract = async (user, id_hop_dong, data = {}) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ Admin mới có quyền hủy hợp đồng");
@@ -244,6 +255,7 @@ const cancelContract = async (user, id_hop_dong, data = {}) => {
   });
 };
 
+// Admin khoi phuc hop dong da huy ve trang thai cho ky.
 const restoreContract = async (user, id_hop_dong, data = {}) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ Admin mới có quyền khôi phục hợp đồng");

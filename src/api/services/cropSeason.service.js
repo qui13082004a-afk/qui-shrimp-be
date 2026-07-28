@@ -1,28 +1,20 @@
-const { cropSeasonRepository, pondRepository } = require("../repositories");
+﻿const { cropSeasonRepository, pondRepository } = require("../repositories");
 
 /**
  * TẠO MỚI VỤ NUÔI (CROP SEASON)
  */
 const createCropSeason = async (userId, data) => {
-
-  // 1. NGHIỆP VỤ: Kiểm tra ao nuôi có tồn tại hay không
   const pond = await pondRepository.findById(data.id_ao);
   if (!pond) {
     throw new Error("Không tìm thấy thông tin ao nuôi trên hệ thống");
   }
-
-  // 2. BẢO MẬT (IDOR Guard): Đảm bảo khách hàng chỉ được tạo vụ nuôi cho ao của chính mình
   if (Number(pond.id_nguoi_dung) !== Number(userId)) {
     throw new Error("Bạn không có quyền quản lý hoặc tạo vụ nuôi cho ao này");
   }
-
-  // 3. NGHIỆP VỤ NUÔI TÔM: Một ao tại một thời điểm chỉ được phép có DUY NHẤT một vụ nuôi đang hoạt động ('dang_nuoi')
   const activeCropSeason = await cropSeasonRepository.findActiveByPondId(data.id_ao);
   if (activeCropSeason) {
     throw new Error(`Ao "${pond.ten_ao}" hiện đã có một vụ nuôi khác đang hoạt động ("${activeCropSeason.ten_vu_nuoi}"). Vui lòng kết thúc hoặc hủy vụ cũ trước khi mở vụ mới.`);
   }
-
-  // 4. Tiến hành lưu xuống Database
   return await cropSeasonRepository.create({
     id_ao: data.id_ao,
     ten_vu_nuoi: data.ten_vu_nuoi,
@@ -43,8 +35,6 @@ const getCropSeasonsByPond = async (userId, id_ao) => {
   if (!pond) {
     throw new Error("Không tìm thấy thông tin ao nuôi");
   }
-
-  // Bảo mật: Đảm bảo khách hàng không xem trộm vụ nuôi của ao người khác
   if (Number(pond.id_nguoi_dung) !== Number(userId)) {
     throw new Error("Bạn không có quyền truy cập dữ liệu của ao nuôi này");
   }
@@ -61,8 +51,6 @@ const getCropSeasonById = async (userId, id_vu_nuoi) => {
   if (!cropSeason) {
     throw new Error("Không tìm thấy thông tin vụ nuôi yêu cầu");
   }
-
-  // Bảo mật: Đối chiếu quyền sở hữu thông qua mối quan hệ liên kết (Association) AoNuoi
   if (!cropSeason.AoNuoi || Number(cropSeason.AoNuoi.id_nguoi_dung) !== Number(userId)) {
     throw new Error("Bạn không có quyền xem thông tin vụ nuôi này");
   }
@@ -79,8 +67,6 @@ const updateCropSeason = async (userId, id_vu_nuoi, data) => {
   if (!cropSeason) {
     throw new Error("Không tìm thấy thông tin vụ nuôi cần cập nhật");
   }
-
-  // Bảo mật: Kiểm tra quyền sở hữu
   if (!cropSeason.AoNuoi || Number(cropSeason.AoNuoi.id_nguoi_dung) !== Number(userId)) {
     throw new Error("Bạn không có quyền cập nhật vụ nuôi này");
   }
@@ -95,7 +81,7 @@ const updateCropSeason = async (userId, id_vu_nuoi, data) => {
 };
 
 /**
- * XÓA VỤ NUÔI (CÓ RÀNG BUỘC TOÀN VẸN)
+ * XÓA VỤ NUÔI 
  */
 const deleteCropSeason = async (userId, id_vu_nuoi) => {
   const cropSeason = await cropSeasonRepository.findById(id_vu_nuoi);
@@ -103,8 +89,6 @@ const deleteCropSeason = async (userId, id_vu_nuoi) => {
   if (!cropSeason) {
     throw new Error("Không tìm thấy thông tin vụ nuôi cần xóa");
   }
-
-  // Bảo mật: Kiểm tra quyền sở hữu
   if (!cropSeason.AoNuoi || Number(cropSeason.AoNuoi.id_nguoi_dung) !== Number(userId)) {
     throw new Error("Bạn không có quyền xóa vụ nuôi này");
   }
@@ -116,7 +100,6 @@ const deleteCropSeason = async (userId, id_vu_nuoi) => {
 
   return await cropSeasonRepository.remove(id_vu_nuoi);
 };
-// Hàm hỗ trợ chuyển đổi giá trị thành số
 const toNumber = (value) => Number(value || 0);
 //hàm tổng đơn hàng của vụ nuôi
 const getSeasonOrderSummary = async (id_nguoi_dung, id_vu_nuoi) => {
@@ -132,26 +115,26 @@ const getSeasonOrderSummary = async (id_nguoi_dung, id_vu_nuoi) => {
   const plain = season.toJSON();
   const orders = plain.DonHangs || [];
 
+//filter()  → WHERE
   const validOrders = orders.filter(
     (order) =>
       !["da_huy", "giao_that_bai"].includes(order.trang_thai_don_hang)
   );
-
+//reduce() cộng dồn → SUM()
   const tong_von = validOrders.reduce(
     (sum, order) => sum + toNumber(order.tong_thanh_toan),
     0
   );
 
   return {
-    id_vu_nuoi: plain.id_vu_nuoi,
     ten_vu_nuoi: plain.ten_vu_nuoi,
-    trang_thai: plain.trang_thai,
     ngay_tha_giong: plain.ngay_tha_giong,
-    so_luong_giong: plain.so_luong_giong,
-    ngay_thu_hoach_du_kien: plain.ngay_thu_hoach_du_kien,
-
-    ao_nuoi: plain.AoNuoi,
-
+    ao_nuoi: plain.AoNuoi
+      ? {
+        ten_ao: plain.AoNuoi.ten_ao,
+      }
+      : null,
+      //.length → COUNT()
     tong_so_don: validOrders.length,
     tong_von,
     don_hoan_tat: validOrders.filter(
@@ -170,18 +153,15 @@ const getSeasonOrderSummary = async (id_nguoi_dung, id_vu_nuoi) => {
       tong_thanh_toan: toNumber(order.tong_thanh_toan),
       hinh_thuc_thanh_toan: order.hinh_thuc_thanh_toan,
       trang_thai_don_hang: order.trang_thai_don_hang,
-      ghi_chu: order.ghi_chu,
 
       san_pham: (order.ChiTietDonHangs || []).map((item) => ({
         id_chi_tiet: item.id_chi_tiet,
-        id_san_pham: item.id_san_pham,
         ten_san_pham: item.SanPham?.ten_san_pham || "Sản phẩm không tồn tại",
         hinh_anh: item.SanPham?.hinh_anh || null,
         don_vi_tinh: item.SanPham?.don_vi_tinh || null,
         gia_ban: toNumber(item.gia_ban),
         so_luong_dat: item.so_luong_dat,
         thanh_tien: toNumber(item.thanh_tien),
-        trang_thai_san_pham: item.trang_thai_san_pham,
       })),
     })),
   };

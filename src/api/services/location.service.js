@@ -15,20 +15,24 @@ const REQUIRED_COLUMNS = [
 
 const IMPORT_BATCH_SIZE = 500;
 
+// Chi admin moi duoc phep import du lieu don vi hanh chinh.
 const validateAdmin = (user) => {
   if (!user || user.vai_tro !== "admin") {
     throw new Error("Chi Admin moi co quyen import du lieu hanh chinh");
   }
 };
 
+// Chuan hoa chuoi van ban de tranh sai lech do khoang trang.
 const normalizeText = (value) => String(value || "").trim().replace(/\s+/g, " ");
 
+// Chuan hoa ma hanh chinh, dong thoi loai bo duoi .0 khi doc tu Excel.
 const normalizeCode = (value) => {
   const code = normalizeText(value);
   if (!code) throw new Error("Ma hanh chinh khong duoc de trong");
   return code.replace(/\.0$/, "");
 };
 
+// Ep va kiem tra gia tri toa do nam trong khoang hop le.
 const toCoordinate = (value, fieldName, min, max) => {
   const number = Number(value);
   if (!Number.isFinite(number) || number < min || number > max) {
@@ -37,6 +41,9 @@ const toCoordinate = (value, fieldName, min, max) => {
   return number;
 };
 
+// Xac dinh duong dan file Excel import:
+// - uu tien filePath truyen vao
+// - neu khong co thi dung file mac dinh trong workspace
 const resolveExcelPath = (filePath) => {
   if (filePath) {
     return path.isAbsolute(filePath)
@@ -46,6 +53,7 @@ const resolveExcelPath = (filePath) => {
   return path.resolve(process.cwd(), "..", "ward_centroid_full_34.xlsx");
 };
 
+// Doc dong du lieu tu Excel va kiem tra day du cac cot bat buoc.
 const readRowsFromExcel = (filePath) => {
   const workbook = xlsx.readFile(resolveExcelPath(filePath), {
     cellDates: false,
@@ -66,6 +74,7 @@ const readRowsFromExcel = (filePath) => {
   return { sheetName, rows };
 };
 
+// Import danh sach tinh/thanh va phuong/xa tu file Excel vao he thong.
 const importAdministrativeUnits = async (user, filePath) => {
   validateAdmin(user);
 
@@ -108,6 +117,7 @@ const importAdministrativeUnits = async (user, filePath) => {
   const wardCodeList = Array.from(wardCodes);
   const existingWardCount = await locationRepository.countWardsByCodes(wardCodeList);
 
+  // Neu toan bo ma xa da ton tai thi xem nhu file da duoc import truoc do.
   if (existingWardCount === normalizedRows.length) {
     return {
       sheet_name: sheetName,
@@ -142,6 +152,7 @@ const importAdministrativeUnits = async (user, filePath) => {
     };
   });
 
+  // Upsert phuong/xa theo tung lo de tranh query qua lon.
   for (let index = 0; index < wardItems.length; index += IMPORT_BATCH_SIZE) {
     const batch = wardItems.slice(index, index + IMPORT_BATCH_SIZE);
     await locationRepository.bulkUpsertWards(batch);
@@ -155,16 +166,19 @@ const importAdministrativeUnits = async (user, filePath) => {
   };
 };
 
+// Lay danh sach toan bo tinh/thanh.
 const getAllProvinces = async () => {
   return await locationRepository.findAllProvinces();
 };
 
+// Lay danh sach phuong/xa theo mot tinh/thanh cu the.
 const getWardsByProvinceId = async (id_tinh_thanh) => {
   const province = await locationRepository.findProvinceById(id_tinh_thanh);
   if (!province) throw new Error("Khong tim thay tinh/thanh");
   return await locationRepository.findWardsByProvinceId(id_tinh_thanh);
 };
 
+// Phan giai tu toa do sang thong tin dia gioi hanh chinh tuong ung.
 const resolveCoordinate = async (data) => {
   return boundaryLookupService.resolveCoordinate(data);
 };

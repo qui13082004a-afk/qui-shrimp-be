@@ -111,7 +111,7 @@ const register = async (data) => {
 
   await safeSendEmail(
     email,
-    "Mã xác thực tài khoản Đất Tôm",
+    "Mã xác thực tài khoản Nhà Nông",
     `Chào ${ho_ten}, mã OTP xác thực tài khoản của bạn là: ${otp}. Mã này có hiệu lực trong vòng 5 phút.`
   );
 
@@ -377,6 +377,7 @@ const changePassword = async (userId, mat_khau_cu, mat_khau_moi) => {
  */
 const layThongTinTaiKhoan = async (idNguoiDung) => {
   const nguoiDung = await authRepository.findByPk(idNguoiDung, {
+    // không lấy dữ liệu nhạy cảm
     attributes: {
       exclude: ["mat_khau", "otp_code", "otp_expires"],
     },
@@ -533,10 +534,6 @@ const createStaffAccount = async (adminId, data) => {
   if (existedUser) {
     if (existedUser.email === email) {
       throw new Error("Email này đã được đăng ký trên hệ thống");
-    }
-
-    if (so_dien_thoai && existedUser.so_dien_thoai === so_dien_thoai) {
-      throw new Error("Số điện thoại này đã được sử dụng trên hệ thống");
     }
   }
 

@@ -1,4 +1,4 @@
-const {
+﻿const {
   debtExtensionRepository,
   customerProfileRepository,
 } = require("../repositories");
@@ -8,16 +8,20 @@ const notificationService = require("./notification.service");
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const ALLOW_BEFORE_DAYS = 7;
-const MAX_EXTENSION_TIMES = 2;
+const MAX_EXTENSION_TIMES = 10;
+// gia hạn tối đa
+const MAX_EXTENSION_DAYS_PER_REQUEST = 60;
 const ADMIN_DEBT_EXTENSION_LINK = "/admin/gia-han-thanh-toan";
 const getCustomerDebtProfileLink = (id_ho_so) => `/debt/profile/${id_ho_so}`;
 
+// Dua ngay ve 00:00:00 de tinh so ngay chinh xac theo lich.
 const toStartOfDay = (date) => {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
 };
 
+// Parse ngay va chan truong hop du lieu rong / sai dinh dang.
 const parseValidDate = (value, message) => {
   const date = new Date(value);
 
@@ -28,12 +32,14 @@ const parseValidDate = (value, message) => {
   return date;
 };
 
+// Tinh chenh lech so ngay giua 2 moc thoi gian.
 const diffDays = (fromDate, toDate) => {
   const from = toStartOfDay(fromDate);
   const to = toStartOfDay(toDate);
   return Math.ceil((to - from) / MS_PER_DAY);
 };
 
+// Rut gon ket qua upload tu nhieu loai storage thanh danh sach duong dan.
 const normalizeUploadedImages = (files = []) => {
   if (!Array.isArray(files) || files.length === 0) {
     return null;
@@ -53,6 +59,7 @@ const normalizeUploadedImages = (files = []) => {
     .filter(Boolean);
 };
 
+// Tao thong bao nhung khong de loi notification lam fail nghiep vu chinh.
 const safeCreateNotification = async (payload) => {
   try {
     await notificationService.createNotification(payload);
@@ -61,6 +68,7 @@ const safeCreateNotification = async (payload) => {
   }
 };
 
+// Gui thong bao den admin nhung van uu tien hoan tat nghiep vu chinh.
 const safeNotifyAdmins = async (payload) => {
   try {
     await notificationService.notifyAdmins(payload);
@@ -69,6 +77,7 @@ const safeNotifyAdmins = async (payload) => {
   }
 };
 
+// Khach hang gui yeu cau gia han cho ho so tra sau cua minh.
 const createDebtExtension = async (user, data, files = []) => {
   const { id_ho_so, han_de_xuat, ly_do } = data;
 
@@ -115,6 +124,7 @@ const createDebtExtension = async (user, data, files = []) => {
     throw new Error(`Hồ sơ này đã gia hạn tối đa ${MAX_EXTENSION_TIMES} lần`);
   }
 
+  // Chuan hoa ngay hien tai, ngay den han va ngay de xuat moi de kiem tra nghiep vu.
   const today = new Date();
   const currentDeadline = parseValidDate(
     profile.han_thanh_toan,
@@ -133,17 +143,23 @@ const createDebtExtension = async (user, data, files = []) => {
     );
   }
 
+  // So ngay gia han phai duong, tuc la han moi phai lon hon han hien tai.
   const extensionDays = diffDays(currentDeadline, proposedDeadline);
 
   if (extensionDays <= 0) {
     throw new Error("Hạn đề xuất phải lớn hơn hạn thanh toán hiện tại");
   }
 
-  // TODO: Chốt thêm nghiệp vụ số ngày gia hạn tối đa cho mỗi lần nếu cần giới hạn.
+  if (extensionDays > MAX_EXTENSION_DAYS_PER_REQUEST) {
+    throw new Error(
+      `Mỗi lần gia hạn chỉ được tối đa ${MAX_EXTENSION_DAYS_PER_REQUEST} ngày`
+    );
+  }
 
   const uploadedImages =
     normalizeUploadedImages(files) || data.hinh_anh_minh_chung || null;
 
+  // Luu don gia han o trang thai cho admin duyet.
   const extension = await debtExtensionRepository.create({
     id_ho_so,
     id_nguoi_gui: user.id_nguoi_dung,
@@ -181,14 +197,17 @@ const createDebtExtension = async (user, data, files = []) => {
   return await debtExtensionRepository.findById(extension.id_gia_han);
 };
 
+// Khach hang xem danh sach yeu cau gia han cua chinh minh.
 const getMyDebtExtensions = async (user) => {
   return await debtExtensionRepository.findByUserId(user.id_nguoi_dung);
 };
 
+// Admin xem toan bo yeu cau gia han trong he thong.
 const getAllDebtExtensions = async () => {
   return await debtExtensionRepository.findAll();
 };
 
+// Xem chi tiet mot yeu cau gia han, co kiem tra quyen xem.
 const getDebtExtensionById = async (user, id_gia_han) => {
   const extension = await debtExtensionRepository.findById(id_gia_han);
 
@@ -206,11 +225,13 @@ const getDebtExtensionById = async (user, id_gia_han) => {
   return extension;
 };
 
+// Admin duyet yeu cau gia han va dong bo han thanh toan moi cho ho so.
 const approveDebtExtension = async (user, id_gia_han, data = {}) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ admin mới có quyền duyệt đơn gia hạn");
   }
 
+  // Dung transaction de dam bao duyet don va cap nhat ho so di cung nhau.
   const transaction = await sequelize.transaction();
   let committed = false;
 
@@ -228,6 +249,7 @@ const approveDebtExtension = async (user, id_gia_han, data = {}) => {
       throw new Error("Đơn gia hạn này đã được xử lý");
     }
 
+    // Cap nhat trang thai don gia han truoc.
     await debtExtensionRepository.update(
       id_gia_han,
       {
@@ -242,6 +264,7 @@ const approveDebtExtension = async (user, id_gia_han, data = {}) => {
       }
     );
 
+    // Sau do moi cap nhat han thanh toan moi tren ho so cong no.
     const updatedProfile = await customerProfileRepository.update(
       extension.id_ho_so,
       {
@@ -257,6 +280,7 @@ const approveDebtExtension = async (user, id_gia_han, data = {}) => {
     await transaction.commit();
     committed = true;
 
+    // Thong bao duoc gui sau khi transaction thanh cong.
     await safeCreateNotification({
       id_nguoi_dung: extension.id_nguoi_gui,
       tieu_de: "Gia hạn được duyệt",
@@ -274,6 +298,7 @@ const approveDebtExtension = async (user, id_gia_han, data = {}) => {
   }
 };
 
+// Admin tu choi yeu cau gia han va luu ro ly do tu choi.
 const rejectDebtExtension = async (user, id_gia_han, data = {}) => {
   if (user.vai_tro !== "admin") {
     throw new Error("Chỉ admin mới có quyền từ chối đơn gia hạn");
@@ -314,6 +339,7 @@ const rejectDebtExtension = async (user, id_gia_han, data = {}) => {
   return await debtExtensionRepository.findById(id_gia_han);
 };
 
+// Lay lich su gia han theo tung ho so cong no.
 const getDebtExtensionsByProfileId = async (user, id_ho_so) => {
   const profile = await customerProfileRepository.findById(id_ho_so);
 

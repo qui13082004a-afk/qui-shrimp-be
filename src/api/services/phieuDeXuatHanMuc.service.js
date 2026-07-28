@@ -27,7 +27,7 @@ const getDayDiff = (fromDate, toDate) => {
   const diffMs = end.getTime() - start.getTime();
   return Math.max(Math.floor(diffMs / (1000 * 60 * 60 * 24)), 0);
 };
-
+//tìm  chính sách hiện tại theo ngày nuôi
 const findPolicyByFarmingDay = async (ngayNuoi) => {
   if (ngayNuoi === null || ngayNuoi === undefined) return null;
 
@@ -41,7 +41,7 @@ const findPolicyByFarmingDay = async (ngayNuoi) => {
     ) || null
   );
 };
-
+//tìm  chính sách kế tiếp nếu sắp đến giai đoạn mới
 const findNextPolicyForApprovedProfile = async (profile, farmingDays) => {
   if (farmingDays === null || farmingDays === undefined) return null;
 
@@ -262,7 +262,7 @@ const createProposal = async (user, data, files = []) => {
     } else {
       policy =
         (profile.duoc_phep_tra_sau && profile.trang_thai_ho_so === "da_duyet"
-          ? await findNextPolicyForApprovedProfile(profile, ngayNuoiLucKhaoSat)
+          ? await findNextPolicyForApprovedProfile(profile, ngayNuoiLucKhaoSat)// lay hạn mức tt
           : null) || (await findPolicyByFarmingDay(ngayNuoiLucKhaoSat));
     }
 

@@ -1,4 +1,4 @@
-const {
+﻿const {
   customerProfileRepository,
   pondRepository,
   cropSeasonRepository,
@@ -7,7 +7,7 @@ const {
 } = require("../repositories");
 const notificationService = require("./notification.service");
 const { getS3SignedUrl } = require("../../helpers/s3SignedUrl");
-
+// Bao boc thao tac phu de tranh lam gian doan luong chinh khi co loi.
 const safeNotifyProfile = async (callback) => {
   try {
     await callback();
@@ -26,14 +26,17 @@ const requiredTextFields = [
 
 // Số hồ sơ mua trả sau tối đa 1 khách hàng được phép có (không tính hồ sơ
 // đã bị Admin từ chối - khách bị từ chối vẫn được nộp lại hồ sơ mới).
-const MAX_ACTIVE_PROFILES = 2;
-
+const MAX_ACTIVE_PROFILES = 10;
+// chuẩn hóa chuỗi
 const normalizeText = (value) => String(value || "").trim().replace(/\s+/g, " ");
 
+// Phan tich va chuyen doi du lieu ve dung kieu can xu ly.
 const parseMediaValue = (value) => {
+  //Kiểm tra dữ liệu có phải Array không
   if (Array.isArray(value) || typeof value !== "string") return value;
 
   const trimmed = value.trim();
+  //Kiểm tra chuỗi có giống JSON không
   if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) return value;
 
   try {
@@ -43,6 +46,7 @@ const parseMediaValue = (value) => {
   }
 };
 
+// Bo sung du lieu ho tro hien thi/an toan truoc khi tra ve cho client.
 const signProfileMedia = async (profile) => {
   if (!profile) return null;
 
@@ -71,6 +75,7 @@ const signProfileMedia = async (profile) => {
   return plain;
 };
 
+
 const isValidPersonName = (value) => {
   const name = normalizeText(value);
   return (
@@ -81,6 +86,7 @@ const isValidPersonName = (value) => {
   );
 };
 
+// Kiem tra dieu kien hop le cua du lieu truoc khi thuc hien nghiep vu.
 const validateGuarantorData = (data) => {
   const hasGuarantorInfo = [
     data.nguoi_bao_lanh_ho_ten,
@@ -111,6 +117,7 @@ const validateGuarantorData = (data) => {
   }
 };
 
+// Kiem tra dieu kien hop le cua du lieu truoc khi thuc hien nghiep vu.
 const validateCreateData = (data) => {
   for (const [field, label] of requiredTextFields) {
     if (!String(data[field] || "").trim()) throw new Error(`Vui lòng nhập ${label}`);
@@ -132,6 +139,7 @@ const validateCreateData = (data) => {
   }
 };
 
+// Tao moi du lieu ho so mua tra sau trong he thong.
 const createCustomerProfile = async (userId, data) => {
   validateCreateData(data);
 
@@ -179,7 +187,8 @@ const createCustomerProfile = async (userId, data) => {
 
   const requiredImages = ["anh_cccd_mat_truoc", "anh_cccd_mat_sau", "anh_bien_lai_tha_giong"];
   for (const imageField of requiredImages) {
-    if (!data[imageField]) throw new Error(`Thiếu ảnh bắt buộc: ${imageField}`);
+    if (!data[imageField])
+      throw new Error(`Thiếu ảnh bắt buộc: ${imageField}`);
   }
 
   const pondPlain = typeof pond.toJSON === "function" ? pond.toJSON() : pond;
@@ -221,6 +230,7 @@ const createCustomerProfile = async (userId, data) => {
   return signProfileMedia(profile);
 };
 
+// Gan them thong tin mo rong vao doi tuong ket qua truoc khi tra ve.
 const attachLatestExtensionDeadline = async (profile) => {
   if (!profile) return null;
   const plain = await signProfileMedia(profile);
@@ -241,40 +251,52 @@ const attachLatestExtensionDeadline = async (profile) => {
   };
 };
 
-const getMyCustomerProfiles = async (userId) => Promise.all((await customerProfileRepository.findByUserId(userId)).map(attachLatestExtensionDeadline));
-const getAllCustomerProfiles = async () => Promise.all((await customerProfileRepository.findAll()).map(attachLatestExtensionDeadline));
+// Lay thong tin ho so mua tra sau phuc vu doc du lieu hoac doi chieu nghiep vu.
+const getMyCustomerProfiles = async (userId) => Promise.all(
+  (await customerProfileRepository.findByUserId(userId)).map(attachLatestExtensionDeadline));
+// Lay danh sach ho so mua tra sau theo bo loc hoac dieu kien tim kiem.
+const getAllCustomerProfiles = async () => Promise.all(
+  (await customerProfileRepository.findAll()).map(attachLatestExtensionDeadline));
 
+// Lay thong tin ho so mua tra sau phuc vu doc du lieu hoac doi chieu nghiep vu.
 const getCustomerProfileById = async (user, id) => {
   const profile = await customerProfileRepository.findById(id);
   if (!profile) throw new Error("Không tìm thấy hồ sơ khách hàng yêu cầu");
-  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro) && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung)) throw new Error("Bạn không có quyền truy cập hồ sơ này");
+  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro)
+    && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung))
+    throw new Error("Bạn không có quyền truy cập hồ sơ này");
   return attachLatestExtensionDeadline(profile);
 };
-
+// sửa hồ sơ
 const updateCustomerProfile = async (user, id, data) => {
   const profile = await customerProfileRepository.findById(id);
   if (!profile) throw new Error("Không tìm thấy hồ sơ khách hàng cần cập nhật");
-  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro) && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung)) throw new Error("Bạn không có quyền chỉnh sửa hồ sơ này");
-
+  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro) 
+    && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung))
+     throw new Error("Bạn không có quyền chỉnh sửa hồ sơ này");
   const allowed = user.vai_tro === "admin"
     ? ["trang_thai_ho_so", "ly_do_tu_choi", "bi_khoa_tra_sau", "ly_do_khoa", "ghi_chu"]
     : user.vai_tro === "nhan_vien_dinh_muc"
       ? ["trang_thai_ho_so", "ghi_chu"]
-      : ["zalo", "nguoi_mua_tom_du_kien", "nguoi_bao_lanh_ho_ten", "nguoi_bao_lanh_sdt", "nguoi_bao_lanh_cccd", "nguoi_bao_lanh_quan_he", "ghi_chu"];
+      : ["zalo", "nguoi_mua_tom_du_kien", "nguoi_bao_lanh_ho_ten",
+         "nguoi_bao_lanh_sdt", "nguoi_bao_lanh_cccd", "nguoi_bao_lanh_quan_he", "ghi_chu"];
 
   const patch = {};
   allowed.forEach((field) => { if (data[field] !== undefined) patch[field] = data[field]; });
   return customerProfileRepository.update(id, patch);
 };
-
+// duyệt hồ sơ
 const approvePostpaid = async (user, id, data) => {
-  if (user.vai_tro !== "admin") throw new Error("Chỉ Admin mới có quyền duyệt mua trả sau");
+  if (user.vai_tro !== "admin") 
+    throw new Error("Chỉ Admin mới có quyền duyệt mua trả sau");
   const profile = await customerProfileRepository.findById(id);
   if (!profile) throw new Error("Không tìm thấy hồ sơ khách hàng cần phê duyệt");
-  if (profile.trang_thai_ho_so === "tu_choi") throw new Error("Hồ sơ đã bị từ chối, không thể duyệt");
+  if (profile.trang_thai_ho_so === "tu_choi") 
+    throw new Error("Hồ sơ đã bị từ chối, không thể duyệt");
   const limit = Number(data.dinh_muc_cong_no || 0);
   if (limit <= 0) throw new Error("Hạn mức được duyệt phải lớn hơn 0");
-  if (limit > Number(profile.han_muc_mong_muon)) throw new Error("Hạn mức duyệt không được vượt hạn mức khách hàng mong muốn");
+  if (limit > Number(profile.han_muc_mong_muon)) 
+    throw new Error("Hạn mức duyệt không được vượt hạn mức khách hàng mong muốn");
   if (!data.han_thanh_toan) throw new Error("Vui lòng nhập hạn thanh toán");
 
   return customerProfileRepository.update(id, {

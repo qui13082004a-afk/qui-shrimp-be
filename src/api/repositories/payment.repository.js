@@ -48,13 +48,14 @@ const findById = async (id_thanh_toan) => {
     include: [{ model: DonHang, include: [{ model: NguoiDung }] }],
   });
 };
-
+// Tim giao dich thanh toan theo ma_giao_dich,
+// dong thoi lay kem thong tin don hang va nguoi dung lien quan.
 const findByTransactionCode = async (ma_giao_dich, options = {}) => {
   return await ThanhToan.findOne({
     where: { ma_giao_dich: String(ma_giao_dich) },
     include: [{ model: DonHang, include: [{ model: NguoiDung }] }],
-    transaction: options.transaction,
-    lock: options.lock,
+    transaction: options.transaction,//cho query này tham gia vào giao dịch DB
+    lock: options.lock,//khóa bản ghi để tránh xử lý đồng thời
   });
 };
 

@@ -9,6 +9,7 @@ const { authorizeAdmin } = authMiddleware;
 const uploadFile = require("../middlewares/uploadFile.middleware");
 const privateFileUpload = require("../middlewares/privateFileUpload.middleware");
 
+// Admin upload file hợp đồng mẫu để sử dụng khi tạo hợp đồng trả sau.
 router.post(
   "/upload-file-mau",
   authMiddleware,
@@ -54,6 +55,8 @@ router.post(
     }
   }
 );
+
+// Admin tạo mới hợp đồng trả sau cho hồ sơ/đơn hàng đủ điều kiện.
 router.post(
   "/",
   authMiddleware,
@@ -61,6 +64,7 @@ router.post(
   hopDongController.createContract
 );
 
+// Admin lấy toàn bộ danh sách hợp đồng trong hệ thống.
 router.get(
   "/admin",
   authMiddleware,
@@ -68,28 +72,35 @@ router.get(
   hopDongController.getAllContracts
 );
 
+// Nhân viên lấy danh sách hợp đồng được phân công hoặc được phép theo dõi.
 router.get(
   "/staff",
   authMiddleware,
   hopDongController.getStaffContracts
 );
 
+// Khách hàng lấy danh sách hợp đồng của chính mình.
 router.get(
   "/my",
   authMiddleware,
   hopDongController.getMyContracts
 );
 
+// Lấy hợp đồng theo hồ sơ mua trả sau cụ thể.
 router.get(
   "/profile/:profileId",
   authMiddleware,
   hopDongController.getContractByProfileId
 );
+
+// Tải file hợp đồng mẫu của hợp đồng theo id.
 router.get(
   "/:id/download-template",
   authMiddleware,
   hopDongController.downloadTemplate
 );
+
+// Upload file PDF hợp đồng đã ký lên hệ thống.
 router.put(
   "/:id/upload-pdf",
   authMiddleware,
@@ -97,6 +108,7 @@ router.put(
   hopDongController.uploadSignedPdf
 );
 
+// Lấy chi tiết một hợp đồng theo id.
 router.get(
   "/:id",
   authMiddleware,
@@ -104,6 +116,7 @@ router.get(
 );
 
 
+// Upload ảnh chụp hợp đồng đã ký lên hệ thống.
 router.put(
   "/:id/upload-image",
   authMiddleware,
@@ -111,6 +124,7 @@ router.put(
   hopDongController.uploadSignedImage
 );
 
+// Admin xác nhận hợp đồng hợp lệ sau khi đối chiếu.
 router.put(
   "/:id/confirm",
   authMiddleware,
@@ -118,6 +132,7 @@ router.put(
   hopDongController.confirmContract
 );
 
+// Admin hủy hợp đồng theo id.
 router.put(
   "/:id/cancel",
   authMiddleware,
@@ -125,6 +140,7 @@ router.put(
   hopDongController.cancelContract
 );
 
+// Admin khôi phục lại hợp đồng đã hủy.
 router.put(
   "/:id/restore",
   authMiddleware,

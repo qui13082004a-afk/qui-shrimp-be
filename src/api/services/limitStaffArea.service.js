@@ -4,17 +4,20 @@ const {
   limitStaffAreaRepository,
 } = require("../repositories");
 
+// Chi admin moi duoc phep quan ly phan vung nhan vien tham dinh.
 const validateAdmin = (user) => {
   if (!user || user.vai_tro !== "admin") {
     throw new Error("Chi Admin moi co quyen phan vung nhan vien tham dinh");
   }
 };
 
+// Lay danh sach toan bo phan cong khu vuc cho nhan vien dinh muc.
 const getAssignments = async (user) => {
   validateAdmin(user);
   return limitStaffAreaRepository.findAll();
 };
 
+// Gan mot nhan vien dinh muc phu trach khu vuc ho tro tra sau cu the.
 const assignStaffToArea = async (user, data) => {
   validateAdmin(user);
 
@@ -35,6 +38,7 @@ const assignStaffToArea = async (user, data) => {
   });
 };
 
+// Cap nhat trang thai hoac ghi chu cua mot phan cong khu vuc da ton tai.
 const updateAssignment = async (user, id_phan_cong, data) => {
   validateAdmin(user);
 

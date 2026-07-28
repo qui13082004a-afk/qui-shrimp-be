@@ -2,10 +2,14 @@ const inventoryRepository = require("../repositories/inventory.repository");
 
 const toNumber = (value) => Number(value || 0);
 
+// So luong kha dung = ton kho hien tai - so luong dang duoc giu cho cac don.
 const getAvailableQuantity = (stock) => {
   return Math.max(toNumber(stock.so_luong) - toNumber(stock.so_luong_giu), 0);
 };
 
+// Giu ton kho cho don hang moi:
+// - tang so_luong_giu
+// - dong bo lai tong ton theo san pham
 const reserveInventory = async ({ allocation, items, transaction }) => {
   const touchedProductIds = new Set();
 
@@ -36,6 +40,8 @@ const reserveInventory = async ({ allocation, items, transaction }) => {
   }
 };
 
+// Tra lai ton kho da giu khi don bi huy hoac giao that bai.
+// Neu da co phan ton bi tru thuc te thi cong tra lai vao so_luong.
 const releaseInventory = async ({ order, transaction }) => {
   const details = order.ChiTietDonHangs || [];
   const touchedProductIds = new Set();
@@ -74,6 +80,10 @@ const releaseInventory = async ({ order, transaction }) => {
   }
 };
 
+// Chot xuat kho thuc te:
+// - giam so_luong
+// - giam so_luong_giu
+// - tra ve danh sach ton kho sau khi xac nhan de canh bao ton thap
 const confirmInventory = async ({ order, transaction }) => {
   const details = order.ChiTietDonHangs || [];
   const touchedProductIds = new Set();

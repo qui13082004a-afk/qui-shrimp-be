@@ -65,21 +65,6 @@ const PhieuDeXuatHanMuc = sequelize.define(
       allowNull: true,
     },
 
-    ph: {
-      type: DataTypes.DECIMAL(4, 2),
-      allowNull: true,
-    },
-
-    oxy_hoa_tan: {
-      type: DataTypes.DECIMAL(5, 2),
-      allowNull: true,
-    },
-
-    kich_co_tom: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-
     hinh_anh_khao_sat: {
       type: DataTypes.TEXT,
       allowNull: true,

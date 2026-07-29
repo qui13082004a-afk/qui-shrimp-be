@@ -26,7 +26,7 @@ const findById = async (id_phieu_de_xuat, transaction = null) => {
       {
         model: NguoiDung,
         as: "nhan_vien_de_xuat",
-        attributes: ["id_nguoi_dung", "ho_ten", "email"],
+        attributes: ["id_nguoi_dung", "ho_ten", "email", "so_dien_thoai"],
       },
       {
         model: NguoiDung,
@@ -54,7 +54,7 @@ const findAll = async () => {
       {
         model: NguoiDung,
         as: "nhan_vien_de_xuat",
-        attributes: ["id_nguoi_dung", "ho_ten", "email"],
+        attributes: ["id_nguoi_dung", "ho_ten", "email", "so_dien_thoai"],
       },
       {
         model: NguoiDung,
@@ -83,7 +83,7 @@ const findByProfileId = async (id_ho_so) => {
       {
         model: NguoiDung,
         as: "nhan_vien_de_xuat",
-        attributes: ["id_nguoi_dung", "ho_ten", "email"],
+        attributes: ["id_nguoi_dung", "ho_ten", "email", "so_dien_thoai"],
       },
       {
         model: NguoiDung,

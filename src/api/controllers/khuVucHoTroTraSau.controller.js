@@ -21,6 +21,25 @@ const getAllAreas = async (req, res) => {
   }
 };
 
+const getActiveAreas = async (_req, res) => {
+  try {
+    const areas =
+      await khuVucHoTroTraSauService.getActiveAreas();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Lay danh sach khu vuc ho tro tra sau dang hoat dong thanh cong",
+      data: areas,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 const getAreaById = async (req, res) => {
   try {
     const area =
@@ -136,6 +155,7 @@ const checkSupportedArea = async (
 
 module.exports = {
   getAllAreas,
+  getActiveAreas,
   getAreaById,
   createArea,
   updateArea,

@@ -9,6 +9,7 @@ const {
 } = require("../models");
 
 const EXCLUDED_ORDER_STATUS = ["da_huy", "giao_that_bai"];
+const DEFAULT_POSTPAID_OVERDUE_INTEREST_RATE_MONTHLY = 1.2;
 
 const ACTIVE_POSTPAID_ORDER_STATUS = [
   "cho_xu_ly",
@@ -28,6 +29,55 @@ const RESERVED_STATUS = [
 ];
 
 const toNumber = (value) => Number(value || 0);
+
+const calculateOverdueInterest = ({
+  dueDate,
+  remainingPrincipal,
+  monthlyRate,
+}) => {
+  const principal = toNumber(remainingPrincipal);
+  const rate =
+    toNumber(monthlyRate) > 0
+      ? toNumber(monthlyRate)
+      : DEFAULT_POSTPAID_OVERDUE_INTEREST_RATE_MONTHLY;
+
+  if (!dueDate || principal <= 0 || rate <= 0) {
+    return {
+      so_ngay_qua_han: 0,
+      so_thang_tinh_lai: 0,
+      tien_lai_qua_han: 0,
+    };
+  }
+
+  const due = new Date(dueDate);
+  if (Number.isNaN(due.getTime())) {
+    return {
+      so_ngay_qua_han: 0,
+      so_thang_tinh_lai: 0,
+      tien_lai_qua_han: 0,
+    };
+  }
+
+  const diffDays = Math.floor(
+    (Date.now() - due.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diffDays <= 0) {
+    return {
+      so_ngay_qua_han: 0,
+      so_thang_tinh_lai: 0,
+      tien_lai_qua_han: 0,
+    };
+  }
+
+  const overdueMonths = Math.ceil(diffDays / 30);
+
+  return {
+    so_ngay_qua_han: diffDays,
+    so_thang_tinh_lai: overdueMonths,
+    tien_lai_qua_han: Math.round(principal * (rate / 100) * overdueMonths),
+  };
+};
 
 const buildPaidMap = (paymentDetails) => {
   const paidMap = new Map();
@@ -228,6 +278,7 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
         "id_don_hang",
         "id_ho_so",
         "tong_thanh_toan",
+        "lai_suat_qua_han_thang",
         "ngay_dat",
         "trang_thai_don_hang",
       ],
@@ -247,6 +298,7 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
   let tong_gia_tri_mua_tra_sau = 0;
   let da_thanh_toan = 0;
   let tong_cong_no = 0;
+  let tong_lai_qua_han = 0;
   let dang_giu_han_muc = 0;
   let han_gan_nhat = null;
   let so_don_tra_sau = 0;
@@ -269,6 +321,8 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
       cong_no_hien_tai: 0,
       dang_giu_han_muc: 0,
       da_thanh_toan: 0,
+      tien_lai_qua_han: 0,
+      tong_phai_thanh_toan: 0,
       da_su_dung: 0,
       con_lai: dinh_muc,
       phan_tram_su_dung: 0,
@@ -302,6 +356,15 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
     if (order.trang_thai_don_hang === "hoan_tat") {
       stat.cong_no_hien_tai += conLaiDon;
       tong_cong_no += conLaiDon;
+
+      const interest = calculateOverdueInterest({
+        dueDate: stat.han_thanh_toan,
+        remainingPrincipal: conLaiDon,
+        monthlyRate: order.lai_suat_qua_han_thang,
+      });
+
+      stat.tien_lai_qua_han += interest.tien_lai_qua_han;
+      tong_lai_qua_han += interest.tien_lai_qua_han;
     } else if (RESERVED_STATUS.includes(order.trang_thai_don_hang)) {
       stat.dang_giu_han_muc += conLaiDon;
       dang_giu_han_muc += conLaiDon;
@@ -322,12 +385,15 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
   const han_muc_theo_ho_so = hanMucTheoHoSo.map((item) => {
     const da_su_dung = item.cong_no_hien_tai + item.dang_giu_han_muc;
     const con_lai = Math.max(item.dinh_muc_cong_no - da_su_dung, 0);
+    const tong_phai_thanh_toan =
+      item.cong_no_hien_tai + item.tien_lai_qua_han;
 
     return {
       ...item,
       da_su_dung,
       con_lai,
       tong_cong_no: item.cong_no_hien_tai,
+      tong_phai_thanh_toan,
       phan_tram_su_dung:
         item.dinh_muc_cong_no > 0
           ? Math.min((da_su_dung / item.dinh_muc_cong_no) * 100, 100)
@@ -344,6 +410,8 @@ const getMyDebtSummary = async (id_nguoi_dung) => {
     da_thanh_toan,
     tong_cong_no,
     cong_no_hien_tai: tong_cong_no,
+    tong_lai_qua_han,
+    tong_phai_thanh_toan: tong_cong_no + tong_lai_qua_han,
     dang_giu_han_muc,
     da_su_dung,
     con_lai,
@@ -418,6 +486,7 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
     attributes: [
       "id_don_hang",
       "tong_thanh_toan",
+      "lai_suat_qua_han_thang",
       "ngay_dat",
       "trang_thai_don_hang",
     ],
@@ -435,6 +504,7 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
   let dang_giu_han_muc = 0;
   let da_thanh_toan = 0;
   let tong_gia_tri_mua_tra_sau = 0;
+  let tong_lai_qua_han = 0;
 
   const don_hang = plainOrders.map((order) => {
     const tongTienDon = toNumber(order.tong_thanh_toan);
@@ -452,12 +522,30 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
       dang_giu_han_muc += conLaiDon;
     }
 
+    const interest =
+      order.trang_thai_don_hang === "hoan_tat"
+        ? calculateOverdueInterest({
+            dueDate: plain.han_thanh_toan,
+            remainingPrincipal: conLaiDon,
+            monthlyRate: order.lai_suat_qua_han_thang,
+          })
+        : {
+            so_ngay_qua_han: 0,
+            so_thang_tinh_lai: 0,
+            tien_lai_qua_han: 0,
+          };
+
+    tong_lai_qua_han += interest.tien_lai_qua_han;
+
     return {
       id_don_hang: order.id_don_hang,
       ngay_dat: order.ngay_dat,
       tong_thanh_toan: tongTienDon,
+      lai_suat_qua_han_thang: toNumber(order.lai_suat_qua_han_thang),
       da_thanh_toan: daThanhToanDon,
       con_lai: conLaiDon,
+      ...interest,
+      tong_phai_thanh_toan: conLaiDon + interest.tien_lai_qua_han,
       trang_thai_don_hang: order.trang_thai_don_hang,
     };
   });
@@ -485,6 +573,8 @@ const getDebtProfileDetail = async (id_nguoi_dung, id_ho_so) => {
     dinh_muc_cong_no: dinh_muc,
     tong_gia_tri_mua_tra_sau,
     cong_no_hien_tai,
+    tong_lai_qua_han,
+    tong_phai_thanh_toan: cong_no_hien_tai + tong_lai_qua_han,
     dang_giu_han_muc,
     da_su_dung,
     da_thanh_toan,

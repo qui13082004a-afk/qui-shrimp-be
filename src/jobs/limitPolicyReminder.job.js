@@ -4,6 +4,7 @@ const notificationService = require("../api/services/notification.service");
 
 const REMINDER_DAYS_BEFORE_STAGE = 3;
 
+// Tinh so ngay nuoi tu ngay tha giong den ngay hien tai.
 const getDayDiff = (fromDate, toDate) => {
   if (!fromDate || !toDate) return null;
 
@@ -20,6 +21,7 @@ const getDayDiff = (fromDate, toDate) => {
   );
 };
 
+// Lay danh sach chinh sach han muc dang hoat dong, sap xep theo bo chinh sach va moc ngay.
 const getPolicies = async () => {
   const [policies] = await sequelize.query(`
     SELECT
@@ -37,6 +39,7 @@ const getPolicies = async () => {
   return policies;
 };
 
+// Lay cac ho so da duyet tra sau va co ngay tha giong de kiem tra moc nang han muc.
 const getApprovedProfiles = async () => {
   const [profiles] = await sequelize.query(`
     SELECT
@@ -67,6 +70,7 @@ const getApprovedProfiles = async () => {
   return profiles;
 };
 
+// Tim chinh sach ke tiep trong cung bo chinh sach, sap den trong vong REMINDER_DAYS_BEFORE_STAGE ngay.
 const findUpcomingPolicyInSameSet = (policies, profile, farmingDays) => {
   if (!profile.ten_chinh_sach_hien_tai) return null;
 
@@ -86,6 +90,7 @@ const findUpcomingPolicyInSameSet = (policies, profile, farmingDays) => {
   );
 };
 
+// Ghi lai chinh sach da nhac de lan chay sau khong tao thong bao trung.
 const updateNotifiedPolicy = async (id_ho_so, id_chinh_sach) => {
   await sequelize.query(
     `
@@ -102,6 +107,7 @@ const updateNotifiedPolicy = async (id_ho_so, id_chinh_sach) => {
   );
 };
 
+// Job quet ho so tra sau va nhac nhan vien dinh muc khi sap toi giai doan han muc moi.
 const runLimitPolicyReminder = async () => {
   try {
     const policies = await getPolicies();
@@ -122,10 +128,12 @@ const runLimitPolicyReminder = async () => {
     let createdCount = 0;
 
     for (const profile of profiles) {
+      // So ngay nuoi la co so de doi chieu voi moc tu_ngay / den_ngay cua chinh sach.
       const farmingDays = getDayDiff(profile.ngay_tha_giong, today);
 
       if (farmingDays === null) continue;
 
+      // Chi nhac khi tim thay chinh sach ke tiep trong cung ten chinh sach hien tai.
       const targetPolicy = findUpcomingPolicyInSameSet(
         policies,
         profile,
@@ -138,6 +146,7 @@ const runLimitPolicyReminder = async () => {
       const notifiedPolicyId = Number(profile.id_chinh_sach_da_nhac || 0);
       const targetPolicyId = Number(targetPolicy.id_chinh_sach);
 
+      // Bo qua neu chinh sach muc tieu la chinh sach hien tai hoac da nhac roi.
       if (targetPolicyId === currentPolicyId) continue;
       if (targetPolicyId === notifiedPolicyId) continue;
 
@@ -146,6 +155,7 @@ const runLimitPolicyReminder = async () => {
         0
       );
 
+      // Gui thong bao cho nhan vien dinh muc phu trach khu vuc cua ho so.
       const notifications = await notificationService.notifyLimitStaffByArea({
         id_khu_vuc: profile.id_khu_vuc,
         tieu_de: "Sap den moc nang han muc",
@@ -158,6 +168,7 @@ const runLimitPolicyReminder = async () => {
 
       if (notifiedCount > 0) {
         createdCount += notifiedCount;
+        // Chi danh dau da nhac khi thuc su tao duoc thong bao.
         await updateNotifiedPolicy(profile.id_ho_so, targetPolicyId);
       }
     }
@@ -170,6 +181,7 @@ const runLimitPolicyReminder = async () => {
   }
 };
 
+// Khoi dong cron job nhac nang han muc theo timezone Viet Nam.
 const startLimitPolicyReminderJob = () => {
   cron.schedule(
     "* * * * *",

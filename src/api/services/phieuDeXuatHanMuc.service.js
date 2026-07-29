@@ -305,9 +305,6 @@ const createProposal = async (user, data, files = []) => {
         ly_do_de_xuat: data.ly_do_de_xuat.trim(),
         nhan_xet_khao_sat: data.nhan_xet_khao_sat || null,
 
-        ph: data.ph || null,
-        oxy_hoa_tan: data.oxy_hoa_tan || null,
-        kich_co_tom: data.kich_co_tom || null,
         hinh_anh_khao_sat: surveyImages,
 
         trang_thai: "cho_duyet",

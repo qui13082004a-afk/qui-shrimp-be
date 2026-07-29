@@ -5,6 +5,9 @@ const shippingFeeService = require("./shippingFee.service");
 const warehouseSelectionService = require("./warehouseSelection.service");
 const inventoryService = require("./inventory.service");
 
+const POSTPAID_SURCHARGE_RATE = 5;
+const POSTPAID_OVERDUE_INTEREST_RATE_MONTHLY = 1.2;
+
 const getOrderStatusText = (status) => {
   const map = {
     cho_xu_ly: "chờ xử lý",
@@ -121,6 +124,11 @@ const resolveShippingForOrder = async (userId, data, transaction) => {
 // tinh phi ship, chon kho xuat, tao payment va gui thong bao.
 const createOrder = async (user, data) => {
   const userId = user.id_nguoi_dung;
+  const isPostpaidOrder = data.hinh_thuc_thanh_toan === "tra_sau";
+  const tyLePhuPhiTraSau = isPostpaidOrder ? POSTPAID_SURCHARGE_RATE : 0;
+  const laiSuatQuaHanThang = isPostpaidOrder
+    ? POSTPAID_OVERDUE_INTEREST_RATE_MONTHLY
+    : 0;
   let shippingData = await resolveShippingForOrder(userId, data, null);
   const transaction = await sequelize.transaction();
 
@@ -149,7 +157,10 @@ const createOrder = async (user, data) => {
         throw new Error("Số lượng đặt phải lớn hơn 0");
       }
 
-      const gia_ban = Number(product.gia);
+      const giaGoc = Number(product.gia);
+      const gia_ban = isPostpaidOrder
+        ? Math.round(giaGoc * (1 + tyLePhuPhiTraSau / 100))
+        : giaGoc;
       const thanh_tien = gia_ban * so_luong_dat;
 
       tong_tien += thanh_tien;
@@ -177,7 +188,7 @@ const createOrder = async (user, data) => {
       trang_thai_don_hang = "cho_thanh_toan";
     }
 
-    if (data.hinh_thuc_thanh_toan === "tra_sau") {
+    if (isPostpaidOrder) {
       if (!data.id_vu_nuoi) {
         throw new Error("Vui lòng chọn vụ nuôi khi mua trả sau");
       }
@@ -261,7 +272,7 @@ const createOrder = async (user, data) => {
       tong_thanh_toan = tong_tien + phi_van_chuyen;
     }
 
-    if (data.hinh_thuc_thanh_toan === "tra_sau") {
+    if (isPostpaidOrder) {
       const profile = await orderRepository.findApprovedPostpaidProfile(
         userId,
         data.id_vu_nuoi,
@@ -304,6 +315,8 @@ const createOrder = async (user, data) => {
         tong_tien,
         phi_van_chuyen,
         tong_thanh_toan,
+        ty_le_phu_phi_tra_sau: tyLePhuPhiTraSau,
+        lai_suat_qua_han_thang: laiSuatQuaHanThang,
         hinh_thuc_thanh_toan: data.hinh_thuc_thanh_toan,
         trang_thai_don_hang,
         dia_chi_giao_hang: shippingData.dia_chi_giao_hang,
@@ -419,6 +432,8 @@ const createOrder = async (user, data) => {
 // - du kien phi van chuyen va tong thanh toan
 const previewOrder = async (user, data) => {
   const userId = user.id_nguoi_dung;
+  const isPostpaidOrder = data.hinh_thuc_thanh_toan === "tra_sau";
+  const tyLePhuPhiTraSau = isPostpaidOrder ? POSTPAID_SURCHARGE_RATE : 0;
   let shippingData = await resolveShippingForOrder(userId, data, null);
   let tong_tien = 0;
   const orderDetails = [];
@@ -439,7 +454,10 @@ const previewOrder = async (user, data) => {
       throw new Error("Số lượng đặt phải lớn hơn 0");
     }
 
-    const gia_ban = Number(product.gia);
+    const giaGoc = Number(product.gia);
+    const gia_ban = isPostpaidOrder
+      ? Math.round(giaGoc * (1 + tyLePhuPhiTraSau / 100))
+      : giaGoc;
     const thanh_tien = gia_ban * so_luong_dat;
     tong_tien += thanh_tien;
 
@@ -502,6 +520,7 @@ const previewOrder = async (user, data) => {
     phi_van_chuyen,
     tong_tien,
     tong_thanh_toan: tong_tien + phi_van_chuyen,
+    ty_le_phu_phi_tra_sau: tyLePhuPhiTraSau,
     chi_tiet: orderDetails.map((detail) => ({
       ...detail,
       id_kho_xuat_thuc_te: selectedWarehouse.id_kho_hang,

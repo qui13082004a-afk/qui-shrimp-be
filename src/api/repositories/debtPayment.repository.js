@@ -23,7 +23,9 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
 
   const summary = await debtRepository.getMyDebtSummary(id_nguoi_dung);
 
-  let maxDebt = Number(summary.cong_no_hien_tai || 0);
+  let maxDebt = Number(
+    summary.tong_phai_thanh_toan || summary.cong_no_hien_tai || 0
+  );
 
   if (id_ho_so) {
     const selectedProfile = summary.han_muc_theo_ho_so.find(
@@ -34,7 +36,11 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
       throw new Error("Không tìm thấy hồ sơ công nợ");
     }
 
-    maxDebt = Number(selectedProfile.cong_no_hien_tai || 0);
+    maxDebt = Number(
+      selectedProfile.tong_phai_thanh_toan ||
+        selectedProfile.cong_no_hien_tai ||
+        0
+    );
   }
 
   if (maxDebt <= 0) {
@@ -282,9 +288,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       remaining -= allocateAmount;
     }
 
-    if (remaining > 0) {
-      throw new Error("Số tiền thanh toán vượt quá công nợ có thể phân bổ");
-    }
+    // Phan remaining neu con sau khi phan bo het no goc duoc xem la tien lai qua han da thu.
 
     await ChiTietThanhToanCongNo.bulkCreate(allocationRows, { transaction });
 
@@ -318,7 +322,9 @@ const createAdminDirectDebtPayment = async (data) => {
   }
 
   const detail = await debtRepository.getAdminDebtProfileDetail(id_ho_so);
-  const maxDebt = Number(detail.cong_no_hien_tai || 0);
+  const maxDebt = Number(
+    detail.tong_phai_thanh_toan || detail.cong_no_hien_tai || 0
+  );
 
   if (maxDebt <= 0) {
     throw new Error("Khach hang khong co cong no hien tai can thanh toan");

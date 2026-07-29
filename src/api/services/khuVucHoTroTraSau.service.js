@@ -16,6 +16,10 @@ const getAllAreas = async () => {
   return await khuVucHoTroTraSauRepository.findAll();
 };
 
+const getActiveAreas = async () => {
+  return await khuVucHoTroTraSauRepository.findActive();
+};
+
 const getAreaById = async (id_khu_vuc) => {
   const area = await khuVucHoTroTraSauRepository.findById(id_khu_vuc);
 
@@ -155,6 +159,7 @@ const checkSupportedArea = async (data) => {
 
 module.exports = {
   getAllAreas,
+  getActiveAreas,
   getAreaById,
   createArea,
   updateArea,

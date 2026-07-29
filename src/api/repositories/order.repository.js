@@ -24,6 +24,8 @@ const ORDER_ATTRIBUTES = [
   "tong_tien",
   "phi_van_chuyen",
   "tong_thanh_toan",
+  "ty_le_phu_phi_tra_sau",
+  "lai_suat_qua_han_thang",
   "hinh_thuc_thanh_toan",
   "trang_thai_don_hang",
   "dia_chi_giao_hang",

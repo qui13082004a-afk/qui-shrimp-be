@@ -8,6 +8,9 @@ require("./api/models");
 const {
   startLimitPolicyReminderJob,
 } = require("./jobs/limitPolicyReminder.job");
+const {
+  startOverdueDebtReminderJob,
+} = require("./jobs/overdueDebtReminder.job");
 
 const app = express();
 
@@ -65,6 +68,7 @@ const startServer = async () => {
   await connectDB();
 
   startLimitPolicyReminderJob();
+  startOverdueDebtReminderJob();
 
   app.listen(process.env.PORT, () => {
     console.log(`Server chạy tại port ${process.env.PORT}`);

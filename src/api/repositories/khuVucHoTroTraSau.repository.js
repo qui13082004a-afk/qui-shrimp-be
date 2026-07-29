@@ -24,6 +24,19 @@ const findAll = async () => {
   });
 };
 
+const findActive = async () => {
+  return await KhuVucHoTroTraSau.findAll({
+    where: {
+      trang_thai: "hoat_dong",
+    },
+    order: [
+      ["tinh_thanh", "ASC"],
+      ["quan_huyen", "ASC"],
+      ["phuong_xa", "ASC"],
+    ],
+  });
+};
+
 const findById = async (
   id_khu_vuc,
   transaction = null
@@ -216,6 +229,7 @@ const remove = async (
 module.exports = {
   create,
   findAll,
+  findActive,
   findById,
   findExactArea,
   findSupportedArea,

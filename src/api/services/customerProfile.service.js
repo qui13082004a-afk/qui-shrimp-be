@@ -7,6 +7,7 @@
 } = require("../repositories");
 const notificationService = require("./notification.service");
 const { getS3SignedUrl } = require("../../helpers/s3SignedUrl");
+const { encryptFields, decryptFields } = require("../../helpers/encryption");
 // Bao boc thao tac phu de tranh lam gian doan luong chinh khi co loi.
 const safeNotifyProfile = async (callback) => {
   try {
@@ -27,6 +28,21 @@ const requiredTextFields = [
 // Số hồ sơ mua trả sau tối đa 1 khách hàng được phép có (không tính hồ sơ
 // đã bị Admin từ chối - khách bị từ chối vẫn được nộp lại hồ sơ mới).
 const MAX_ACTIVE_PROFILES = 10;
+const encryptedProfileFields = [
+  "ho_ten",
+  "ngay_sinh",
+  "so_cccd",
+  "so_dien_thoai",
+  "zalo",
+  "dia_chi_thuong_tru",
+  "nguon_thu_nhap_tra_no",
+  "nguoi_mua_tom_du_kien",
+  "nguoi_bao_lanh_ho_ten",
+  "nguoi_bao_lanh_sdt",
+  "nguoi_bao_lanh_cccd",
+  "nguoi_bao_lanh_quan_he",
+];
+
 // chuẩn hóa chuỗi
 const normalizeText = (value) => String(value || "").trim().replace(/\s+/g, " ");
 
@@ -50,7 +66,8 @@ const parseMediaValue = (value) => {
 const signProfileMedia = async (profile) => {
   if (!profile) return null;
 
-  const plain = typeof profile.toJSON === "function" ? profile.toJSON() : { ...profile };
+  const rawPlain = typeof profile.toJSON === "function" ? profile.toJSON() : { ...profile };
+  const plain = decryptFields(rawPlain, encryptedProfileFields);
   const mediaFields = [
     "anh_cccd_mat_truoc",
     "anh_cccd_mat_sau",
@@ -194,19 +211,25 @@ const createCustomerProfile = async (userId, data) => {
   const pondPlain = typeof pond.toJSON === "function" ? pond.toJSON() : pond;
   const pondDetailAddress = normalizeText(pondPlain.dia_chi_ao);
 
-  const profile = await customerProfileRepository.create({
-    ...data,
-    dia_chi_chi_tiet_ao: pondDetailAddress || normalizeText(data.dia_chi_chi_tiet_ao),
-    id_nguoi_dung: userId,
-    id_khu_vuc: supportedArea.id_khu_vuc,
-    id_chinh_sach: null,
-    dinh_muc_cong_no: 0,
-    duoc_phep_tra_sau: false,
-    bi_khoa_tra_sau: false,
-    han_thanh_toan: null,
-    ngay_duyet: null,
-    trang_thai_ho_so: "cho_kiem_tra",
-  });
+  const profilePayload = encryptFields(
+    {
+      ...data,
+      dia_chi_chi_tiet_ao:
+        pondDetailAddress || normalizeText(data.dia_chi_chi_tiet_ao),
+      id_nguoi_dung: userId,
+      id_khu_vuc: supportedArea.id_khu_vuc,
+      id_chinh_sach: null,
+      dinh_muc_cong_no: 0,
+      duoc_phep_tra_sau: false,
+      bi_khoa_tra_sau: false,
+      han_thanh_toan: null,
+      ngay_duyet: null,
+      trang_thai_ho_so: "cho_kiem_tra",
+    },
+    encryptedProfileFields
+  );
+
+  const profile = await customerProfileRepository.create(profilePayload);
 
   await safeNotifyProfile(() =>
     notificationService.notifyAdmins({
@@ -283,7 +306,9 @@ const updateCustomerProfile = async (user, id, data) => {
 
   const patch = {};
   allowed.forEach((field) => { if (data[field] !== undefined) patch[field] = data[field]; });
-  return customerProfileRepository.update(id, patch);
+  const encryptedPatch = encryptFields(patch, encryptedProfileFields);
+  const updatedProfile = await customerProfileRepository.update(id, encryptedPatch);
+  return attachLatestExtensionDeadline(updatedProfile);
 };
 // duyệt hồ sơ
 const approvePostpaid = async (user, id, data) => {

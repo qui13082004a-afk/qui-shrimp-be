@@ -1,6 +1,19 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../../config/database");
 const KhuVucHoTroTraSau = require("./KhuVucHoTroTraSau");
+const { encryptText, decryptText } = require("../../helpers/encryption");
+
+const encryptedField = (field, allowNull = true) => ({
+  type: DataTypes.TEXT,
+  allowNull,
+  get() {
+    return decryptText(this.getDataValue(field));
+  },
+  set(value) {
+    this.setDataValue(field, encryptText(value));
+  },
+});
+
 const HoSoKhachHang = sequelize.define(
   "HoSoKhachHang",
   {
@@ -13,12 +26,12 @@ const HoSoKhachHang = sequelize.define(
     id_khu_vuc: { type: DataTypes.BIGINT, allowNull: false },
 
     // Thông tin cá nhân tại thời điểm nộp hồ sơ
-    ho_ten: { type: DataTypes.STRING(150), allowNull: false },
-    ngay_sinh: { type: DataTypes.DATEONLY, allowNull: false },
-    so_cccd: { type: DataTypes.STRING(20), allowNull: false },
-    so_dien_thoai: { type: DataTypes.STRING(20), allowNull: false },
-    zalo: { type: DataTypes.STRING(50), allowNull: true },
-    dia_chi_thuong_tru: { type: DataTypes.TEXT, allowNull: false },
+    ho_ten: encryptedField("ho_ten", false),
+    ngay_sinh: encryptedField("ngay_sinh", false),
+    so_cccd: encryptedField("so_cccd", false),
+    so_dien_thoai: encryptedField("so_dien_thoai", false),
+    zalo: encryptedField("zalo"),
+    dia_chi_thuong_tru: encryptedField("dia_chi_thuong_tru", false),
 
     // Địa chỉ ao được tách trường để kiểm tra vùng hỗ trợ ổn định
     tinh_thanh_ao: { type: DataTypes.STRING(100), allowNull: false },
@@ -40,8 +53,8 @@ const HoSoKhachHang = sequelize.define(
       defaultValue: "kg",
     },
     kinh_nghiem_nuoi_nam: { type: DataTypes.INTEGER, allowNull: false },
-    nguon_thu_nhap_tra_no: { type: DataTypes.TEXT, allowNull: false },
-    nguoi_mua_tom_du_kien: { type: DataTypes.STRING(200), allowNull: true },
+    nguon_thu_nhap_tra_no: encryptedField("nguon_thu_nhap_tra_no", false),
+    nguoi_mua_tom_du_kien: encryptedField("nguoi_mua_tom_du_kien"),
     ngay_thu_hoach_du_kien: { type: DataTypes.DATEONLY, allowNull: false },
 
     han_muc_mong_muon: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
@@ -52,10 +65,10 @@ const HoSoKhachHang = sequelize.define(
     },
     mat_hang_du_kien: { type: DataTypes.TEXT, allowNull: false },
 
-    nguoi_bao_lanh_ho_ten: { type: DataTypes.STRING(150), allowNull: true },
-    nguoi_bao_lanh_sdt: { type: DataTypes.STRING(20), allowNull: true },
-    nguoi_bao_lanh_cccd: { type: DataTypes.STRING(20), allowNull: true },
-    nguoi_bao_lanh_quan_he: { type: DataTypes.STRING(100), allowNull: true },
+    nguoi_bao_lanh_ho_ten: encryptedField("nguoi_bao_lanh_ho_ten"),
+    nguoi_bao_lanh_sdt: encryptedField("nguoi_bao_lanh_sdt"),
+    nguoi_bao_lanh_cccd: encryptedField("nguoi_bao_lanh_cccd"),
+    nguoi_bao_lanh_quan_he: encryptedField("nguoi_bao_lanh_quan_he"),
 
     cam_ket_thong_tin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     dong_y_xac_minh: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
@@ -76,6 +89,7 @@ const HoSoKhachHang = sequelize.define(
     ly_do_khoa: { type: DataTypes.TEXT, allowNull: true },
     duoc_phep_tra_sau: { type: DataTypes.BOOLEAN, defaultValue: false },
     han_thanh_toan: { type: DataTypes.DATE, allowNull: true },
+    ngay_nhac_no_qua_han: { type: DataTypes.DATEONLY, allowNull: true },
     ngay_duyet: { type: DataTypes.DATE, allowNull: true },
     ghi_chu: { type: DataTypes.TEXT, allowNull: true },
     ngay_tao: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

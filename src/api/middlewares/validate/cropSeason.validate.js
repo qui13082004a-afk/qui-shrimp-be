@@ -23,6 +23,12 @@ const diffDays = (fromDate, toDate) => {
   return Math.round((toDate.getTime() - fromDate.getTime()) / DAY_MS);
 };
 
+const isAfterOneCalendarYear = (fromDate, toDate) => {
+  const maxDate = new Date(fromDate);
+  maxDate.setMonth(maxDate.getMonth() + 5);
+  return toDate.getTime() > maxDate.getTime();
+};
+
 const validateCropSeasonDates = ({
   ngay_tha_giong,
   ngay_thu_hoach_du_kien,
@@ -37,11 +43,6 @@ const validateCropSeasonDates = ({
     today.setHours(0, 0, 0, 0);
 
     const daysFromSeedToToday = diffDays(seedDate, today);
-
-    if (daysFromSeedToToday < 0) {
-      throw new Error("Ngày thả giống thực tế không được lớn hơn ngày hiện tại");
-    }
-
     if (daysFromSeedToToday > 90) {
       throw new Error("Ngày thả giống thực tế không được cách thời điểm hiện tại quá 90 ngày");
     }
@@ -58,8 +59,8 @@ const validateCropSeasonDates = ({
       throw new Error("Ngày thu hoạch dự kiến không được nhỏ hơn ngày thả giống");
     }
 
-    if (daysFromSeedToHarvest > 120) {
-      throw new Error("Ngày thu hoạch dự kiến không được cách ngày thả giống quá 120 ngày");
+    if (daysFromSeedToHarvest > 150) {
+      throw new Error("Ngày thu hoạch dự kiến không được cách ngày thả giống quá 150 ngày");
     }
   }
 };
@@ -77,7 +78,9 @@ const validateCreateCropSeason = (req, res, next) => {
     if (!id_ao) {
       throw new Error("Vui lòng chọn ao nuôi");
     }
-
+    if (isAfterOneCalendarYear(ngay_tha_giong, ngay_thu_hoach_du_kien)) {
+      throw new Error("Khoảng thời gian giữa ngày thả giống và ngày thu hoạch dự kiến không được vượt quá 5 tháng");
+    }
     validateRequiredString(ten_vu_nuoi, "Tên vụ nuôi");
     validatePositiveNumber(so_luong_giong, "Số lượng giống");
     validateCropSeasonDates({

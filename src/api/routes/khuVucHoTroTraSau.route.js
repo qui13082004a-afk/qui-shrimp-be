@@ -1,26 +1,26 @@
 const express = require("express");
 const router = express.Router();
 
-const {
-  khuVucHoTroTraSauController,
-} = require("../controllers");
+const { khuVucHoTroTraSauController } = require("../controllers");
+const authMiddleware = require("../middlewares/auth.middleware");
 
-const authMiddleware = require(
-  "../middlewares/auth.middleware"
-);
+const { authorizeAdmin } = authMiddleware;
 
-const {
-  authorizeAdmin,
-} = authMiddleware;
-
-// Khách kiểm tra khu vực ao có được hỗ trợ hay không
+// Khach kiem tra khu vuc ao co duoc ho tro mua tra sau hay khong.
 router.post(
   "/check",
   authMiddleware,
   khuVucHoTroTraSauController.checkSupportedArea
 );
 
-// Admin xem danh sách khu vực
+// Khach lay danh sach khu vuc tra sau dang hoat dong de chon khi dang ky.
+router.get(
+  "/active",
+  authMiddleware,
+  khuVucHoTroTraSauController.getActiveAreas
+);
+
+// Admin xem danh sach khu vuc.
 router.get(
   "/",
   authMiddleware,
@@ -28,7 +28,7 @@ router.get(
   khuVucHoTroTraSauController.getAllAreas
 );
 
-// Admin xem chi tiết
+// Admin xem chi tiet khu vuc.
 router.get(
   "/:id",
   authMiddleware,
@@ -36,7 +36,7 @@ router.get(
   khuVucHoTroTraSauController.getAreaById
 );
 
-// Admin thêm khu vực
+// Admin them khu vuc.
 router.post(
   "/",
   authMiddleware,
@@ -44,7 +44,7 @@ router.post(
   khuVucHoTroTraSauController.createArea
 );
 
-// Admin cập nhật hoặc bật/tắt khu vực
+// Admin cap nhat hoac bat/tat khu vuc.
 router.put(
   "/:id",
   authMiddleware,

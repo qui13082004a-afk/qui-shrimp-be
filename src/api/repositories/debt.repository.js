@@ -70,7 +70,11 @@ const calculateOverdueInterest = ({
     };
   }
 
-  const overdueMonths = Math.ceil(diffDays / 30);
+  const overdueMonths = Math.max(
+  1,
+  (today.getFullYear() - dueDate.getFullYear()) * 12 +
+    (today.getMonth() - dueDate.getMonth())
+);
 
   return {
     so_ngay_qua_han: diffDays,
@@ -664,6 +668,7 @@ const getDebtProfileTransactions = async (id_nguoi_dung, id_ho_so) => {
             required: true,
             attributes: [
               "id_thanh_toan_cong_no",
+              "so_tien",
               "ma_giao_dich",
               "trang_thai",
               "ngay_thanh_toan",
@@ -677,6 +682,7 @@ const getDebtProfileTransactions = async (id_nguoi_dung, id_ho_so) => {
     : [];
 
   const transactions = [];
+  const paidByPayment = new Map();
 
   for (const order of plainOrders) {
     transactions.push({
@@ -692,16 +698,48 @@ const getDebtProfileTransactions = async (id_nguoi_dung, id_ho_so) => {
 
   for (const item of paymentDetails) {
     const plain = item.toJSON();
+    const paymentId = plain.ThanhToanCongNo?.id_thanh_toan_cong_no;
+    const allocatedAmount = toNumber(plain.so_tien_phan_bo);
+
+    if (paymentId) {
+      const current = paidByPayment.get(paymentId) || {
+        total: toNumber(plain.ThanhToanCongNo?.so_tien),
+        allocated: 0,
+        ngay: plain.ThanhToanCongNo?.ngay_thanh_toan || plain.ngay_phan_bo,
+        trang_thai: plain.ThanhToanCongNo?.trang_thai || "thanh_cong",
+        ma_giao_dich: plain.ThanhToanCongNo?.ma_giao_dich || null,
+      };
+
+      current.allocated += allocatedAmount;
+      paidByPayment.set(paymentId, current);
+    }
 
     transactions.push({
       id: `PAY-${plain.id_chi_tiet_thanh_toan_cong_no}`,
       ngay: plain.ThanhToanCongNo?.ngay_thanh_toan || plain.ngay_phan_bo,
       loai: "thanh_toan",
       noi_dung: `Thanh toán công nợ đơn #DH-${plain.id_don_hang}`,
-      so_tien: toNumber(plain.so_tien_phan_bo),
+      so_tien: allocatedAmount,
       trang_thai: plain.ThanhToanCongNo?.trang_thai || "thanh_cong",
       id_don_hang: plain.id_don_hang,
       ma_giao_dich: plain.ThanhToanCongNo?.ma_giao_dich || null,
+    });
+  }
+
+  for (const [paymentId, payment] of paidByPayment) {
+    const interestAmount = Math.round(payment.total - payment.allocated);
+
+    if (interestAmount <= 0) continue;
+
+    transactions.push({
+      id: `PAY-INTEREST-${paymentId}`,
+      ngay: payment.ngay,
+      loai: "thanh_toan",
+      noi_dung: "Thanh toan lai/phi qua han",
+      so_tien: interestAmount,
+      trang_thai: payment.trang_thai,
+      id_don_hang: null,
+      ma_giao_dich: payment.ma_giao_dich,
     });
   }
 

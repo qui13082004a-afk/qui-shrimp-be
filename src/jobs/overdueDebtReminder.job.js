@@ -111,7 +111,7 @@ const getAdminEmails = async () => {
 
   return admins;
 };
-
+//đánh dấu hồ sơ đã được nhắc nợ quá hạn trong ngày hôm nay
 const markProfileReminded = async (profileId) => {
   await sequelize.query(
     `
@@ -136,8 +136,7 @@ const buildCustomerEmail = (profile) => {
       `Xin chào ${profile.ho_ten || "Quý khách"},`,
       "",
       `Hồ sơ mua trả sau #${profile.id_ho_so} của bạn đã quá hạn thanh toán.`,
-      `Ao/Vụ nuôi: ${profile.ten_ao || `Ao #${profile.id_ao}`} - ${
-        profile.ten_vu_nuoi || `Vụ #${profile.id_vu_nuoi}`
+      `Ao/Vụ nuôi: ${profile.ten_ao || `Ao #${profile.id_ao}`} - ${profile.ten_vu_nuoi || `Vụ #${profile.id_vu_nuoi}`
       }`,
       `Hạn thanh toán: ${formatDate(profile.han_thanh_toan)}`,
       `Số ngày quá hạn: ${Number(profile.so_ngay_qua_han || 0)} ngày`,
@@ -149,7 +148,7 @@ const buildCustomerEmail = (profile) => {
       "",
       "Trân trọng,",
       "Hệ thống Nhà Nông",
-    ].join("\n"),
+    ].join("\n"),//.join("\n") dùng để ghép các phần tử trong mảng thành một chuỗi, mỗi phần tử cách nhau bằng ký tự xuống dòng
   };
 };
 
@@ -168,14 +167,11 @@ const buildAdminSummaryEmail = (profiles) => {
     const interest = Number(item.tien_lai_qua_han || 0);
 
     return [
-      `- Hồ sơ #${item.id_ho_so} | ${item.ho_ten || "Khách hàng"} | ${
-        item.email || "không có email"
+      `- Hồ sơ #${item.id_ho_so} | ${item.ho_ten || "Khách hàng"} | ${item.email || "không có email"
       }`,
-      `  Trạng thái email khách: ${
-        item.email_sent ? "đã gửi" : "chưa gửi/gửi lỗi"
+      `  Trạng thái email khách: ${item.email_sent ? "đã gửi" : "chưa gửi/gửi lỗi"
       }`,
-      `  Ao/Vụ: ${item.ten_ao || `Ao #${item.id_ao}`} - ${
-        item.ten_vu_nuoi || `Vụ #${item.id_vu_nuoi}`
+      `  Ao/Vụ: ${item.ten_ao || `Ao #${item.id_ao}`} - ${item.ten_vu_nuoi || `Vụ #${item.id_vu_nuoi}`
       }`,
       `  Quá hạn: ${Number(item.so_ngay_qua_han || 0)} ngày | Nợ gốc: ${formatMoney(
         principal
@@ -205,6 +201,7 @@ const buildAdminSummaryEmail = (profiles) => {
 
 const runOverdueDebtReminder = async () => {
   try {
+    //Lấy danh sách hồ sơ quá hạn:
     const profiles = await getOverdueDebtProfiles();
 
     if (!profiles.length) {
@@ -216,9 +213,12 @@ const runOverdueDebtReminder = async () => {
     let sentCustomerCount = 0;
 
     for (const profile of profiles) {
+      //Với mỗi hồ sơ, nó tạo nội dung email gửi khách
       const email = buildCustomerEmail(profile);
+      //gửi email
       const sent = await safeSendEmail(profile.email, email.subject, email.text);
-
+      //thêm hồ sơ vào danh sách báo cáo
+      //  kèm kết quả gửi email có thành công hay không.
       reportProfiles.push({
         ...profile,
         email_sent: sent,
@@ -232,7 +232,7 @@ const runOverdueDebtReminder = async () => {
 
     const adminEmail = buildAdminSummaryEmail(reportProfiles);
     const admins = await getAdminEmails();
-
+//duyệt từng admin trong danh sách.
     for (const admin of admins) {
       await safeSendEmail(admin.email, adminEmail.subject, adminEmail.text);
     }
@@ -244,8 +244,9 @@ const runOverdueDebtReminder = async () => {
     console.error("[OVERDUE DEBT REMINDER ERROR]", error.message);
   }
 };
-
+//bật job tự động nhắc nợ quá hạn theo lịch.
 const startOverdueDebtReminderJob = () => {
+  //phut gio ngay-trong-thang thang thu-trong-tuan
   const schedule = process.env.OVERDUE_DEBT_REMINDER_CRON || "30 7 * * *";
 
   cron.schedule(

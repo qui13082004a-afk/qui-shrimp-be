@@ -8,14 +8,6 @@
 const notificationService = require("./notification.service");
 const { getS3SignedUrl } = require("../../helpers/s3SignedUrl");
 const { encryptFields, decryptFields } = require("../../helpers/encryption");
-// Bao boc thao tac phu de tranh lam gian doan luong chinh khi co loi.
-const safeNotifyProfile = async (callback) => {
-  try {
-    await callback();
-  } catch (error) {
-    console.error("Khong the gui thong bao ho so:", error.message);
-  }
-};
 
 const requiredTextFields = [
   ["ho_ten", "Họ tên"], ["ngay_sinh", "Ngày sinh"], ["so_cccd", "Số CCCD"],
@@ -43,99 +35,8 @@ const encryptedProfileFields = [
   "nguoi_bao_lanh_quan_he",
 ];
 
-// chuẩn hóa chuỗi
-const normalizeText = (value) => String(value || "").trim().replace(/\s+/g, " ");
-
-// Phan tich va chuyen doi du lieu ve dung kieu can xu ly.
-const parseMediaValue = (value) => {
-  //Kiểm tra dữ liệu có phải Array không
-  if (Array.isArray(value) || typeof value !== "string") return value;
-
-  const trimmed = value.trim();
-  //Kiểm tra chuỗi có giống JSON không
-  if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) return value;
-
-  try {
-    return JSON.parse(trimmed);
-  } catch (_error) {
-    return value;
-  }
-};
-
-// Bo sung du lieu ho tro hien thi/an toan truoc khi tra ve cho client.
-const signProfileMedia = async (profile) => {
-  if (!profile) return null;
-
-  const rawPlain = typeof profile.toJSON === "function" ? profile.toJSON() : { ...profile };
-  const plain = decryptFields(rawPlain, encryptedProfileFields);
-  const mediaFields = [
-    "anh_cccd_mat_truoc",
-    "anh_cccd_mat_sau",
-    "anh_bien_lai_tha_giong",
-    "anh_ao_nuoi",
-  ];
-
-  await Promise.all(
-    mediaFields.map(async (field) => {
-      const value = parseMediaValue(plain[field]);
-      if (!value) return;
-
-      if (Array.isArray(value)) {
-        plain[field] = await Promise.all(value.map((item) => getS3SignedUrl(item)));
-        return;
-      }
-
-      plain[field] = await getS3SignedUrl(value);
-    })
-  );
-
-  return plain;
-};
-
-
-const isValidPersonName = (value) => {
-  const name = normalizeText(value);
-  return (
-    name.length >= 2 &&
-    name.length <= 100 &&
-    /^[A-Za-zÀ-ỹ\s]+$/.test(name) &&
-    /[A-Za-zÀ-ỹ]/.test(name)
-  );
-};
-
-// Kiem tra dieu kien hop le cua du lieu truoc khi thuc hien nghiep vu.
-const validateGuarantorData = (data) => {
-  const hasGuarantorInfo = [
-    data.nguoi_bao_lanh_ho_ten,
-    data.nguoi_bao_lanh_sdt,
-    data.nguoi_bao_lanh_cccd,
-    data.nguoi_bao_lanh_quan_he,
-  ].some((value) => normalizeText(value));
-
-  if (!hasGuarantorInfo) return;
-
-  if (!isValidPersonName(data.nguoi_bao_lanh_ho_ten)) {
-    throw new Error("Ho ten nguoi bao lanh chi duoc nhap chu, tu 2 den 100 ky tu");
-  }
-
-  if (!/^0\d{9}$/.test(normalizeText(data.nguoi_bao_lanh_sdt))) {
-    throw new Error("So dien thoai nguoi bao lanh phai gom 10 chu so va bat dau bang 0");
-  }
-
-  if (!/^\d{9}$|^\d{12}$/.test(normalizeText(data.nguoi_bao_lanh_cccd))) {
-    throw new Error("So CCCD nguoi bao lanh phai gom 9 hoac 12 chu so");
-  }
-
-  if (
-    normalizeText(data.nguoi_bao_lanh_quan_he) &&
-    !isValidPersonName(data.nguoi_bao_lanh_quan_he)
-  ) {
-    throw new Error("Quan he voi khach hang chi duoc nhap chu, tu 2 den 100 ky tu");
-  }
-};
-
-// Kiem tra dieu kien hop le cua du lieu truoc khi thuc hien nghiep vu.
-const validateCreateData = (data) => {
+// Tao moi du lieu ho so mua tra sau trong he thong.
+const createCustomerProfile = async (userId, data) => {
   for (const [field, label] of requiredTextFields) {
     if (!String(data[field] || "").trim()) throw new Error(`Vui lòng nhập ${label}`);
   }
@@ -149,25 +50,63 @@ const validateCreateData = (data) => {
     if (Number(data[field]) <= 0) throw new Error(`${label} phải lớn hơn 0`);
   }
 
-  validateGuarantorData(data);
+  const hasGuarantorInfo = [
+    data.nguoi_bao_lanh_ho_ten,
+    data.nguoi_bao_lanh_sdt,
+    data.nguoi_bao_lanh_cccd,
+    data.nguoi_bao_lanh_quan_he,
+  ].some((value) => String(value || "").trim().replace(/\s+/g, " "));
+
+  if (hasGuarantorInfo) {
+    const guarantorName = String(data.nguoi_bao_lanh_ho_ten || "").trim().replace(/\s+/g, " ");
+    if (
+      guarantorName.length < 2 ||
+      guarantorName.length > 100 ||
+      !/^[A-Za-zÀ-ỹ\s]+$/.test(guarantorName) ||
+      !/[A-Za-zÀ-ỹ]/.test(guarantorName)
+    ) {
+      throw new Error("Ho ten nguoi bao lanh chi duoc nhap chu, tu 2 den 100 ky tu");
+    }
+
+    const guarantorPhone = String(data.nguoi_bao_lanh_sdt || "").trim().replace(/\s+/g, " ");
+    if (!/^0\d{9}$/.test(guarantorPhone)) {
+      throw new Error("So dien thoai nguoi bao lanh phai gom 10 chu so va bat dau bang 0");
+    }
+
+    const guarantorIdCard = String(data.nguoi_bao_lanh_cccd || "").trim().replace(/\s+/g, " ");
+    if (!/^\d{9}$|^\d{12}$/.test(guarantorIdCard)) {
+      throw new Error("So CCCD nguoi bao lanh phai gom 9 hoac 12 chu so");
+    }
+
+    const guarantorRelation = String(data.nguoi_bao_lanh_quan_he || "").trim().replace(/\s+/g, " ");
+    if (
+      guarantorRelation &&
+      (
+        guarantorRelation.length < 2 ||
+        guarantorRelation.length > 100 ||
+        !/^[A-Za-zÀ-ỹ\s]+$/.test(guarantorRelation) ||
+        !/[A-Za-zÀ-ỹ]/.test(guarantorRelation)
+      )
+    ) {
+      throw new Error("Quan he voi khach hang chi duoc nhap chu, tu 2 den 100 ky tu");
+    }
+  }
 
   if (!data.cam_ket_thong_tin || !data.dong_y_xac_minh || !data.dong_y_dieu_khoan) {
     throw new Error("Bạn phải đồng ý đầy đủ các cam kết trước khi gửi hồ sơ");
   }
-};
-
-// Tao moi du lieu ho so mua tra sau trong he thong.
-const createCustomerProfile = async (userId, data) => {
-  validateCreateData(data);
 
   const pond = await pondRepository.findById(data.id_ao);
   if (!pond) throw new Error("Không tìm thấy thông tin ao nuôi trên hệ thống");
-  if (Number(pond.id_nguoi_dung) !== Number(userId)) throw new Error("Bạn không có quyền đăng ký trả sau cho ao nuôi này");
+  if (Number(pond.id_nguoi_dung) !== Number(userId)) 
+    throw new Error("Bạn không có quyền đăng ký trả sau cho ao nuôi này");
 
   const cropSeason = await cropSeasonRepository.findById(data.id_vu_nuoi);
   if (!cropSeason) throw new Error("Không tìm thấy thông tin vụ nuôi yêu cầu");
-  if (Number(cropSeason.id_ao) !== Number(data.id_ao)) throw new Error("Vụ nuôi không thuộc ao nuôi đã chọn");
-  if (cropSeason.trang_thai !== "dang_nuoi") throw new Error("Chỉ được đăng ký cho vụ nuôi đang hoạt động");
+  if (Number(cropSeason.id_ao) !== Number(data.id_ao)) 
+    throw new Error("Vụ nuôi không thuộc ao nuôi đã chọn");
+  if (cropSeason.trang_thai !== "dang_nuoi") 
+    throw new Error("Chỉ được đăng ký cho vụ nuôi đang hoạt động");
 
   const existed = await customerProfileRepository.findByCropSeasonId(data.id_vu_nuoi);
   if (existed) throw new Error("Vụ nuôi này đã có hồ sơ mua trả sau");
@@ -209,13 +148,13 @@ const createCustomerProfile = async (userId, data) => {
   }
 
   const pondPlain = typeof pond.toJSON === "function" ? pond.toJSON() : pond;
-  const pondDetailAddress = normalizeText(pondPlain.dia_chi_ao);
+  const pondDetailAddress = String(pondPlain.dia_chi_ao || "").trim().replace(/\s+/g, " ");
 
   const profilePayload = encryptFields(
     {
       ...data,
       dia_chi_chi_tiet_ao:
-        pondDetailAddress || normalizeText(data.dia_chi_chi_tiet_ao),
+        pondDetailAddress || String(data.dia_chi_chi_tiet_ao || "").trim().replace(/\s+/g, " "),
       id_nguoi_dung: userId,
       id_khu_vuc: supportedArea.id_khu_vuc,
       id_chinh_sach: null,
@@ -231,32 +170,226 @@ const createCustomerProfile = async (userId, data) => {
 
   const profile = await customerProfileRepository.create(profilePayload);
 
-  await safeNotifyProfile(() =>
-    notificationService.notifyAdmins({
+  try {
+    await notificationService.notifyAdmins({
       tieu_de: "Co ho so mua tra sau moi",
       noi_dung: `Khach hang ${data.ho_ten} vua gui ho so mua tra sau #${profile.id_ho_so}.`,
       loai: "ho_so",
       lien_ket: `/admin/ho-so-cong-no`,
-    })
-  );
+    });
+  } catch (error) {
+    console.error("Khong the gui thong bao ho so:", error.message);
+  }
 
-  await safeNotifyProfile(() =>
-    notificationService.notifyLimitStaffByArea({
+  try {
+    await notificationService.notifyLimitStaffByArea({
       id_khu_vuc: supportedArea.id_khu_vuc,
       tieu_de: "Ho so can tham dinh trong khu vuc phu trach",
       noi_dung: `Ho so #${profile.id_ho_so} cua ${data.ho_ten} dang cho kiem tra tai khu vuc ${supportedArea.tinh_thanh}.`,
       loai: "ho_so",
       lien_ket: `/nhan-vien-dinh-muc/ho-so-tham-dinh`,
+    });
+  } catch (error) {
+    console.error("Khong the gui thong bao ho so:", error.message);
+  }
+
+  const rawPlain = typeof profile.toJSON === "function" ? profile.toJSON() : { ...profile };
+  const plain = decryptFields(rawPlain, encryptedProfileFields);
+  const mediaFields = [
+    "anh_cccd_mat_truoc",
+    "anh_cccd_mat_sau",
+    "anh_bien_lai_tha_giong",
+    "anh_ao_nuoi",
+  ];
+
+  await Promise.all(
+    mediaFields.map(async (field) => {
+      let value = plain[field];
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+          try {
+            value = JSON.parse(trimmed);
+          } catch (_error) {
+            value = plain[field];
+          }
+        }
+      }
+
+      if (!value) return;
+      if (Array.isArray(value)) {
+        plain[field] = await Promise.all(value.map((item) => getS3SignedUrl(item)));
+        return;
+      }
+
+      plain[field] = await getS3SignedUrl(value);
     })
   );
 
-  return signProfileMedia(profile);
+  return plain;
 };
 
-// Gan them thong tin mo rong vao doi tuong ket qua truoc khi tra ve.
-const attachLatestExtensionDeadline = async (profile) => {
-  if (!profile) return null;
-  const plain = await signProfileMedia(profile);
+// Lay thong tin ho so mua tra sau phuc vu doc du lieu hoac doi chieu nghiep vu.
+const getMyCustomerProfiles = async (userId) => {
+  const profiles = await customerProfileRepository.findByUserId(userId);
+
+  return Promise.all(
+    profiles.map(async (profile) => {
+      if (!profile) return null;
+
+      const rawPlain = typeof profile.toJSON === "function" ? profile.toJSON() : { ...profile };
+      const plain = decryptFields(rawPlain, encryptedProfileFields);
+      const mediaFields = [
+        "anh_cccd_mat_truoc",
+        "anh_cccd_mat_sau",
+        "anh_bien_lai_tha_giong",
+        "anh_ao_nuoi",
+      ];
+
+      await Promise.all(
+        mediaFields.map(async (field) => {
+          let value = plain[field];
+          if (typeof value === "string") {
+            const trimmed = value.trim();
+            if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+              try {
+                value = JSON.parse(trimmed);
+              } catch (_error) {
+                value = plain[field];
+              }
+            }
+          }
+
+          if (!value) return;
+          if (Array.isArray(value)) {
+            plain[field] = await Promise.all(value.map((item) => getS3SignedUrl(item)));
+            return;
+          }
+
+          plain[field] = await getS3SignedUrl(value);
+        })
+      );
+
+      const [latest, firstApproved] = await Promise.all([
+        debtExtensionRepository.findLatestApprovedByProfileId(plain.id_ho_so),
+        debtExtensionRepository.findFirstApprovedByProfileId(plain.id_ho_so),
+      ]);
+
+      return {
+        ...plain,
+        gia_han_moi_nhat: latest || null,
+        han_thanh_toan_goc: firstApproved
+          ? firstApproved.han_cu
+          : plain.han_thanh_toan,
+        han_thanh_toan_hien_tai: latest
+          ? latest.han_de_xuat
+          : plain.han_thanh_toan,
+      };
+    })
+  );
+};
+
+// Lay danh sach ho so mua tra sau theo bo loc hoac dieu kien tim kiem.
+const getAllCustomerProfiles = async () => {
+  const profiles = await customerProfileRepository.findAll();
+
+  return Promise.all(
+    profiles.map(async (profile) => {
+      if (!profile) return null;
+
+      const rawPlain = typeof profile.toJSON === "function" ? profile.toJSON() : { ...profile };
+      const plain = decryptFields(rawPlain, encryptedProfileFields);
+      const mediaFields = [
+        "anh_cccd_mat_truoc",
+        "anh_cccd_mat_sau",
+        "anh_bien_lai_tha_giong",
+        "anh_ao_nuoi",
+      ];
+
+      await Promise.all(
+        mediaFields.map(async (field) => {
+          let value = plain[field];
+          if (typeof value === "string") {
+            const trimmed = value.trim();
+            if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+              try {
+                value = JSON.parse(trimmed);
+              } catch (_error) {
+                value = plain[field];
+              }
+            }
+          }
+
+          if (!value) return;
+          if (Array.isArray(value)) {
+            plain[field] = await Promise.all(value.map((item) => getS3SignedUrl(item)));
+            return;
+          }
+
+          plain[field] = await getS3SignedUrl(value);
+        })
+      );
+
+      const [latest, firstApproved] = await Promise.all([
+        debtExtensionRepository.findLatestApprovedByProfileId(plain.id_ho_so),
+        debtExtensionRepository.findFirstApprovedByProfileId(plain.id_ho_so),
+      ]);
+
+      return {
+        ...plain,
+        gia_han_moi_nhat: latest || null,
+        han_thanh_toan_goc: firstApproved
+          ? firstApproved.han_cu
+          : plain.han_thanh_toan,
+        han_thanh_toan_hien_tai: latest
+          ? latest.han_de_xuat
+          : plain.han_thanh_toan,
+      };
+    })
+  );
+};
+
+// Lay thong tin ho so mua tra sau phuc vu doc du lieu hoac doi chieu nghiep vu.
+const getCustomerProfileById = async (user, id) => {
+  const profile = await customerProfileRepository.findById(id);
+  if (!profile) throw new Error("Không tìm thấy hồ sơ khách hàng yêu cầu");
+  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro)
+    && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung))
+    throw new Error("Bạn không có quyền truy cập hồ sơ này");
+
+  const rawPlain = typeof profile.toJSON === "function" ? profile.toJSON() : { ...profile };
+  const plain = decryptFields(rawPlain, encryptedProfileFields);
+  const mediaFields = [
+    "anh_cccd_mat_truoc",
+    "anh_cccd_mat_sau",
+    "anh_bien_lai_tha_giong",
+    "anh_ao_nuoi",
+  ];
+
+  await Promise.all(
+    mediaFields.map(async (field) => {
+      let value = plain[field];
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+          try {
+            value = JSON.parse(trimmed);
+          } catch (_error) {
+            value = plain[field];
+          }
+        }
+      }
+
+      if (!value) return;
+      if (Array.isArray(value)) {
+        plain[field] = await Promise.all(value.map((item) => getS3SignedUrl(item)));
+        return;
+      }
+
+      plain[field] = await getS3SignedUrl(value);
+    })
+  );
+
   const [latest, firstApproved] = await Promise.all([
     debtExtensionRepository.findLatestApprovedByProfileId(plain.id_ho_so),
     debtExtensionRepository.findFirstApprovedByProfileId(plain.id_ho_so),
@@ -273,54 +406,85 @@ const attachLatestExtensionDeadline = async (profile) => {
       : plain.han_thanh_toan,
   };
 };
-
-// Lay thong tin ho so mua tra sau phuc vu doc du lieu hoac doi chieu nghiep vu.
-const getMyCustomerProfiles = async (userId) => Promise.all(
-  (await customerProfileRepository.findByUserId(userId)).map(attachLatestExtensionDeadline));
-// Lay danh sach ho so mua tra sau theo bo loc hoac dieu kien tim kiem.
-const getAllCustomerProfiles = async () => Promise.all(
-  (await customerProfileRepository.findAll()).map(attachLatestExtensionDeadline));
-
-// Lay thong tin ho so mua tra sau phuc vu doc du lieu hoac doi chieu nghiep vu.
-const getCustomerProfileById = async (user, id) => {
-  const profile = await customerProfileRepository.findById(id);
-  if (!profile) throw new Error("Không tìm thấy hồ sơ khách hàng yêu cầu");
-  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro)
-    && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung))
-    throw new Error("Bạn không có quyền truy cập hồ sơ này");
-  return attachLatestExtensionDeadline(profile);
-};
 // sửa hồ sơ
 const updateCustomerProfile = async (user, id, data) => {
   const profile = await customerProfileRepository.findById(id);
   if (!profile) throw new Error("Không tìm thấy hồ sơ khách hàng cần cập nhật");
-  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro) 
+  if (!["admin", "nhan_vien_dinh_muc"].includes(user.vai_tro)
     && Number(profile.id_nguoi_dung) !== Number(user.id_nguoi_dung))
-     throw new Error("Bạn không có quyền chỉnh sửa hồ sơ này");
+    throw new Error("Bạn không có quyền chỉnh sửa hồ sơ này");
   const allowed = user.vai_tro === "admin"
     ? ["trang_thai_ho_so", "ly_do_tu_choi", "bi_khoa_tra_sau", "ly_do_khoa", "ghi_chu"]
     : user.vai_tro === "nhan_vien_dinh_muc"
       ? ["trang_thai_ho_so", "ghi_chu"]
       : ["zalo", "nguoi_mua_tom_du_kien", "nguoi_bao_lanh_ho_ten",
-         "nguoi_bao_lanh_sdt", "nguoi_bao_lanh_cccd", "nguoi_bao_lanh_quan_he", "ghi_chu"];
+        "nguoi_bao_lanh_sdt", "nguoi_bao_lanh_cccd", "nguoi_bao_lanh_quan_he", "ghi_chu"];
 
   const patch = {};
   allowed.forEach((field) => { if (data[field] !== undefined) patch[field] = data[field]; });
   const encryptedPatch = encryptFields(patch, encryptedProfileFields);
   const updatedProfile = await customerProfileRepository.update(id, encryptedPatch);
-  return attachLatestExtensionDeadline(updatedProfile);
+
+  const rawPlain = typeof updatedProfile.toJSON === "function" ? updatedProfile.toJSON() : { ...updatedProfile };
+  const plain = decryptFields(rawPlain, encryptedProfileFields);
+  const mediaFields = [
+    "anh_cccd_mat_truoc",
+    "anh_cccd_mat_sau",
+    "anh_bien_lai_tha_giong",
+    "anh_ao_nuoi",
+  ];
+
+  await Promise.all(
+    mediaFields.map(async (field) => {
+      let value = plain[field];
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+          try {
+            value = JSON.parse(trimmed);
+          } catch (_error) {
+            value = plain[field];
+          }
+        }
+      }
+
+      if (!value) return;
+      if (Array.isArray(value)) {
+        plain[field] = await Promise.all(value.map((item) => getS3SignedUrl(item)));
+        return;
+      }
+
+      plain[field] = await getS3SignedUrl(value);
+    })
+  );
+
+  const [latest, firstApproved] = await Promise.all([
+    debtExtensionRepository.findLatestApprovedByProfileId(plain.id_ho_so),
+    debtExtensionRepository.findFirstApprovedByProfileId(plain.id_ho_so),
+  ]);
+
+  return {
+    ...plain,
+    gia_han_moi_nhat: latest || null,
+    han_thanh_toan_goc: firstApproved
+      ? firstApproved.han_cu
+      : plain.han_thanh_toan,
+    han_thanh_toan_hien_tai: latest
+      ? latest.han_de_xuat
+      : plain.han_thanh_toan,
+  };
 };
 // duyệt hồ sơ
 const approvePostpaid = async (user, id, data) => {
-  if (user.vai_tro !== "admin") 
+  if (user.vai_tro !== "admin")
     throw new Error("Chỉ Admin mới có quyền duyệt mua trả sau");
   const profile = await customerProfileRepository.findById(id);
   if (!profile) throw new Error("Không tìm thấy hồ sơ khách hàng cần phê duyệt");
-  if (profile.trang_thai_ho_so === "tu_choi") 
+  if (profile.trang_thai_ho_so === "tu_choi")
     throw new Error("Hồ sơ đã bị từ chối, không thể duyệt");
   const limit = Number(data.dinh_muc_cong_no || 0);
   if (limit <= 0) throw new Error("Hạn mức được duyệt phải lớn hơn 0");
-  if (limit > Number(profile.han_muc_mong_muon)) 
+  if (limit > Number(profile.han_muc_mong_muon))
     throw new Error("Hạn mức duyệt không được vượt hạn mức khách hàng mong muốn");
   if (!data.han_thanh_toan) throw new Error("Vui lòng nhập hạn thanh toán");
 
@@ -338,4 +502,11 @@ const approvePostpaid = async (user, id, data) => {
   });
 };
 
-module.exports = { createCustomerProfile, getMyCustomerProfiles, getAllCustomerProfiles, getCustomerProfileById, updateCustomerProfile, approvePostpaid };
+module.exports = {
+  createCustomerProfile,
+  getMyCustomerProfiles,
+  getAllCustomerProfiles,
+  getCustomerProfileById,
+  updateCustomerProfile,
+  approvePostpaid
+};

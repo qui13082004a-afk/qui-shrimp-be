@@ -24,7 +24,6 @@ const HoSoKhachHang = sequelize.define(
     id_ao: { type: DataTypes.BIGINT, allowNull: false },
     id_vu_nuoi: { type: DataTypes.BIGINT, allowNull: false, unique: true },
     id_khu_vuc: { type: DataTypes.BIGINT, allowNull: false },
-
     // Thông tin cá nhân tại thời điểm nộp hồ sơ
     ho_ten: encryptedField("ho_ten", false),
     ngay_sinh: encryptedField("ngay_sinh", false),
@@ -32,8 +31,6 @@ const HoSoKhachHang = sequelize.define(
     so_dien_thoai: encryptedField("so_dien_thoai", false),
     zalo: encryptedField("zalo"),
     dia_chi_thuong_tru: encryptedField("dia_chi_thuong_tru", false),
-
-    // Địa chỉ ao được tách trường để kiểm tra vùng hỗ trợ ổn định
     tinh_thanh_ao: { type: DataTypes.STRING(100), allowNull: false },
     quan_huyen_ao: { type: DataTypes.STRING(100), allowNull: false },
     phuong_xa_ao: { type: DataTypes.STRING(100), allowNull: false },

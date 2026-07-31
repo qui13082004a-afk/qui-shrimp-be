@@ -29,10 +29,6 @@ const DiaChiGiaoHang = require("./DiaChiGiaoHang");
 const KhuVucHoTroTraSau = require("./KhuVucHoTroTraSau");
 KhuVucHoTroTraSau.hasMany(HoSoKhachHang, { foreignKey: "id_khu_vuc" });
 HoSoKhachHang.belongsTo(KhuVucHoTroTraSau, { foreignKey: "id_khu_vuc" });
-
-/* =========================
-   KHU VUC / VI TRI / PHI VAN CHUYEN
-========================= */
 TinhThanh.hasMany(PhuongXa, {
   foreignKey: "id_tinh_thanh",
 });

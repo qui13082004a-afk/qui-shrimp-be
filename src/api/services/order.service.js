@@ -5,8 +5,21 @@ const shippingFeeService = require("./shippingFee.service");
 const warehouseSelectionService = require("./warehouseSelection.service");
 const inventoryService = require("./inventory.service");
 
-const POSTPAID_SURCHARGE_RATE = 5;
 const POSTPAID_OVERDUE_INTEREST_RATE_MONTHLY = 1.2;
+
+// Lay ty le phu phi tra sau tu cau hinh Backend (.env).
+// Vi du: POSTPAID_SURCHARGE_RATE=5
+const getPostpaidSurchargeRate = () => {
+  const rate = Number(process.env.POSTPAID_SURCHARGE_RATE);
+
+  if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+    throw new Error(
+      "POSTPAID_SURCHARGE_RATE chua duoc cau hinh hop le trong Backend"
+    );
+  }
+
+  return rate;
+};
 
 const getOrderStatusText = (status) => {
   const map = {
@@ -125,7 +138,9 @@ const resolveShippingForOrder = async (userId, data, transaction) => {
 const createOrder = async (user, data) => {
   const userId = user.id_nguoi_dung;
   const isPostpaidOrder = data.hinh_thuc_thanh_toan === "tra_sau";
-  const tyLePhuPhiTraSau = isPostpaidOrder ? POSTPAID_SURCHARGE_RATE : 0;
+  const tyLePhuPhiTraSau = isPostpaidOrder
+    ? getPostpaidSurchargeRate()
+    : 0;
   const laiSuatQuaHanThang = isPostpaidOrder
     ? POSTPAID_OVERDUE_INTEREST_RATE_MONTHLY
     : 0;
@@ -433,7 +448,9 @@ const createOrder = async (user, data) => {
 const previewOrder = async (user, data) => {
   const userId = user.id_nguoi_dung;
   const isPostpaidOrder = data.hinh_thuc_thanh_toan === "tra_sau";
-  const tyLePhuPhiTraSau = isPostpaidOrder ? POSTPAID_SURCHARGE_RATE : 0;
+  const tyLePhuPhiTraSau = isPostpaidOrder
+    ? getPostpaidSurchargeRate()
+    : 0;
   let shippingData = await resolveShippingForOrder(userId, data, null);
   let tong_tien = 0;
   const orderDetails = [];

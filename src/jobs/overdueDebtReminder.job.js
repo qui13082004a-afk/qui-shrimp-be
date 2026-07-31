@@ -259,7 +259,7 @@ const startOverdueDebtReminderJob = () => {
     }
   );
 
-  console.log(`[OVERDUE DEBT REMINDER] Job da bat - lich: ${schedule}`);
+  console.log(`[OVERDUE DEBT REMINDER] Job da bat`);
 };
 
 module.exports = {

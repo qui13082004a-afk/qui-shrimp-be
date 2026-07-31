@@ -13,6 +13,7 @@ const {
 
 const debtRepository = require("./debt.repository");
 
+// Tạo yêu cầu thanh toán công nợ qua PayOS
 const createPartialDebtPayment = async (id_nguoi_dung, data) => {
   const amount = Math.round(Number(data.so_tien || 0));
   const id_ho_so = data.id_ho_so ? Number(data.id_ho_so) : null;
@@ -21,12 +22,14 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
     throw new Error("Số tiền thanh toán không hợp lệ");
   }
 
+  // Lấy thông tin công nợ hiện tại
   const summary = await debtRepository.getMyDebtSummary(id_nguoi_dung);
 
   let maxDebt = Number(
     summary.tong_phai_thanh_toan || summary.cong_no_hien_tai || 0
   );
 
+  // Nếu thanh toán theo hồ sơ thì lấy công nợ của hồ sơ đó
   if (id_ho_so) {
     const selectedProfile = summary.han_muc_theo_ho_so.find(
       (item) => Number(item.id_ho_so) === Number(id_ho_so)
@@ -51,6 +54,7 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
     throw new Error("Số tiền thanh toán vượt quá công nợ hiện tại");
   }
 
+  // Tạo phiếu thanh toán
   const debtPayment = await ThanhToanCongNo.create({
     id_nguoi_dung,
     id_ho_so,
@@ -58,10 +62,12 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
     trang_thai: "cho_thanh_toan",
   });
 
+  // Sinh mã giao dịch PayOS
   const orderCode = Number(
     `${debtPayment.id_thanh_toan_cong_no}${Date.now().toString().slice(-6)}`
   );
 
+  // Tạo link thanh toán PayOS
   const result = await payOS.paymentRequests.create({
     orderCode,
     amount,
@@ -70,6 +76,7 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
     cancelUrl: `${process.env.FRONTEND_URL}/debt/payment-cancel?orderCode=${orderCode}`,
   });
 
+  // Lưu mã giao dịch
   await debtPayment.update({ ma_giao_dich: String(orderCode) });
 
   return {
@@ -79,6 +86,7 @@ const createPartialDebtPayment = async (id_nguoi_dung, data) => {
   };
 };
 
+// Lấy lịch sử thanh toán công nợ
 const getMyDebtPayments = (id_nguoi_dung) => {
   return ThanhToanCongNo.findAll({
     where: { id_nguoi_dung },
@@ -122,7 +130,13 @@ const getMyDebtPayments = (id_nguoi_dung) => {
                 model: VuNuoi,
                 required: false,
                 attributes: ["id_vu_nuoi", "ten_vu_nuoi"],
-                include: [{ model: AoNuoi, required: false, attributes: ["id_ao", "ten_ao"] }],
+                include: [
+                  {
+                    model: AoNuoi,
+                    required: false,
+                    attributes: ["id_ao", "ten_ao"],
+                  },
+                ],
               },
             ],
           },
@@ -133,6 +147,7 @@ const getMyDebtPayments = (id_nguoi_dung) => {
   });
 };
 
+// Lấy chi tiết một giao dịch thanh toán
 const getDebtPaymentDetail = async (id_nguoi_dung, id_thanh_toan_cong_no) => {
   const data = await ThanhToanCongNo.findOne({
     where: { id_thanh_toan_cong_no, id_nguoi_dung },
@@ -143,7 +158,12 @@ const getDebtPaymentDetail = async (id_nguoi_dung, id_thanh_toan_cong_no) => {
         include: [
           {
             model: DonHang,
-            attributes: ["id_don_hang", "tong_thanh_toan", "ngay_dat", "trang_thai_don_hang"],
+            attributes: [
+              "id_don_hang",
+              "tong_thanh_toan",
+              "ngay_dat",
+              "trang_thai_don_hang",
+            ],
           },
         ],
       },
@@ -157,6 +177,7 @@ const getDebtPaymentDetail = async (id_nguoi_dung, id_thanh_toan_cong_no) => {
   return data;
 };
 
+// Tìm giao dịch đang chờ thanh toán
 const findPendingDebtPaymentByOrderCode = (orderCode) => {
   return ThanhToanCongNo.findOne({
     where: {
@@ -166,13 +187,16 @@ const findPendingDebtPaymentByOrderCode = (orderCode) => {
   });
 };
 
+// Tìm giao dịch theo mã
 const findDebtPaymentByOrderCode = (orderCode) => {
   return ThanhToanCongNo.findOne({
     where: { ma_giao_dich: String(orderCode) },
   });
 };
 
+// Phân bổ tiền thanh toán vào các đơn hàng
 const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
+  // Bắt đầu transaction
   const transaction = await sequelize.transaction();
 
   try {
@@ -180,6 +204,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       throw new Error("Không tìm thấy giao dịch công nợ cần phân bổ");
     }
 
+    // Khóa giao dịch để tránh xử lý nhiều lần
     const lockedDebtPayment = await ThanhToanCongNo.findByPk(
       debtPayment.id_thanh_toan_cong_no,
       {
@@ -192,14 +217,17 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       throw new Error("Khong tim thay giao dich cong no can phan bo");
     }
 
+    // Nếu đã xử lý thì bỏ qua
     if (lockedDebtPayment.trang_thai === "thanh_cong") {
       await transaction.commit();
       return lockedDebtPayment;
     }
-
+// Số tiền PayOS gửi về sau khi thanh toán
     const paidAmount = Math.round(Number(amount || 0));
+    // Số tiền đã lưu trong phiếu thanh toán công nợ
     const expectedAmount = Math.round(Number(lockedDebtPayment.so_tien || 0));
 
+    // Kiểm tra số tiền thanh toán
     if (paidAmount !== expectedAmount) {
       throw new Error("Số tiền PayOS gửi về không khớp với phiếu công nợ");
     }
@@ -208,6 +236,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       ? { id_ho_so: lockedDebtPayment.id_ho_so }
       : undefined;
 
+    // Lấy các đơn hàng cần phân bổ
     const orders = await DonHang.findAll({
       where: {
         id_nguoi_dung: lockedDebtPayment.id_nguoi_dung,
@@ -243,6 +272,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       throw new Error("Không có đơn công nợ để phân bổ");
     }
 
+    // Lấy số tiền đã thanh toán trước đó
     const paidDetails = await ChiTietThanhToanCongNo.findAll({
       where: { id_don_hang: { [Op.in]: orderIds } },
       attributes: ["id_don_hang", "so_tien_phan_bo"],
@@ -257,6 +287,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       transaction,
     });
 
+    // Lưu tổng tiền đã thanh toán của từng đơn
     const paidMap = new Map();
 
     for (const item of paidDetails) {
@@ -264,9 +295,11 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       paidMap.set(id, (paidMap.get(id) || 0) + Number(item.so_tien_phan_bo || 0));
     }
 
+    // Số tiền còn lại cần phân bổ
     let remaining = paidAmount;
     const allocationRows = [];
 
+    // Phân bổ lần lượt cho từng đơn hàng
     for (const order of orders) {
       if (remaining <= 0) break;
 
@@ -288,10 +321,10 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       remaining -= allocateAmount;
     }
 
-    // Phan remaining neu con sau khi phan bo het no goc duoc xem la tien lai qua han da thu.
+    // Nếu còn tiền thì xem như tiền lãi đã thu
+    await ChiTietThanhToanCongNo.bulkCrreate(allocationRows, { transaction });
 
-    await ChiTietThanhToanCongNo.bulkCreate(allocationRows, { transaction });
-
+    // Cập nhật trạng thái giao dịch
     await lockedDebtPayment.update(
       {
         trang_thai: "thanh_cong",
@@ -300,6 +333,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
       { transaction }
     );
 
+    // Hoàn tất transaction
     await transaction.commit();
 
     return lockedDebtPayment;
@@ -310,6 +344,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
   }
 };
 
+// Admin xác nhận thanh toán trực tiếp
 const createAdminDirectDebtPayment = async (data) => {
   const id_ho_so = Number(data.id_ho_so || 0);
   const amount = Math.round(Number(data.so_tien || 0));
@@ -321,6 +356,7 @@ const createAdminDirectDebtPayment = async (data) => {
     throw new Error("So tien thanh toan khong hop le");
   }
 
+  // Lấy thông tin công nợ của hồ sơ
   const detail = await debtRepository.getAdminDebtProfileDetail(id_ho_so);
   const maxDebt = Number(
     detail.tong_phai_thanh_toan || detail.cong_no_hien_tai || 0
@@ -333,6 +369,7 @@ const createAdminDirectDebtPayment = async (data) => {
     throw new Error("So tien thanh toan vuot qua cong no hien tai");
   }
 
+  // Tạo phiếu thanh toán
   const debtPayment = await ThanhToanCongNo.create({
     id_nguoi_dung: detail.id_nguoi_dung,
     id_ho_so,
@@ -341,6 +378,7 @@ const createAdminDirectDebtPayment = async (data) => {
     trang_thai: "cho_thanh_toan",
   });
 
+  // Phân bổ tiền vào các đơn hàng
   await allocateDebtPayment(debtPayment, amount, { onlyCompleted: true });
 
   return getDebtPaymentDetail(

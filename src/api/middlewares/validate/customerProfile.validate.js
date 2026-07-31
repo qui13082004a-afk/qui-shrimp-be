@@ -87,7 +87,6 @@ const validateApprovePostpaid = (req, res, next) => {
     validatePositiveNumber(dinh_muc_cong_no, "Định mức công nợ");
     validateRequiredString(han_thanh_toan, "Hạn thanh toán");
     validateDateString(han_thanh_toan, "Hạn thanh toán");
-
     return next();
   } catch (error) {
     return errorResponse(res, error.message);

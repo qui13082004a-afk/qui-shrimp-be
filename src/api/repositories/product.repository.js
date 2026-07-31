@@ -213,7 +213,6 @@ const findAllActive = async (params = {}) => {
     order: buildProductOrder(params.sortBy),
   });
 };
-
 /**
  * Admin:
  * Lấy toàn bộ sản phẩm (bao gồm cả ngừng bán).
@@ -259,7 +258,6 @@ const findById = (id) => {
     ],
   });
 };
-
 /**
  * Tạo sản phẩm mới.
  */

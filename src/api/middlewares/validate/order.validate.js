@@ -7,7 +7,7 @@ const validateCreateOrder = (req, res, next) => {
   try {
     const { items, hinh_thuc_thanh_toan, dia_chi_giao_hang, id_vu_nuoi } = req.body;
 
-    // 1. Kiểm tra giỏ hàng danh sách sản phẩm đặt
+    // Kiểm tra giỏ hàng danh sách sản phẩm đặt
     if (!items || !Array.isArray(items) || items.length === 0) {
       throw new Error("Đơn hàng phải có ít nhất một mặt hàng trong giỏ");
     }

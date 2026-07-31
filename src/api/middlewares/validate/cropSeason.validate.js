@@ -52,7 +52,6 @@ const validateCreateCropSeason = (req, res, next) => {
         throw new Error("Khoảng thời gian giữa ngày thả giống và ngày thu hoạch dự kiến không được vượt quá 5 tháng");
       }
     }
-
     return next();
   } catch (error) {
     return errorResponse(res, error.message);
@@ -107,9 +106,13 @@ const validateUpdateCropSeason = (req, res, next) => {
       if (daysFromSeedToHarvest < 0) {
         throw new Error("Ngày thu hoạch dự kiến không được nhỏ hơn ngày thả giống");
       }
+      const maxDate = new Date(seedDate);
+      maxDate.setMonth(maxDate.getMonth() + 5);
 
-      if (daysFromSeedToHarvest > 150) {
-        throw new Error("Ngày thu hoạch dự kiến không được cách ngày thả giống quá 150 ngày");
+      if (harvestDate.getTime() > maxDate.getTime()) {
+        throw new Error(
+          "Khoảng thời gian giữa ngày thả giống và ngày thu hoạch dự kiến không được vượt quá 5 tháng"
+        );
       }
     }
 

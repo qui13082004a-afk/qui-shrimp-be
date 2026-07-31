@@ -15,7 +15,7 @@ const findAllActive = async () => {
       trang_thai: "hoat_dong",
     },
   });
-  const danhMucCoSoLuong = await Promise.all(
+const danhMucCoSoLuong = await Promise.all(
     danhMuc.map(async (item) => {
       const so_luong_san_pham = await SanPham.count({
         where: {

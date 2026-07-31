@@ -73,7 +73,7 @@ const notifyLimitStaffByArea = async ({
   id_khu_vuc,
   tieu_de,
   noi_dung,
-  loai = "ho_so",
+  loai = "cong_no",
   lien_ket = null,
   transaction = null,
 }) => {

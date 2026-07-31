@@ -174,7 +174,7 @@ const createCustomerProfile = async (userId, data) => {
     await notificationService.notifyAdmins({
       tieu_de: "Co ho so mua tra sau moi",
       noi_dung: `Khach hang ${data.ho_ten} vua gui ho so mua tra sau #${profile.id_ho_so}.`,
-      loai: "ho_so",
+      loai: "cong_no",
       lien_ket: `/admin/ho-so-cong-no`,
     });
   } catch (error) {
@@ -186,7 +186,7 @@ const createCustomerProfile = async (userId, data) => {
       id_khu_vuc: supportedArea.id_khu_vuc,
       tieu_de: "Ho so can tham dinh trong khu vuc phu trach",
       noi_dung: `Ho so #${profile.id_ho_so} cua ${data.ho_ten} dang cho kiem tra tai khu vuc ${supportedArea.tinh_thanh}.`,
-      loai: "ho_so",
+      loai: "cong_no",
       lien_ket: `/nhan-vien-dinh-muc/ho-so-tham-dinh`,
     });
   } catch (error) {

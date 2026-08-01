@@ -322,7 +322,7 @@ const allocateDebtPayment = async (debtPayment, amount, options = {}) => {
     }
 
     // Nếu còn tiền thì xem như tiền lãi đã thu
-    await ChiTietThanhToanCongNo.bulkCrreate(allocationRows, { transaction });
+    await ChiTietThanhToanCongNo.bulkCreate(allocationRows, { transaction });
 
     // Cập nhật trạng thái giao dịch
     await lockedDebtPayment.update(

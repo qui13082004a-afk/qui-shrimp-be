@@ -12,9 +12,6 @@ const findStocksForProductsForUpdate = async (productIds, transaction) => {
       {
         model: KhoHang,
         required: true,
-        where: {
-          trang_thai: "hoat_dong",
-        },
       },
     ],
     transaction,

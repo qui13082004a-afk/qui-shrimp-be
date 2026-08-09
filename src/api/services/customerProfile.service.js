@@ -13,8 +13,8 @@ const requiredTextFields = [
   ["ho_ten", "Họ tên"], ["ngay_sinh", "Ngày sinh"], ["so_cccd", "Số CCCD"],
   ["so_dien_thoai", "Số điện thoại"], ["dia_chi_thuong_tru", "Địa chỉ thường trú"],
   ["tinh_thanh_ao", "Tỉnh/thành của ao"], ["quan_huyen_ao", "Quận/huyện của ao"],
-  ["phuong_xa_ao", "Phường/xã của ao"], ["nguon_thu_nhap_tra_no", "Nguồn thu nhập trả nợ"],
-  ["ngay_thu_hoach_du_kien", "Ngày thu hoạch dự kiến"], ["mat_hang_du_kien", "Mặt hàng dự kiến mua"],
+  ["phuong_xa_ao", "Phường/xã của ao"],
+  ["ngay_thu_hoach_du_kien", "Ngày thu hoạch dự kiến"],
 ];
 
 // Số hồ sơ mua trả sau tối đa 1 khách hàng được phép có (không tính hồ sơ
@@ -27,8 +27,6 @@ const encryptedProfileFields = [
   "so_dien_thoai",
   "zalo",
   "dia_chi_thuong_tru",
-  "nguon_thu_nhap_tra_no",
-  "nguoi_mua_tom_du_kien",
   "nguoi_bao_lanh_ho_ten",
   "nguoi_bao_lanh_sdt",
   "nguoi_bao_lanh_cccd",
@@ -42,8 +40,7 @@ const createCustomerProfile = async (userId, data) => {
   }
 
   const positiveNumbers = [
-    ["dien_tich_ao", "Diện tích ao"], ["so_vu_nuoi_moi_nam", "Số vụ nuôi mỗi năm"],
-    ["san_luong_du_kien", "Sản lượng dự kiến"], ["kinh_nghiem_nuoi_nam", "Kinh nghiệm nuôi"],
+    ["dien_tich_ao", "Diện tích ao"],
     ["han_muc_mong_muon", "Hạn mức mong muốn"], ["thoi_han_tra_mong_muon", "Thời hạn trả mong muốn"],
   ];
   for (const [field, label] of positiveNumbers) {
@@ -416,8 +413,8 @@ const updateCustomerProfile = async (user, id, data) => {
   const allowed = user.vai_tro === "admin"
     ? ["trang_thai_ho_so", "ly_do_tu_choi", "bi_khoa_tra_sau", "ly_do_khoa", "ghi_chu"]
     : user.vai_tro === "nhan_vien_dinh_muc"
-      ? ["trang_thai_ho_so", "ghi_chu"]
-      : ["zalo", "nguoi_mua_tom_du_kien", "nguoi_bao_lanh_ho_ten",
+    ? ["trang_thai_ho_so", "ghi_chu"]
+      : ["zalo", "nguoi_bao_lanh_ho_ten",
         "nguoi_bao_lanh_sdt", "nguoi_bao_lanh_cccd", "nguoi_bao_lanh_quan_he", "ghi_chu"];
 
   const patch = {};

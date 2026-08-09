@@ -12,6 +12,21 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+const ACCESS_TOKEN_EXPIRES_IN = "3h";
+const REFRESH_TOKEN_EXPIRES_IN = "7d";
+
+const signAuthToken = (user, tokenType, expiresIn) => {
+  return jwt.sign(
+    {
+      id_nguoi_dung: user.id_nguoi_dung,
+      vai_tro: user.vai_tro,
+      token_type: tokenType,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn }
+  );
+};
+
 // Hàm gửi email an toàn tránh treo luồng chính khi email lỗi
 const safeSendEmail = async (to, subject, text) => {
   try {
@@ -180,15 +195,9 @@ const login = async (email, mat_khau) => {
     throw new Error("Tài khoản email hoặc mật khẩu không chính xác");
   }
 
-  // Tạo JWT Token chứa payload bảo mật
-  const token = jwt.sign(
-    {
-      id_nguoi_dung: user.id_nguoi_dung,
-      vai_tro: user.vai_tro,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
+  // Access token dùng để gọi API, refresh token dùng làm token dài hạn nếu sau này cần mở rộng.
+  const token = signAuthToken(user, "access", ACCESS_TOKEN_EXPIRES_IN);
+  const refreshToken = signAuthToken(user, "refresh", REFRESH_TOKEN_EXPIRES_IN);
 
   // Ẩn các thông tin nhạy cảm trước khi trả về Client
   user.mat_khau = undefined;
@@ -197,6 +206,9 @@ const login = async (email, mat_khau) => {
 
   return {
     token,
+    refreshToken,
+    expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    refreshExpiresIn: REFRESH_TOKEN_EXPIRES_IN,
     user,
   };
 };

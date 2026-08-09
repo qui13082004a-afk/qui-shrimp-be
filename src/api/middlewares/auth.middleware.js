@@ -30,6 +30,14 @@ const authMiddleware = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    if (decoded.token_type && decoded.token_type !== "access") {
+      return res.status(401).json({
+        success: false,
+        code: "INVALID_TOKEN_TYPE",
+        message: "Token không hợp lệ",
+      });
+    }
+
     const user = await NguoiDung.findByPk(decoded.id_nguoi_dung, {
       attributes: [
         "id_nguoi_dung",
@@ -41,6 +49,7 @@ const authMiddleware = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
+        code: "ACCOUNT_NOT_FOUND",
         message: "Tài khoản không tồn tại",
       });
     }
@@ -48,6 +57,7 @@ const authMiddleware = async (req, res, next) => {
     if (user.trang_thai_tai_khoan !== "hoat_dong") {
       return res.status(403).json({
         success: false,
+        code: "ACCOUNT_LOCKED",
         message: "Tài khoản đã bị khóa hoặc chưa được xác thực",
       });
     }
@@ -61,9 +71,14 @@ const authMiddleware = async (req, res, next) => {
 
     next();
   } catch (error) {
+    const isExpired = error.name === "TokenExpiredError";
+
     return res.status(401).json({
       success: false,
-      message: "Token không hợp lệ hoặc đã hết hạn",
+      code: isExpired ? "TOKEN_EXPIRED" : "INVALID_TOKEN",
+      message: isExpired
+        ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại"
+        : "Token không hợp lệ hoặc đã hết hạn",
     });
   }
 };

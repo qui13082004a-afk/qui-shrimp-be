@@ -35,47 +35,30 @@ const HoSoKhachHang = sequelize.define(
     quan_huyen_ao: { type: DataTypes.STRING(100), allowNull: false },
     phuong_xa_ao: { type: DataTypes.STRING(100), allowNull: false },
     dia_chi_chi_tiet_ao: { type: DataTypes.TEXT, allowNull: true },
-
     dien_tich_ao: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     don_vi_dien_tich: {
       type: DataTypes.ENUM("m2", "ha"),
       allowNull: false,
       defaultValue: "m2",
     },
-    so_vu_nuoi_moi_nam: { type: DataTypes.INTEGER, allowNull: false },
-    san_luong_du_kien: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
-    don_vi_san_luong: {
-      type: DataTypes.ENUM("kg", "tan"),
-      allowNull: false,
-      defaultValue: "kg",
-    },
-    kinh_nghiem_nuoi_nam: { type: DataTypes.INTEGER, allowNull: false },
-    nguon_thu_nhap_tra_no: encryptedField("nguon_thu_nhap_tra_no", false),
-    nguoi_mua_tom_du_kien: encryptedField("nguoi_mua_tom_du_kien"),
     ngay_thu_hoach_du_kien: { type: DataTypes.DATEONLY, allowNull: false },
-
     han_muc_mong_muon: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
     thoi_han_tra_mong_muon: { type: DataTypes.INTEGER, allowNull: false },
     don_vi_thoi_han: {
       type: DataTypes.ENUM("ngay", "thang", "sau_thu_hoach"),
       allowNull: false,
     },
-    mat_hang_du_kien: { type: DataTypes.TEXT, allowNull: false },
-
     nguoi_bao_lanh_ho_ten: encryptedField("nguoi_bao_lanh_ho_ten"),
     nguoi_bao_lanh_sdt: encryptedField("nguoi_bao_lanh_sdt"),
     nguoi_bao_lanh_cccd: encryptedField("nguoi_bao_lanh_cccd"),
     nguoi_bao_lanh_quan_he: encryptedField("nguoi_bao_lanh_quan_he"),
-
     cam_ket_thong_tin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     dong_y_xac_minh: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     dong_y_dieu_khoan: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
-
     anh_cccd_mat_truoc: { type: DataTypes.STRING(500), allowNull: false },
     anh_cccd_mat_sau: { type: DataTypes.STRING(500), allowNull: false },
     anh_bien_lai_tha_giong: { type: DataTypes.STRING(500), allowNull: false },
     anh_ao_nuoi: { type: DataTypes.TEXT, allowNull: true },
-
     dinh_muc_cong_no: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
     trang_thai_ho_so: {
       type: DataTypes.ENUM("cho_kiem_tra", "cho_de_xuat", "cho_admin_duyet", "da_duyet", "tu_choi"),

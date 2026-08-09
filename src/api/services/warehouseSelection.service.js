@@ -135,10 +135,40 @@ const chooseBestWarehouse = async ({
   }
 
   // Danh sách các kho có thể đáp ứng đơn hàng
+  const requestedInactiveWarehouse = requestedWarehouseIds.find((id) =>
+    stocks.some(
+      (stock) =>
+        Number(stock.id_kho_hang) === Number(id) &&
+        stock.KhoHang?.trang_thai === "tam_ngung"
+    )
+  );
+
+  if (requestedInactiveWarehouse) {
+    const error = new Error(
+      "Kho hàng bạn chọn hiện đã tạm ngưng hoạt động. Vui lòng chọn kho khác hoặc liên hệ cửa hàng."
+    );
+
+    error.code = "WAREHOUSE_INACTIVE";
+    throw error;
+  }
+
+  const activeStocks = stocks.filter(
+    (stock) => stock.KhoHang?.trang_thai === "hoat_dong"
+  );
+
+  if (!activeStocks.length) {
+    const error = new Error(
+      "Kho hàng đang lưu tồn kho cho sản phẩm hiện đã tạm ngưng hoạt động. Vui lòng chọn sản phẩm khác hoặc liên hệ cửa hàng."
+    );
+
+    error.code = "WAREHOUSE_INACTIVE";
+    throw error;
+  }
+
   const candidates = [];
 
   // Gom tồn kho theo từng kho
-  const warehouseGroups = groupStocksByWarehouse(stocks);
+  const warehouseGroups = groupStocksByWarehouse(activeStocks);
   // Kiểm tra lần lượt từng kho
   for (const warehouseGroup of warehouseGroups) {
     const warehouse = warehouseGroup.warehouse;
@@ -200,6 +230,15 @@ const chooseBestWarehouse = async ({
   }
 
   // Không có kho nào đủ điều kiện
+  if (!candidates.length) {
+    const error = new Error(
+      "Không có kho đang hoạt động đủ tồn kho để xuất toàn bộ đơn hàng. Một số kho có thể đã tạm ngưng hoặc không đủ hàng."
+    );
+
+    error.code = "OUT_OF_STOCK";
+    throw error;
+  }
+
   if (!candidates.length) {
     const error = new Error(
       "Không có kho nào đủ tồn kho để xuất toàn bộ đơn hàng"

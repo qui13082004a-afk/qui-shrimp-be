@@ -184,7 +184,7 @@ const runLimitPolicyReminder = async () => {
 // Khoi dong cron job nhac nang han muc theo timezone Viet Nam.
 const startLimitPolicyReminderJob = () => {
   cron.schedule(
-    "1 11 1 * *",
+    "30 7 * * *",
     async () => {
       await runLimitPolicyReminder();
     },

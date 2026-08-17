@@ -4,11 +4,10 @@ const notificationService = require("./notification.service");
 const shippingFeeService = require("./shippingFee.service");
 const warehouseSelectionService = require("./warehouseSelection.service");
 const inventoryService = require("./inventory.service");
-
+// lai theo thang
 const POSTPAID_OVERDUE_INTEREST_RATE_MONTHLY = 1.2;
 
-// Lay ty le phu phi tra sau tu cau hinh Backend (.env).
-// Vi du: POSTPAID_SURCHARGE_RATE=5
+// Lay ty le phu phi tra sau 
 const getPostpaidSurchargeRate = () => {
   const rate = Number(process.env.POSTPAID_SURCHARGE_RATE);
 
@@ -75,10 +74,7 @@ const ensureDeliveryStaffAssignedToOrder = async (user, id_don_hang) => {
   return delivery;
 };
 
-// Chuan hoa thong tin giao hang cho don:
-// - uu tien lay dia chi da luu neu nguoi dung da chon
-// - neu co toa do thi tinh khu vuc/phi ship theo he thong
-// - neu thieu toa do thi tam tra ve phi ship dau vao hoac mac dinh = 0
+
 const resolveShippingForOrder = async (userId, data, transaction) => {
   let viDo = toNullableCoordinate(data.vi_do_giao_hang);
   let kinhDo = toNullableCoordinate(data.kinh_do_giao_hang);

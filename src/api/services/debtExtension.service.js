@@ -59,7 +59,7 @@ const normalizeUploadedImages = (files = []) => {
     .filter(Boolean);
 };
 
-// Tao thong bao nhung khong de loi notification lam fail nghiep vu chinh.
+// Tao thong bao 
 const safeCreateNotification = async (payload) => {
   try {
     await notificationService.createNotification(payload);
@@ -68,7 +68,7 @@ const safeCreateNotification = async (payload) => {
   }
 };
 
-// Gui thong bao den admin nhung van uu tien hoan tat nghiep vu chinh.
+// Gui thong bao den admin
 const safeNotifyAdmins = async (payload) => {
   try {
     await notificationService.notifyAdmins(payload);
